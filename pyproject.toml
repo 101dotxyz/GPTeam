@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "101-ai"
+version = "0.1.0"
+description = ""
+authors = ["Alex Velikanov <alex25368@gmail.com>"]
+readme = "README.md"
+packages = [{include = "101_ai"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

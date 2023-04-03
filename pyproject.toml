@@ -6,8 +6,12 @@ authors = ["Alex Velikanov <alex25368@gmail.com>"]
 readme = "README.md"
 packages = [{include = "101_ai"}]
 
+[tool.poetry.scripts]
+start = "101_ai:run"
+
 [tool.poetry.dependencies]
 python = "^3.11"
+quart = {extras = ["dotenv"], version = "^0.18.3"}
 
 
 [build-system]

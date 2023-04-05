@@ -22,8 +22,8 @@ from langchain.schema import (AgentAction, AIMessage, BaseLanguageModel,
                               BaseMessage, BaseOutputParser, HumanMessage)
 from langchain.tools.base import BaseTool
 
+from ..tools.search import SearchTool
 from ..tools.user_input import UserInputTool
-from ..utils.input import get_user_input
 
 
 class AgentOutputParser(BaseOutputParser):
@@ -166,18 +166,11 @@ class TaskDefinitionAgent(Agent):
 
 
 def get_task_definition_agent():
-    search = SerpAPIWrapper()
 
     tools = [
-        Tool(
-            name = "Search",
-            func=search.run,
-            description="Allows you to search the web. Input is a query. Output is a list of results."
-        ),
+        SearchTool(),
         UserInputTool()
     ]
-
-    # tools = load_tools(["human"])
 
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     

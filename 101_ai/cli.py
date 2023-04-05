@@ -4,12 +4,11 @@ from colorama import Fore, Style, init
 from dotenv import load_dotenv
 from langchain.schema import HumanMessage
 
-from .agents.task_definition import get_task_specification_agent
+from .agents.task_definition import get_task_definition_agent
 from .utils.chat import get_chat_completion
 from .utils.formatting import print_to_console
 from .utils.models import ChatModel
-from .utils.prompts.task_specification import \
-    TASK_SPECIFICATION_CHAT_PROMPT_TEMPLATE
+from .utils.prompts.task_definition import TASK_DEFINITION_CHAT_PROMPT_TEMPLATE
 
 load_dotenv()
 
@@ -22,10 +21,10 @@ async def main():
     # print_to_console("Question", Fore.GREEN, "Got it. What shall we call this app?")
     # app_name = input()
 
-    messages = TASK_SPECIFICATION_CHAT_PROMPT_TEMPLATE.format_prompt(task_description=task_description).to_messages()
+    messages = TASK_DEFINITION_CHAT_PROMPT_TEMPLATE.format_prompt(task_description=task_description).to_messages()
 
     message_input = ', '.join([message.content for message in messages])
-    agent = get_task_specification_agent()
+    agent = get_task_definition_agent()
 
     agent.run(input=message_input)
 

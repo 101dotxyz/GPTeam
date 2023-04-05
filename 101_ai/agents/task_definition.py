@@ -6,13 +6,8 @@ from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.utilities import SerpAPIWrapper
 
-from ..utils.formatting import print_to_console
+from ..tools.user_input import UserInputTool
 
-
-def get_user_input(question: str):
-    print_to_console("Question", Fore.MAGENTA, question)
-    i = input()
-    return i
 
 def get_task_specification_agent():
     search = SerpAPIWrapper()
@@ -23,7 +18,7 @@ def get_task_specification_agent():
             func=search.run,
             description="useful for when you need to answer questions about current events or the current state of the world. the input to this should be a single search term."
         ),
-        Tool(name = "ASK_USER_A_QUESTION", func=get_user_input, description="Get an answer from the user to a question.")
+        UserInputTool()
     ]
 
     # tools = load_tools(["human"])

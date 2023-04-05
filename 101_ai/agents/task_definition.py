@@ -22,6 +22,7 @@ from langchain.schema import (AgentAction, AIMessage, BaseLanguageModel,
                               BaseMessage, BaseOutputParser, HumanMessage)
 from langchain.tools.base import BaseTool
 
+from ..tools.user_input import UserInputTool
 from ..utils.input import get_user_input
 
 
@@ -165,7 +166,6 @@ class TaskDefinitionAgent(Agent):
 
 
 def get_task_definition_agent():
-    
     search = SerpAPIWrapper()
 
     tools = [
@@ -174,7 +174,7 @@ def get_task_definition_agent():
             func=search.run,
             description="Allows you to search the web. Input is a query. Output is a list of results."
         ),
-        Tool(name = "ASK_USER_A_QUESTION", func=get_user_input, description="Get an answer from the user to a question.")
+        UserInputTool()
     ]
 
     # tools = load_tools(["human"])

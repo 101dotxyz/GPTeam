@@ -23,8 +23,8 @@ from langchain.schema import (AgentAction, AgentFinish, AIMessage,
                               HumanMessage)
 from langchain.tools.base import BaseTool
 
-from ..tools.search import SearchTool
-from ..tools.user_input import UserInputTool
+from ..tools import AgentTool
+from ..tools.main import get_tools
 
 
 class AgentOutputParser(BaseOutputParser):
@@ -65,6 +65,15 @@ class TaskDefinitionAgent(ConversationalChatAgent):
 
 
         suggested_action = super().plan(intermediate_steps, **kwargs)
+
+        if len(intermediate_steps) > 0:
+            [last_action, response] = intermediate_steps[-1]
+
+            if last_action.tool == AgentTool.EvaluateCode:
+                print("Agent has recently evaluated code and is suggesting we improve it.")
+                return AgentAction(tool=AgentTool.ImproveCode.value, tool_input=f"[{response}, {last_action.tool_input}]")
+
+        print(suggested_action, intermediate_steps)
         
         if isinstance(suggested_action, AgentFinish):
             print("Agent is suggesting we finish the conversation. Initiating reflection instead.")
@@ -86,12 +95,9 @@ class TaskDefinitionAgent(ConversationalChatAgent):
         return AgentAction(tool="Search", tool_input="foo", log="")
 
 
-def get_task_definition_agent():
+def get_task_definition_agent() -> AgentExecutor:
 
-    tools = [
-        SearchTool(),
-        UserInputTool()
-    ]
+    tools = get_tools([AgentTool.AskUserQuestion, AgentTool.EvaluateCode])
 
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     

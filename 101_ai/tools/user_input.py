@@ -2,12 +2,13 @@ from colorama import Fore
 from langchain.agents import Tool
 
 from ..utils.formatting import print_to_console
+from . import AgentTool
 
 
 class UserInputTool(Tool):
     def __init__(self):
         super().__init__(
-            name="Ask User A Question",
+            name=AgentTool.AskUserQuestion.value,
             func=self.get_user_input,
             description="Get an answer from the user to a question."
         )

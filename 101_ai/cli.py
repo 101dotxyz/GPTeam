@@ -5,9 +5,7 @@ from dotenv import load_dotenv
 from langchain.schema import HumanMessage
 
 from .agents.task_definition import get_task_definition_agent
-from .utils.chat import get_chat_completion
 from .utils.formatting import print_to_console
-from .utils.models import ChatModel
 from .utils.prompts.task_definition import TASK_DEFINITION_CHAT_PROMPT_TEMPLATE
 
 load_dotenv()

@@ -4,7 +4,7 @@ from . import AgentTool
 from .llm_function import LLMFunctionTool
 
 
-class EvaluateSpecTool(LLMFunctionTool):
+class EvaluateCodeTool(LLMFunctionTool):
     def __init__(self):
         super().__init__(
             name=AgentTool.EvaluateCode.value,

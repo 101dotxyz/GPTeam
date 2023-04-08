@@ -6,4 +6,5 @@ class AgentTool(Enum):
     AskUserQuestion = "ASK_USER_QUESTION"
     EvaluateCode = "EVALUATE_CODE"
     ImproveCode = "IMPROVE_CODE"
+    MissingInformation = "MISSING_INFORMATION"
     

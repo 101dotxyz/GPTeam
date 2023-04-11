@@ -2,50 +2,21 @@
 from __future__ import annotations
 
 import json
-from typing import Any, List, Optional, Sequence, Tuple, Union
+import re
+from typing import Any, List, Tuple, Union
 
-from langchain import SerpAPIWrapper
-from langchain.agents import AgentExecutor, ConversationalChatAgent, Tool
-from langchain.agents.agent import Agent
-from langchain.agents.conversational_chat.prompt import (
-    FORMAT_INSTRUCTIONS, PREFIX, SUFFIX, TEMPLATE_TOOL_RESPONSE)
-from langchain.callbacks.base import BaseCallbackManager
-from langchain.chains import LLMChain
+from langchain.agents import (BaseMultiActionAgent, ConversationalChatAgent,
+                              Tool)
+from langchain.agents.agent import Agent, AgentOutputParser
+from langchain.agents.conversational_chat.prompt import FORMAT_INSTRUCTIONS
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
-from langchain.prompts.base import BasePromptTemplate
-from langchain.prompts.chat import (ChatPromptTemplate,
-                                    HumanMessagePromptTemplate,
-                                    MessagesPlaceholder,
-                                    SystemMessagePromptTemplate)
-from langchain.schema import (AgentAction, AgentFinish, AIMessage,
-                              BaseLanguageModel, BaseMessage, BaseOutputParser,
-                              HumanMessage)
-from langchain.tools.base import BaseTool
+from langchain.schema import AgentAction, AgentFinish
 
 from ..tools import AgentTool
 from ..tools.main import get_tools
-
-
-class AgentOutputParser(BaseOutputParser):
-    def get_format_instructions(self) -> str:
-        return FORMAT_INSTRUCTIONS
-
-    def parse(self, text: str) -> Any:
-        cleaned_output = text.strip()
-        if "```json" in cleaned_output:
-            _, cleaned_output = cleaned_output.split("```json")
-        if "```" in cleaned_output:
-            cleaned_output, _ = cleaned_output.split("```")
-        if cleaned_output.startswith("```json"):
-            cleaned_output = cleaned_output[len("```json") :]
-        if cleaned_output.startswith("```"):
-            cleaned_output = cleaned_output[len("```") :]
-        if cleaned_output.endswith("```"):
-            cleaned_output = cleaned_output[: -len("```")]
-        cleaned_output = cleaned_output.strip()
-        response = json.loads(cleaned_output)
-        return {"action": response["action"], "action_input": response["action_input"]}
+from ..utils.prompts.task_definition import \
+    TASK_DEFINITION_SYSTEM_PROMPT_TEMPLATE
 
 
 class TaskDefinitionAgent(ConversationalChatAgent):
@@ -95,22 +66,15 @@ class TaskDefinitionAgent(ConversationalChatAgent):
         return AgentAction(tool="Search", tool_input="foo", log="")
 
 
-def get_task_definition_agent() -> AgentExecutor:
+def get_task_definition_agent() -> Agent:
 
     tools = get_tools([AgentTool.AskUserQuestion, AgentTool.Search, AgentTool.MissingInformation])
-
-    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     
     llm=ChatOpenAI(temperature=0)
 
-    agent = TaskDefinitionAgent.from_llm_and_tools(llm=llm, tools=tools, verbose=True)
+    agent = TaskDefinitionAgent.from_llm_and_tools(llm=llm, tools=tools, verbose=True, system_message="You are a engineering manager for a software development team. Your job is to translate high-level app concepts, given by users, into a well-defined technical specification for a developer to implement.\n\nFor each app concept, you should start by asking clarifying questions of the user so that a developer can implement the idea with zero additional guidance or outside resources.\n\nThe developer will be writing their implementation in typescript. They will not have access to any paid API services. If the app requires one, ask the user for an API key.\n\nThe final output should loosely follow this structure:\n---\nBACKEND ENDPOINTS: \n- list of endpoints and corresponding detailed pseudocode for the backend web-server that will be triggered by cron tasks or frontend interactions\n\nTABLES:\n- list of database tables with schema for each table\n\nCRON JOBS:\n- list of necessary cron jobs and which functions they call\n\nENV VARIABLES:\n- list all necessary environment variables\n\nFRONTEND:\n- list of necessary frontend components\n---\n\nDo not write your specification without first echoing your understanding of the task back to the user, and receiving a confirmation.")
 
-
-    agent_chain = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True, memory=memory)
-
-    return agent_chain
-
-
+    return agent
 
 class TaskDefinitionOutputParser(AgentOutputParser):
     

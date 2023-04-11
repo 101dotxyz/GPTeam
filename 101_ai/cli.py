@@ -8,15 +8,15 @@ from langchain.schema import (AIMessage, BaseMessage, HumanMessage,
 
 from .parsers.task_definition_parser import (TaskDefinition,
                                              get_task_definition_parser)
-from .prompts.task_definition import (TASK_DEFINITION_SYSTEM_PROMPT_TEMPLATE,
-                                      task_definition_parser)
 from .utils.chat import get_chat_completion
 from .utils.formatting import print_to_console
 from .utils.models import ChatModel
+from .utils.spinner import Spinner
 
 load_dotenv()
 
-MAX_ITERATIONS = 5
+# Used to avoid spamming the API in case things go wrong.
+MAX_ITERATIONS = 20
 
 async def main():
     init()
@@ -25,10 +25,10 @@ async def main():
     task_description = "A Gmail bot that sends a daily email with a summary of the user's unread emails."
     print_to_console("Answer", Fore.CYAN, task_description)
 
+    parser = get_task_definition_parser()
 
-    system_message = SystemMessage(content=TASK_DEFINITION_SYSTEM_PROMPT_TEMPLATE.format().content)
 
-
+    system_message = SystemMessage(content=f"You are a engineering manager for a software development team. Your job is to translate high-level app concepts, given by users, into a well-defined technical specification for a developer to implement.\n\nYou should start by asking clarifying questions of the user so that a developer can implement the idea with zero additional guidance or outside resources. When asking questions, you should do so one at a time.\n\nThe developer will be writing their implementation in typescript. They will not have access to any paid API services. If the app requires one, ask the user for an API key. \n\n Once you are ready to give a specification, your final answer should be formatted according to the following rules: {parser.get_format_instructions()}")
 
     human_message = HumanMessage(content=f"Here is my new app concept: {task_description}")
 
@@ -38,21 +38,21 @@ async def main():
 
     i = 0
 
-    while not result or i < MAX_ITERATIONS:
-        response = get_chat_completion(messages, ChatModel.TURBO)
-        messages.append(AIMessage(content=response))
-        try:
+    for i in range(MAX_ITERATIONS):
+        with Spinner("Thinking... "):
+            response = get_chat_completion(messages, ChatModel.TURBO)
+            messages.append(AIMessage(content=response))
+
             if "backend_endpoints" in response:
                 print(f"Answer: {response}")
-                result = task_definition_parser.parse(response)
+                result = parser.parse(response)
                 break
-            raise Exception
-        except Exception:
-            print_to_console("Question", Fore.GREEN, response)
-            human_response = input("Answer: ")
-            human_message = HumanMessage(content=human_response)
-            messages.append(human_message)
-            i += 1
+
+        print_to_console("Question", Fore.GREEN, response)
+        human_response = input("Answer: ")
+        human_message = HumanMessage(content=human_response)
+        messages.append(human_message)
+        i += 1
 
     if not result:
         print_to_console("Max iterations reached", Fore.RED, f"I reached the maximum number of allowed iterations ({MAX_ITERATIONS}) and gave up trying.")

@@ -39,7 +39,7 @@ async def main():
     i = 0
 
     for i in range(MAX_ITERATIONS):
-        with Spinner("Thinking... "):
+        with Spinner("🤔 Thinking... "):
             response = get_chat_completion(messages, ChatModel.TURBO)
             messages.append(AIMessage(content=response))
 

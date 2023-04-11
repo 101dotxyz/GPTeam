@@ -8,12 +8,19 @@ from pydantic import BaseModel, Field, validator
 from ..utils.models import ChatModel, get_chat_model
 
 
+class BackendEndpointDefinition(BaseModel):
+    endpoint: str = Field(description="The endpoint url e.g. /endpoint-url")
+    pseudocode: str = Field(description="The pseudocode for this endpoint in plain english")
+
+class CronJobDefinition(BaseModel):
+    cron: str = Field(description="The cron definition e.g. 0 0 * * *")
+    url: str = Field(description="The backend endpoint url to trigger e.g. /endpoint-url")
 class TaskDefinition(BaseModel):
-    backend_endpoints: str = Field(description="list of endpoints and corresponding detailed pseudocode for the backend web-server that will be triggered by cron tasks or frontend interactions")
-    tables: str = Field(description="list of database tables with schema for each table")
-    cron_jobs: str = Field(description="list of necessary cron jobs and which functions they call")
-    env_variables: str = Field(description="list all necessary environment variables")
-    frontend: str = Field(description="list of necessary frontend components")
+    backend_endpoints: list[BackendEndpointDefinition] = Field(description="A list of endpoints for the backend web-server that will be triggered by cron tasks or frontend interactions")
+    cron_jobs: list[CronJobDefinition] = Field(description="A list of necessary cron jobs and which functions they call")
+    env_variables: list[str] = Field(description="A list of all necessary environment variables.")
+    # tables: str = Field(description="A list of database tables with schema for each table")
+    # frontend: str = Field(description="list of necessary frontend components")
 
     
 

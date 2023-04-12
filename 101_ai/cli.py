@@ -35,8 +35,7 @@ async def main():
     parser = get_task_definition_parser()
 
     system_message = SystemMessage(
-        content=" ".join(["As an engineering manager, you are talking with a Product Manager to create a well-defined technical specification for a new standalone app.",  
-                 "The Product Manager knows what the app should do, but does not have any technical knowledge.", 
+        content=" ".join(["As an engineering manager, you are talking with a Product Manager to create a well-defined technical specification for a new standalone app to give to a developer.",  
                  "You should ask the Product Manager questions when you need to know something about the product.",
                  "Remember to make the questions understandable for someone who does not code.", 
                  "The technical specification should be complete and self-sufficient, allowing a developer to implement it in TypeScript without needing additional guidance or external resources.", 
@@ -46,7 +45,7 @@ async def main():
     )
 
     human_message = HumanMessage(
-        content=f"Here is my new app concept: {task_description}"
+        content=f"I am the Product Manager. I don't have any technical knowledge. Here is my new app concept: {task_description}"
     )
 
     messages: list[BaseMessage] = [system_message, human_message]

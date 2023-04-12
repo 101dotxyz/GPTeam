@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import time
 from typing import Optional
@@ -18,17 +19,22 @@ REFLECTION_ITERATIONS = 2
 MAX_ITERATIONS_PER_REFLECTION = 10
 
 
-async def main():
+async def run(use_defaults=False):
     init()
     print_to_console(
         "Introduction",
         Fore.BLUE,
         "\nHi there 👋\n\nI'm Lixir, your AI programming assistant. Together we will create an application without writing a single line of code!\n\nLet's get started.\n",
     )
+
     print_to_console("Question", Fore.GREEN, "What are we building today?")
-    time.sleep(1)
-    task_description = "A Gmail bot that sends a daily email with a summary of the user's unread emails."
-    print_to_console("Answer", Fore.CYAN, task_description)
+    task_description = None
+    if use_defaults:
+        time.sleep(1)
+        task_description = "A Gmail bot that sends a daily email with a summary of the user's unread emails."
+        print_to_console("Answer", Fore.CYAN, task_description)
+    else:
+        task_description = input()
 
     parser = get_task_definition_parser()
 
@@ -58,7 +64,7 @@ async def main():
             )
 
             reflection_message = HumanMessage(
-                content=f"Now you have provided a task definition, please reflect on ways that you should improve it. Remember, the description of the task is: {task_description}. You can ask me questions to help you think of improvements. Only when you are ready, give me an improved task definition that corresponds to the previously provided formatting requirements."
+                content=f"Now you have provided your {nth(reflection_iteration)} draft of a technical specification, please reflect on ways that you could improve it. Remember, the description of the task is: {task_description}. You can ask me questions to help you think of improvements. Only when you are ready, give me an improved task definition that corresponds to the previously provided formatting requirements."
             )
 
             messages.append(reflection_message)
@@ -92,4 +98,15 @@ async def main():
     print_to_console("Implementation Notes", Fore.BLUE, result.implementation_notes)
 
 
-asyncio.run(main())
+def nth(n: int) -> str:
+    if n == 1:
+        return "first"
+    if n == 2:
+        return "second"
+    if n == 3:
+        return "third"
+    return f"{n}th"
+
+
+async def main(use_defaults: bool = False) -> Optional[TaskDefinition]:
+    await asyncio.gather(run(use_defaults), run(use_defaults))

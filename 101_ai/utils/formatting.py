@@ -7,12 +7,10 @@ from colorama import Fore, Style
 def colored_text(text: str, color: str) -> str:
     return color + text + Style.RESET_ALL
 
+
 def print_to_console(
-        title,
-        title_color,
-        content,
-        min_typing_speed=0.05,
-        max_typing_speed=0.01):
+    title, title_color, content, min_typing_speed=0.06, max_typing_speed=0.04
+):
     print(title_color + title + " " + Style.RESET_ALL, end="")
     if content:
         if isinstance(content, list):
@@ -25,6 +23,6 @@ def print_to_console(
             typing_speed = random.uniform(min_typing_speed, max_typing_speed)
             time.sleep(typing_speed)
             # type faster after each word
-            min_typing_speed = min_typing_speed * 0.95
-            max_typing_speed = max_typing_speed * 0.95
+            min_typing_speed = min_typing_speed * 0.97
+            max_typing_speed = max_typing_speed * 0.97
     print()

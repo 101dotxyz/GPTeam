@@ -11,7 +11,5 @@ class ChatModel(Enum):
     GPT4 = "gpt-4"
 
 
-def get_chat_model(model:ChatModel):
-    return ChatOpenAI(model_name=model.value)
-        
-
+def get_chat_model(model: ChatModel):
+    return ChatOpenAI(model_name=model.value, temperature=0.6)

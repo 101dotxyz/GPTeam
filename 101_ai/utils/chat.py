@@ -8,10 +8,7 @@ from .models import ChatModel
 
 
 def get_chat_completion(messages: list[BaseMessage], model: ChatModel) -> str:
-   chat = ChatOpenAI(model=model.value)
-   response = chat(messages)
+    chat = ChatOpenAI(model=model.value, temperature=0.6)
+    response = chat(messages)
 
-   return response.content
-    
-
-    
+    return response.content

@@ -8,19 +8,31 @@ from langchain import SerpAPIWrapper
 from langchain.agents import AgentExecutor, ConversationalChatAgent, Tool
 from langchain.agents.agent import Agent
 from langchain.agents.conversational_chat.prompt import (
-    FORMAT_INSTRUCTIONS, PREFIX, SUFFIX, TEMPLATE_TOOL_RESPONSE)
+    FORMAT_INSTRUCTIONS,
+    PREFIX,
+    SUFFIX,
+    TEMPLATE_TOOL_RESPONSE,
+)
 from langchain.callbacks.base import BaseCallbackManager
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts.base import BasePromptTemplate
-from langchain.prompts.chat import (ChatPromptTemplate,
-                                    HumanMessagePromptTemplate,
-                                    MessagesPlaceholder,
-                                    SystemMessagePromptTemplate)
-from langchain.schema import (AgentAction, AgentFinish, AIMessage,
-                              BaseLanguageModel, BaseMessage, BaseOutputParser,
-                              HumanMessage)
+from langchain.prompts.chat import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    MessagesPlaceholder,
+    SystemMessagePromptTemplate,
+)
+from langchain.schema import (
+    AgentAction,
+    AgentFinish,
+    AIMessage,
+    BaseLanguageModel,
+    BaseMessage,
+    BaseOutputParser,
+    HumanMessage,
+)
 from langchain.tools.base import BaseTool
 
 from ..tools.search import SearchTool
@@ -63,11 +75,12 @@ class TaskDefinitionAgent(ConversationalChatAgent):
             Action specifying what tool to use.
         """
 
-
         suggested_action = super().plan(intermediate_steps, **kwargs)
-        
+
         if isinstance(suggested_action, AgentFinish):
-            print("Agent is suggesting we finish the conversation. Initiating reflection instead.")
+            print(
+                "Agent is suggesting we finish the conversation. Initiating reflection instead."
+            )
         return suggested_action
 
     async def aplan(
@@ -87,18 +100,16 @@ class TaskDefinitionAgent(ConversationalChatAgent):
 
 
 def get_task_definition_agent():
-
-    tools = [
-        SearchTool(),
-        UserInputTool()
-    ]
+    tools = [SearchTool(), UserInputTool()]
 
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-    
-    llm=ChatOpenAI(temperature=0)
+
+    llm = ChatOpenAI(temperature=0)
 
     agent = TaskDefinitionAgent.from_llm_and_tools(llm=llm, tools=tools, verbose=True)
 
-    agent_chain = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True, memory=memory)
+    agent_chain = AgentExecutor.from_agent_and_tools(
+        agent=agent, tools=tools, verbose=True, memory=memory
+    )
 
     return agent_chain

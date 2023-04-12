@@ -1,4 +1,5 @@
 # Define your desired data structure.
+from sys import implementation
 from typing import Optional
 
 from langchain.chat_models import ChatOpenAI
@@ -19,6 +20,7 @@ class TaskDefinition(BaseModel):
     backend_endpoints: list[BackendEndpointDefinition] = Field(description="A list of endpoints for the backend web-server that will be triggered by cron tasks or frontend interactions")
     cron_jobs: list[CronJobDefinition] = Field(description="A list of necessary cron jobs and which functions they call")
     env_variables: list[str] = Field(description="A list of all necessary environment variables.")
+    implementation_notes: str = Field(description="Any notes for the developer about how to implement the application")
     # tables: str = Field(description="A list of database tables with schema for each table")
     # frontend: str = Field(description="list of necessary frontend components")
 

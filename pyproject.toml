@@ -9,6 +9,7 @@ packages = [{include = "101_ai"}]
 [tool.poetry.scripts]
 start = "101_ai:run"
 cli = "101_ai.cli:main"
+memory = "101_ai.memory_test:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"

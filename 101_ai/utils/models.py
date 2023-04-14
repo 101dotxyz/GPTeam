@@ -12,4 +12,4 @@ class ChatModel(Enum):
 
 
 def get_chat_model(model: ChatModel):
-    return ChatOpenAI(model_name=model.value, temperature=0.6)
+    return ChatOpenAI(model_name=model.value, temperature=0)

@@ -1,6 +1,8 @@
 import numpy as np
 import openai
 
+from ..utils.cache import json_cache
+
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     dot_product = np.dot(a, b)

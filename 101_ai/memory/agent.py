@@ -13,6 +13,13 @@ from langchain.schema import SystemMessage
 from numpy import number
 from pydantic import BaseModel, Field, validator
 
+from ..parameters import (
+    IMPORTANCE_WEIGHT,
+    RECENCY_WEIGHT,
+    REFLECTION_MEMORY_COUNT,
+    RELEVANCE_WEIGHT,
+    TIME_SPEED_MULTIPLIER,
+)
 from ..utils.chat import get_chat_completion
 from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel, get_chat_model
@@ -54,12 +61,6 @@ class ReflectionResponse(BaseModel):
     insights: list[ReflectionInsight] = Field(
         description="A list of insights and the statements that support them"
     )
-
-
-RECENCY_WEIGHT = 1
-RELEVANCE_WEIGHT = 1
-IMPORTANCE_WEIGHT = 1
-REFLECTION_MEMORY_COUNT = 100
 
 
 class MemoryType(Enum):
@@ -116,8 +117,9 @@ class Memory(BaseModel):
     @property
     def recency(self) -> float:
         last_retrieved_hours_ago = (datetime.now() - self.lastAccessed) / timedelta(
-            hours=1
+            hours=1 / TIME_SPEED_MULTIPLIER
         )
+
         decay_factor = 0.99
         return math.pow(decay_factor, last_retrieved_hours_ago)
 
@@ -146,6 +148,8 @@ class AgentMemory(BaseModel):
             self.memories, key=lambda memory: memory.lastAccessed, reverse=True
         )[:REFLECTION_MEMORY_COUNT]
 
+        print_to_console("Starting Reflection", Fore.CYAN, "🤔")
+
         llm = get_chat_model(ChatModel.GPT4)
 
         question_parser = OutputFixingParser.from_llm(
@@ -160,7 +164,7 @@ class AgentMemory(BaseModel):
         response = get_chat_completion(
             [reflection_questions_prompt],
             ChatModel.GPT4,
-            "🤔 Thinking about what to reflect on...",
+            loading_text="🤔 Thinking about what to reflect on...",
         )
 
         parsed_questions_response: ReflectionQuestionsResponse = question_parser.parse(
@@ -186,17 +190,17 @@ class AgentMemory(BaseModel):
                 content=f"Statements about {self.name}\n{formatted_memories}\nWhat 5 high-level insights can you infer from the above statements? {reflection_parser.get_format_instructions()}"
             )
 
+            print_to_console("Reflecting on Question", Fore.GREEN, f"{question}")
+
             response = get_chat_completion(
                 [reflection_prompt],
                 ChatModel.GPT4,
-                f"🤔 Reflecting on the following question: {question}",
+                loading_text=f"🤔 Reflecting on the following question: {question}",
             )
 
             parsed_insights_response: ReflectionResponse = reflection_parser.parse(
                 response
             )
-
-            print_to_console("Committing reflections to memory", Fore.CYAN, "")
 
             for reflection_insight in parsed_insights_response.insights:
                 related_memory_ids = [
@@ -210,11 +214,13 @@ class AgentMemory(BaseModel):
                     insights=related_memory_ids,
                 )
 
-                print(f"Added reflection memory: {new_reflection_memory.description}")
+                print_to_console(
+                    "Memorized Reflection",
+                    Fore.CYAN,
+                    new_reflection_memory.description,
+                )
 
                 self.add_memory(new_reflection_memory)
-
-            print("Done!")
 
 
 def calculate_memory_importance(memory_description: str) -> int:
@@ -232,12 +238,16 @@ def calculate_memory_importance(memory_description: str) -> int:
     response = get_chat_completion(
         [importance_scoring_prompt],
         ChatModel.GPT4,
-        "🤔 Calculating memory importance...",
+        loading_text="🤔 Calculating memory importance...",
     )
 
     parsed_response = parser.parse(response)
 
     rating = parsed_response.rating
+
+    print_to_console(
+        "Memory Importance", Fore.YELLOW, f"{memory_description}: {rating}/10"
+    )
 
     normalized_rating = (rating - 1) / 9
 

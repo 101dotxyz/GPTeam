@@ -20,7 +20,7 @@ def main():
 
     agent.memory.reflect()
 
-    state = AgentState(description="Klaus would like to go to the fish market")
+    state = AgentState(description="David is going to the fish market")
 
     query_memory = Memory(description=state.description)
 

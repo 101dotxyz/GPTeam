@@ -1,16 +1,20 @@
 import math
 from ast import parse
 from datetime import datetime, timedelta
+from enum import Enum
 from typing import List
+from uuid import UUID, uuid4
 
 import numpy as np
 from attr import validate
+from colorama import Fore
 from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from langchain.schema import SystemMessage
 from numpy import number
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field, validator
 
 from ..utils.chat import get_chat_completion
+from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel, get_chat_model
 from .embeddings import cosine_similarity, get_embedding
 
@@ -35,14 +39,40 @@ class ImportanceRatingResponse(BaseModel):
         return rating
 
 
+class ReflectionQuestionsResponse(BaseModel):
+    questions: tuple[str, str, str]
+
+
+class ReflectionInsight(BaseModel):
+    insight: str = Field(description="The insight")
+    statements: list[int] = Field(
+        description="A list of statements that support the insight"
+    )
+
+
+class ReflectionResponse(BaseModel):
+    insights: list[ReflectionInsight] = Field(
+        description="A list of insights and the statements that support them"
+    )
+
+
 RECENCY_WEIGHT = 1
 RELEVANCE_WEIGHT = 1
 IMPORTANCE_WEIGHT = 1
+REFLECTION_MEMORY_COUNT = 100
+
+
+class MemoryType(Enum):
+    OBSERVATION = "observation"
+    ACTION = "action"
+    REFLECTION = "reflection"
 
 
 class Memory(BaseModel):
     id: str
+    type: MemoryType
     description: str
+    insights: list[str]
     embedding: np.ndarray
     importance: int
     created: datetime
@@ -51,13 +81,20 @@ class Memory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def __init__(self, id: str, description: str):
+    def __init__(
+        self,
+        description: str,
+        type: MemoryType = MemoryType.OBSERVATION,
+        insights: list[str] = [],
+    ):
         importance = calculate_memory_importance(description)
         embedding = get_embedding(description)
         super().__init__(
-            id=id,
+            id=str(uuid4()),
             description=description,
+            type=type,
             importance=importance,
+            insights=insights,
             embedding=embedding,
             created=datetime.now(),
             lastAccessed=datetime.now(),
@@ -86,23 +123,102 @@ class Memory(BaseModel):
 
 
 class AgentMemory(BaseModel):
+    name: str
     memories: List[Memory]
 
-    def __init__(self, seed_memories: list[Memory]):
-        super().__init__(memories=seed_memories)
+    def __init__(self, name: str, seed_memories: list[Memory]):
+        super().__init__(name=name, memories=seed_memories)
 
     def retrieve_memories(self, state: AgentState, k: int = 5):
-        query_memory = Memory(id="query", description=state.description)
+        query_memory = Memory(description=state.description)
 
         sorted_memories = sorted(
-            self.memories, key=lambda memory: memory.score(query_memory)
+            self.memories, key=lambda memory: memory.score(query_memory), reverse=True
         )
 
         return sorted_memories[:k]
 
+    def add_memory(self, memory: Memory):
+        self.memories.append(memory)
+
+    def reflect(self):
+        recent_memories = sorted(
+            self.memories, key=lambda memory: memory.lastAccessed, reverse=True
+        )[:REFLECTION_MEMORY_COUNT]
+
+        llm = get_chat_model(ChatModel.GPT4)
+
+        question_parser = OutputFixingParser.from_llm(
+            parser=PydanticOutputParser(pydantic_object=ReflectionQuestionsResponse),
+            llm=llm,
+        )
+
+        reflection_questions_prompt = SystemMessage(
+            content=f"Here are a list of statements:\n{[memory.description for memory in recent_memories]}\n\nGiven only the information above, what are 3 most salient high-level questions we can answer about the subjects in the statements? {question_parser.get_format_instructions()}"
+        )
+
+        response = get_chat_completion(
+            [reflection_questions_prompt],
+            ChatModel.GPT4,
+            "🤔 Thinking about what to reflect on...",
+        )
+
+        parsed_questions_response: ReflectionQuestionsResponse = question_parser.parse(
+            response
+        )
+
+        for question in parsed_questions_response.questions:
+            relevant_memories = self.retrieve_memories(
+                AgentState(description=question), 20
+            )
+
+            formatted_memories = [
+                f"{index}. {memory.description}"
+                for index, memory in enumerate(relevant_memories, start=1)
+            ]
+
+            reflection_parser = OutputFixingParser.from_llm(
+                parser=PydanticOutputParser(pydantic_object=ReflectionResponse),
+                llm=llm,
+            )
+
+            reflection_prompt = SystemMessage(
+                content=f"Statements about {self.name}\n{formatted_memories}\nWhat 5 high-level insights can you infer from the above statements? {reflection_parser.get_format_instructions()}"
+            )
+
+            response = get_chat_completion(
+                [reflection_prompt],
+                ChatModel.GPT4,
+                f"🤔 Reflecting on the following question: {question}",
+            )
+
+            parsed_insights_response: ReflectionResponse = reflection_parser.parse(
+                response
+            )
+
+            print_to_console("Committing reflections to memory", Fore.CYAN, "")
+
+            for reflection_insight in parsed_insights_response.insights:
+                related_memory_ids = [
+                    relevant_memories[index - 1].id
+                    for index in reflection_insight.statements
+                ]
+
+                new_reflection_memory = Memory(
+                    type=MemoryType.REFLECTION,
+                    description=reflection_insight.insight,
+                    insights=related_memory_ids,
+                )
+
+                print(f"Added reflection memory: {new_reflection_memory.description}")
+
+                self.add_memory(new_reflection_memory)
+
+            print("Done!")
+
 
 def calculate_memory_importance(memory_description: str) -> int:
-    llm = get_chat_model(ChatModel.TURBO)
+    llm = get_chat_model(ChatModel.GPT4)
 
     parser = OutputFixingParser.from_llm(
         parser=PydanticOutputParser(pydantic_object=ImportanceRatingResponse),

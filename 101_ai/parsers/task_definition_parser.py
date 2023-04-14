@@ -36,6 +36,25 @@ class TaskDefinition(BaseModel):
     implementation_notes: str = Field(
         description="Any notes for the developer about how to implement the application"
     )
+
+    @validator("cron_jobs")
+    def validate_cron_jobs(cls, cron_jobs, values):
+        for cron_job in cron_jobs:
+            if not cron_job.url.startswith("/"):
+                raise ValueError(
+                    f"cron_job.url must start with a forward slash. Got: {cron_job.url}"
+                )
+            if values["backend_endpoints"]:
+                if not any(
+                    endpoint.endpoint == cron_job.url
+                    for endpoint in values["backend_endpoints"]
+                ):
+                    raise ValueError(
+                        f"cron_job.url must match an endpoint in backend_endpoints. Got: {cron_job.url}"
+                    )
+
+        return cron_jobs
+
     # tables: str = Field(description="A list of database tables with schema for each table")
     # frontend: str = Field(description="list of necessary frontend components")
 

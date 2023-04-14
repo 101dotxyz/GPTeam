@@ -15,7 +15,7 @@ def print_to_console(
     if content:
         if isinstance(content, list):
             content = " ".join(content)
-        words = content.split()
+        words = str(content).split()
         for i, word in enumerate(words):
             print(word, end="", flush=True)
             if i < len(words) - 1:

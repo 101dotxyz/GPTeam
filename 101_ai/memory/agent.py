@@ -128,10 +128,10 @@ class AgentMemory(BaseModel):
     name: str
     memories: List[Memory]
 
-    def __init__(self, name: str, seed_memories: list[Memory]):
+    def __init__(self, name: str, seed_memories: list[Memory]) -> None:
         super().__init__(name=name, memories=seed_memories)
 
-    def retrieve_memories(self, state: AgentState, k: int = 5):
+    def retrieve_memories(self, state: AgentState, k: int = 5) -> list[Memory]:
         query_memory = Memory(description=state.description)
 
         sorted_memories = sorted(
@@ -140,7 +140,7 @@ class AgentMemory(BaseModel):
 
         return sorted_memories[:k]
 
-    def add_memory(self, memory: Memory):
+    def add_memory(self, memory: Memory) -> None:
         self.memories.append(memory)
 
     def reflect(self):

@@ -4,16 +4,17 @@ from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from typing import Optional
 import json
 import os
+from uuid import UUID
 
 from .importance import ImportanceRatingResponse
 from .reflection import ReflectionQuestions, ReflectionResponse
 from ..memory.base import SingleMemory, MemoryType
-from .plans import SinglePlan, PlanningResponse
+from .plans import SinglePlan, LLMPlanResponse, LLMSinglePlan
 from ..utils.parameters import REFLECTION_MEMORY_COUNT, PLAN_LENGTH
 from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel, ChatModelName
 from ..utils.prompt import Prompter, PromptString
-from ..utils.supabase_client import supabase
+from ..utils.database import supabase
 
 class RelatedMemory(BaseModel):
     memory: SingleMemory
@@ -29,36 +30,37 @@ class AgentState(BaseModel):
 
 class Agent(BaseModel):
     id: str
-    name: str
+    full_name: str
     bio: str
     memories: Optional[list[SingleMemory]] = []
     directives: Optional[list[str]] = None
-    plans: Optional[list[SinglePlan]] = []
+    ordered_plan_ids: Optional[list[UUID]] = []
     state: Optional[AgentState]
 
     def __init__(
             self,
             id: str,
-            name: str,
+            full_name: str,
             bio: str,
             directives: list[str] = None,
             memories: list[SingleMemory] = [],
-            plans: list[SinglePlan] = [], 
+            ordered_plan_ids: list[UUID] = [], 
             state: AgentState = None
         ):
         
         super().__init__(
             id=id,
-            name=name,
+            full_name=full_name,
             bio=bio,
             directives=directives,
             memories=memories,
-            plans=plans,
+            ordered_plan_ids=ordered_plan_ids,
             state=state
         )
 
         print_to_console("New Agent Initialized: ", Fore.GREEN, self.bio) 
   
+
     @classmethod
     def from_json_profile(cls, id: str):
         path = os.path.dirname(os.path.abspath(__file__)) + f"/profiles/{id}.json"
@@ -69,31 +71,55 @@ class Agent(BaseModel):
         return cls(**profile)
 
     @classmethod
-    def from_db(cls, id: str):
-        pass
+    def from_db(cls, id: UUID):
+        data, count = supabase.table("Agents").select("*").eq("id", id).execute()
+        print(data)
+        return (cls(**data[1][0]))
 
     # private
     def _add_memory(
         self, 
         description: str,
         type: MemoryType = MemoryType.OBSERVATION,
-        related_memory_ids: list[str] = []
+        related_memory_ids: list[UUID] = [],
+        related_agent_ids: list[UUID] = []
     ) -> SingleMemory:
 
         memory = SingleMemory(
-            description=description,
+            agent_id=self.id,
             type=type,
+            description=description,
+            importance=self.calculate_importance(description),
             related_memory_ids=related_memory_ids,
-            importance=self.calculate_importance(description)
+            related_agent_ids=related_agent_ids
         )
     
         self.memories.append(memory)
+
+        # add to database
+        data, count = supabase.table("Memories").insert(memory.db_dict()).execute()
+
 
         print_to_console(
             "New Memory: ", Fore.BLUE, f"{memory}"
         )
 
         return memory
+
+    # private
+    def _update_agent_row(self):
+        update = {
+            "full_name": self.full_name,
+            "bio": self.bio,
+            "directives": self.directives,
+            "ordered_plan_ids": [str(plan_id) for plan_id in self.ordered_plan_ids],
+        }
+        return supabase.table("Agents").update(update).eq("id", self.id).execute()
+
+    # private
+    def _add_plan_rows(self, plans: list[SinglePlan]):
+        for plan in plans:
+            return supabase.table("Plans").insert(plan.dict()).execute()
 
     def update_state(self, description: str):
         self.state = AgentState(description=description)
@@ -126,13 +152,13 @@ class Agent(BaseModel):
     def summarize_activity(self, k: int = 20) -> str:
 
         recent_memories = sorted(
-            self.memories, key=lambda memory: memory.created, reverse=True
+            self.memories, key=lambda memory: memory.created_at, reverse=True
         )[:k]
 
         summary_prompter = Prompter(
             PromptString.RECENT_ACTIIVITY,
             { 
-                "name": self.name,
+                "full_name": self.full_name,
                 "memory_descriptions": str([memory.description for memory in recent_memories]) 
             }
         )
@@ -160,7 +186,7 @@ class Agent(BaseModel):
         importance_prompter = Prompter(
             PromptString.IMPORTANCE,
             {
-                "name": self.name,
+                "full_name": self.full_name,
                 "bio": self.bio,
                 "memory_description": memory_description,
                 "format_instructions": importance_parser.get_format_instructions()
@@ -180,7 +206,7 @@ class Agent(BaseModel):
 
     def reflect(self):
         recent_memories = sorted(
-            self.memories, key=lambda memory: memory.lastAccessed, reverse=True
+            self.memories, key=lambda memory: memory.last_accessed, reverse=True
         )[:REFLECTION_MEMORY_COUNT]
 
         print_to_console("Starting Reflection", Fore.CYAN, "🤔")
@@ -241,7 +267,7 @@ class Agent(BaseModel):
             reflection_prompter = Prompter(
                 PromptString.REFLECTION_INSIGHTS,
                 {
-                    "name": self.name, 
+                    "full_name": self.full_name, 
                     "memory_strings": str(memory_strings),
                     "format_instructions": reflection_parser.get_format_instructions(),
                 }
@@ -282,7 +308,7 @@ class Agent(BaseModel):
 
         # Make the plan parser
         plan_parser = OutputFixingParser.from_llm(
-            parser=PydanticOutputParser(pydantic_object=PlanningResponse),
+            parser=PydanticOutputParser(pydantic_object=LLMPlanResponse),
             llm=low_temp_llm,
         )
 
@@ -300,11 +326,11 @@ class Agent(BaseModel):
             PromptString.MAKE_PLANS,
             {
                 "time_window": '15 minutes', # PLAN_LENGTH,
-                "name": self.name,
+                "full_name": self.full_name,
                 "bio": self.bio,
                 "directives": str(self.directives),
                 "recent_activity": recent_activity,
-                "current_plans": str(self.plans),
+                "current_plans": str(self.ordered_plan_ids),
                 "format_instructions": plan_parser.get_format_instructions()
             }
         )
@@ -319,13 +345,36 @@ class Agent(BaseModel):
         )
 
         # Parse the response into an object
-        parsed_plans_response: PlanningResponse = plan_parser.parse(response)
+        parsed_plans_response: LLMPlanResponse = plan_parser.parse(response)
 
-        # Replace existing plans with the new ones
-        self.plans = parsed_plans_response.plans
+        # Delete existing plans
+        self.ordered_plan_ids = []
+
+        # Make a bunch of new plan objects, put em into a list
+        new_plans = list[SinglePlan]
+        ordered_plan_ids = list[UUID]
+        for plan in parsed_plans_response.plans:
+            new_plan = SinglePlan(
+                description=plan.description,
+                max_duration_hrs=plan.max_duration_hrs,
+                agent_id=self.id,
+                stop_condition=plan.stop_condition
+            )
+            new_plans.append(new_plan)
+            ordered_plan_ids.append(new_plan.id)
+        
+        # update the local agent object
+        self.ordered_plan_ids = ordered_plan_ids
+
+        # update the db agent row
+        data, count = self._update_agent_row()
+
+        # add the plans to the plan table
+        data, count = self._add_plan_rows(new_plans)
+            
 
         # Loop through each plan and print it to the console
-        for plan in self.plans:
+        for plan in self.ordered_plan_ids:
             print_to_console("Plan ", Fore.YELLOW, f"#{plan.index}: {plan.description} ({str(plan.duration)} hrs)")
 
 

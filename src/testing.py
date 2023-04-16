@@ -2,11 +2,12 @@ from dotenv import load_dotenv
 
 from .agent.base import Agent
 
+
 load_dotenv()
 
-agent = Agent.from_json_profile("TOM_THE_PIRATE")
 
-def test_reflection():
+
+def test_reflection(agent: Agent):
 
     agent.add_observation_strings([
         "Tom picked up a kettle and poured water into it",
@@ -27,10 +28,19 @@ def test_reflection():
         print(item)
 
 
-def test_planning():
+def test_planning(agent):
 
     agent.plan()
 
+
 def main():
+
+    jane_smith_id = "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12"
+    john_doe_id = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+
+    agent = Agent.from_db(jane_smith_id)
+
+    test_reflection(agent)
+
     # test_reflection()
-    test_planning()
+    # test_planning()

@@ -1,24 +1,22 @@
-import json
-from abc import abstractmethod
-
 from colorama import Fore
 from langchain.agents import Tool
-from langchain.schema import AIMessage, HumanMessage, SystemMessage
+from langchain.schema import HumanMessage, SystemMessage
 
-from ..utils.chat import get_chat_completion
 from ..utils.formatting import print_to_console
-from ..utils.models import ChatModel
+from ..utils.models import ChatModelName, ChatModel
 
 
 class LLMFunctionTool(Tool):
-    model: ChatModel
+    model_name: ChatModelName
+    chat_llm: ChatModel
     function_definition: str
     function_description: str
 
-    def __init__(self, name, definition, description, model=ChatModel.GPT4):
+    def __init__(self, name, definition, description, model_name=ChatModelName.GPT4):
         super().__init__(name=name, func=self.get_llm_response, description=description)
 
-        self.model = model
+        self.model_name = model_name
+        self.chat_llm = ChatModel(self.model_name)
 
     def get_llm_response(self, args: str) -> str:
         system_message = SystemMessage(
@@ -26,6 +24,6 @@ class LLMFunctionTool(Tool):
         )
         human_message = HumanMessage(content=f"{args}")
 
-        response = get_chat_completion([system_message, human_message], self.model)
+        response = self.chat_llm.get_chat_completion([system_message, human_message]) 
 
         return response

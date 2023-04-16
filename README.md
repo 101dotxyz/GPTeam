@@ -1,0 +1,2 @@
+
+`poetry run test`

@@ -1,0 +1,636 @@
+[{"message": {}, "time": "2023-04-15T21:44:53.451371"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Tom picked up a kettle and poured water into it\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:44:53.451704"}
+,
+{"message": {}, "time": "2023-04-15T21:44:55.083289"}
+,
+{"message": {}, "time": "2023-04-15T21:44:55.172142"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Tom picked up a kettle and poured water into it"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:44:55.172219"}
+,
+{"message": {}, "time": "2023-04-15T21:44:55.439592"}
+,
+{"message": {}, "time": "2023-04-15T21:44:56.851633"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:David killed his neighbour Freddie\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:44:56.852395"}
+,
+{"message": {}, "time": "2023-04-15T21:44:57.922654"}
+,
+{"message": {}, "time": "2023-04-15T21:44:58.006352"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David killed his neighbour Freddie"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:44:58.006441"}
+,
+{"message": {}, "time": "2023-04-15T21:44:58.156091"}
+,
+{"message": {}, "time": "2023-04-15T21:44:59.075697"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Michael went fishing\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:44:59.078502"}
+,
+{"message": {}, "time": "2023-04-15T21:45:00.332271"}
+,
+{"message": {}, "time": "2023-04-15T21:45:00.438832"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Michael went fishing"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:00.438929"}
+,
+{"message": {}, "time": "2023-04-15T21:45:00.559833"}
+,
+{"message": {}, "time": "2023-04-15T21:45:01.705506"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Michael discovered a new music artist\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:01.705884"}
+,
+{"message": {}, "time": "2023-04-15T21:45:03.427405"}
+,
+{"message": {}, "time": "2023-04-15T21:45:03.476555"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Michael discovered a new music artist"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:03.476639"}
+,
+{"message": {}, "time": "2023-04-15T21:45:03.629765"}
+,
+{"message": {}, "time": "2023-04-15T21:45:04.600683"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Tom ate a sandwich\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:04.601031"}
+,
+{"message": {}, "time": "2023-04-15T21:45:05.988430"}
+,
+{"message": {}, "time": "2023-04-15T21:45:06.066128"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Tom ate a sandwich"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:06.066296"}
+,
+{"message": {}, "time": "2023-04-15T21:45:06.222054"}
+,
+{"message": {}, "time": "2023-04-15T21:45:07.286203"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Michael ate a sandwich\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:07.286522"}
+,
+{"message": {}, "time": "2023-04-15T21:45:08.641402"}
+,
+{"message": {}, "time": "2023-04-15T21:45:08.746056"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Michael ate a sandwich"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:08.746121"}
+,
+{"message": {}, "time": "2023-04-15T21:45:09.024558"}
+,
+{"message": {}, "time": "2023-04-15T21:45:10.307703"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:David found out that Michael is a good friend\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:10.308005"}
+,
+{"message": {}, "time": "2023-04-15T21:45:11.170553"}
+,
+{"message": {}, "time": "2023-04-15T21:45:11.243533"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David found out that Michael is a good friend"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:11.243575"}
+,
+{"message": {}, "time": "2023-04-15T21:45:11.505701"}
+,
+{"message": {}, "time": "2023-04-15T21:45:13.075406"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "Here are a list of statements:\\n['David found out that Michael is a good friend', 'Michael ate a sandwich', 'Tom ate a sandwich', 'Michael discovered a new music artist', 'Michael went fishing', 'David killed his neighbour Freddie', 'Tom picked up a kettle and poured water into it']\\n\\nGiven only the information above, what are 3 most salient high-level questions we can answer about the subjects in the statements?\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"questions\": {\"title\": \"Questions\", \"description\": \"The questions we can answer\", \"type\": \"array\", \"minItems\": 3, \"maxItems\": 3, \"items\": [{\"type\": \"string\"}, {\"type\": \"string\"}, {\"type\": \"string\"}]}}, \"required\": [\"questions\"]}\\n```"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:13.075774"}
+,
+{"message": {}, "time": "2023-04-15T21:45:18.123126"}
+,
+{"message": {}, "time": "2023-04-15T21:45:18.203283"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What activities did Michael engage in?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:18.203467"}
+,
+{"message": {}, "time": "2023-04-15T21:45:18.308278"}
+,
+{"message": {}, "time": "2023-04-15T21:45:18.309233"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What activities did Michael engage in?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:18.309314"}
+,
+{"message": {}, "time": "2023-04-15T21:45:18.609239"}
+,
+{"message": {}, "time": "2023-04-15T21:45:18.615513"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What activities did Michael engage in?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:18.615743"}
+,
+{"message": {}, "time": "2023-04-15T21:45:18.717029"}
+,
+{"message": {}, "time": "2023-04-15T21:45:18.719159"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What activities did Michael engage in?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:18.719455"}
+,
+{"message": {}, "time": "2023-04-15T21:45:18.971443"}
+,
+{"message": {}, "time": "2023-04-15T21:45:18.972247"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What activities did Michael engage in?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:18.972322"}
+,
+{"message": {}, "time": "2023-04-15T21:45:19.090378"}
+,
+{"message": {}, "time": "2023-04-15T21:45:19.091374"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What activities did Michael engage in?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:19.091450"}
+,
+{"message": {}, "time": "2023-04-15T21:45:19.188533"}
+,
+{"message": {}, "time": "2023-04-15T21:45:19.190162"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What activities did Michael engage in?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:19.190339"}
+,
+{"message": {}, "time": "2023-04-15T21:45:19.280108"}
+,
+{"message": {}, "time": "2023-04-15T21:45:20.514367"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "\\n['1. David found out that Michael is a good friend', '2. Michael went fishing', '3. Michael ate a sandwich', '4. Michael discovered a new music artist', '5. Tom ate a sandwich', '6. David killed his neighbour Freddie', '7. Tom picked up a kettle and poured water into it']\\nWhat 5 high-level insights can you infer from the above statements?\\nWhen referring to people, always specify their full name.\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"insights\": {\"title\": \"Insights\", \"description\": \"A list of insights and the statement numbers that support them.\", \"type\": \"array\", \"items\": {\"$ref\": \"#/definitions/ReflectionInsight\"}}}, \"required\": [\"insights\"], \"definitions\": {\"ReflectionInsight\": {\"title\": \"ReflectionInsight\", \"type\": \"object\", \"properties\": {\"insight\": {\"title\": \"Insight\", \"description\": \"The insight\", \"type\": \"string\"}, \"related_statements\": {\"title\": \"Related Statements\", \"description\": \"A list of the statement numbers that support the insight\", \"type\": \"array\", \"items\": {\"type\": \"integer\"}}}, \"required\": [\"insight\", \"related_statements\"]}}}\\n```"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:20.514516"}
+,
+{"message": {}, "time": "2023-04-15T21:45:38.963150"}
+,
+{"message": {}, "time": "2023-04-15T21:45:39.823904"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:David has committed a crime\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:39.825435"}
+,
+{"message": {}, "time": "2023-04-15T21:45:41.278787"}
+,
+{"message": {}, "time": "2023-04-15T21:45:41.379039"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David has committed a crime"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:41.379244"}
+,
+{"message": {}, "time": "2023-04-15T21:45:41.840207"}
+,
+{"message": {}, "time": "2023-04-15T21:45:42.961665"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Michael is involved in recreational activities\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:42.961820"}
+,
+{"message": {}, "time": "2023-04-15T21:45:44.695655"}
+,
+{"message": {}, "time": "2023-04-15T21:45:44.738708"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Michael is involved in recreational activities"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:44.738959"}
+,
+{"message": {}, "time": "2023-04-15T21:45:45.209523"}
+,
+{"message": {}, "time": "2023-04-15T21:45:46.487747"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Michael and Tom both enjoy eating sandwiches\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:46.488908"}
+,
+{"message": {}, "time": "2023-04-15T21:45:48.995581"}
+,
+{"message": {}, "time": "2023-04-15T21:45:49.081496"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Michael and Tom both enjoy eating sandwiches"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:49.081675"}
+,
+{"message": {}, "time": "2023-04-15T21:45:49.183116"}
+,
+{"message": {}, "time": "2023-04-15T21:45:50.189097"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Tom engaged in a tea or coffee-making process\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:50.189239"}
+,
+{"message": {}, "time": "2023-04-15T21:45:51.356552"}
+,
+{"message": {}, "time": "2023-04-15T21:45:51.449966"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Tom engaged in a tea or coffee-making process"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:51.450126"}
+,
+{"message": {}, "time": "2023-04-15T21:45:51.760323"}
+,
+{"message": {}, "time": "2023-04-15T21:45:53.111738"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:David values his friendship with Michael\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:53.112118"}
+,
+{"message": {}, "time": "2023-04-15T21:45:54.420651"}
+,
+{"message": {}, "time": "2023-04-15T21:45:54.474947"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David values his friendship with Michael"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:54.475089"}
+,
+{"message": {}, "time": "2023-04-15T21:45:54.558678"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.011006"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:55.011391"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.096667"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.099069"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:55.099294"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.221793"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.223095"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:55.223270"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.542756"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.543575"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:55.543672"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.706652"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.708336"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:55.708559"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.895759"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.896678"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:55.896757"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.988550"}
+,
+{"message": {}, "time": "2023-04-15T21:45:55.991000"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:55.991169"}
+,
+{"message": {}, "time": "2023-04-15T21:45:56.087575"}
+,
+{"message": {}, "time": "2023-04-15T21:45:56.089049"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:56.089171"}
+,
+{"message": {}, "time": "2023-04-15T21:45:56.316892"}
+,
+{"message": {}, "time": "2023-04-15T21:45:56.318349"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:56.318509"}
+,
+{"message": {}, "time": "2023-04-15T21:45:56.412134"}
+,
+{"message": {}, "time": "2023-04-15T21:45:56.413468"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:56.413630"}
+,
+{"message": {}, "time": "2023-04-15T21:45:56.673164"}
+,
+{"message": {}, "time": "2023-04-15T21:45:56.674455"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:56.674568"}
+,
+{"message": {}, "time": "2023-04-15T21:45:56.785421"}
+,
+{"message": {}, "time": "2023-04-15T21:45:56.787898"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What action did David take against his neighbor?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:45:56.788117"}
+,
+{"message": {}, "time": "2023-04-15T21:45:57.043396"}
+,
+{"message": {}, "time": "2023-04-15T21:45:58.267387"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "\\n['1. David has committed a crime', '2. David values his friendship with Michael', '3. Tom engaged in a tea or coffee-making process', '4. Michael is involved in recreational activities', '5. Michael and Tom both enjoy eating sandwiches', '6. David killed his neighbour Freddie', '7. David found out that Michael is a good friend', '8. Michael ate a sandwich', '9. Michael went fishing', '10. Tom ate a sandwich', '11. Michael discovered a new music artist', '12. Tom picked up a kettle and poured water into it']\\nWhat 5 high-level insights can you infer from the above statements?\\nWhen referring to people, always specify their full name.\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"insights\": {\"title\": \"Insights\", \"description\": \"A list of insights and the statement numbers that support them.\", \"type\": \"array\", \"items\": {\"$ref\": \"#/definitions/ReflectionInsight\"}}}, \"required\": [\"insights\"], \"definitions\": {\"ReflectionInsight\": {\"title\": \"ReflectionInsight\", \"type\": \"object\", \"properties\": {\"insight\": {\"title\": \"Insight\", \"description\": \"The insight\", \"type\": \"string\"}, \"related_statements\": {\"title\": \"Related Statements\", \"description\": \"A list of the statement numbers that support the insight\", \"type\": \"array\", \"items\": {\"type\": \"integer\"}}}, \"required\": [\"insight\", \"related_statements\"]}}}\\n```"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:45:58.267772"}
+,
+{"message": {}, "time": "2023-04-15T21:46:21.563719"}
+,
+{"message": {}, "time": "2023-04-15T21:46:22.277126"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:1. David has engaged in criminal activity and even killed someone.\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:46:22.277337"}
+,
+{"message": {}, "time": "2023-04-15T21:46:23.432370"}
+,
+{"message": {}, "time": "2023-04-15T21:46:23.527590"}
+,
+{"message": {"api_version": "None", "data": {"input": ["1. David has engaged in criminal activity and even killed someone."], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:23.527729"}
+,
+{"message": {}, "time": "2023-04-15T21:46:23.674871"}
+,
+{"message": {}, "time": "2023-04-15T21:46:25.141981"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:2. David and Michael have a strong friendship and value their relationship.\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:46:25.142170"}
+,
+{"message": {}, "time": "2023-04-15T21:46:26.473706"}
+,
+{"message": {}, "time": "2023-04-15T21:46:26.499906"}
+,
+{"message": {"api_version": "None", "data": {"input": ["2. David and Michael have a strong friendship and value their relationship."], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:26.499974"}
+,
+{"message": {}, "time": "2023-04-15T21:46:26.589846"}
+,
+{"message": {}, "time": "2023-04-15T21:46:28.149279"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:3. Michael participates in various activities, both leisure and culinary.\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:46:28.149561"}
+,
+{"message": {}, "time": "2023-04-15T21:46:29.543050"}
+,
+{"message": {}, "time": "2023-04-15T21:46:29.614292"}
+,
+{"message": {"api_version": "None", "data": {"input": ["3. Michael participates in various activities, both leisure and culinary."], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:29.614402"}
+,
+{"message": {}, "time": "2023-04-15T21:46:29.709148"}
+,
+{"message": {}, "time": "2023-04-15T21:46:31.107215"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:4. Tom is involved in food preparation and activities related to beverages.\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:46:31.107830"}
+,
+{"message": {}, "time": "2023-04-15T21:46:32.277946"}
+,
+{"message": {}, "time": "2023-04-15T21:46:32.358840"}
+,
+{"message": {"api_version": "None", "data": {"input": ["4. Tom is involved in food preparation and activities related to beverages."], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:32.358903"}
+,
+{"message": {}, "time": "2023-04-15T21:46:32.678419"}
+,
+{"message": {}, "time": "2023-04-15T21:46:33.988098"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:5. Michael and Tom have a common interest in eating sandwiches.\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:46:33.990556"}
+,
+{"message": {}, "time": "2023-04-15T21:46:35.789891"}
+,
+{"message": {}, "time": "2023-04-15T21:46:35.868936"}
+,
+{"message": {"api_version": "None", "data": {"input": ["5. Michael and Tom have a common interest in eating sandwiches."], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:35.869010"}
+,
+{"message": {}, "time": "2023-04-15T21:46:35.959379"}
+,
+{"message": {}, "time": "2023-04-15T21:46:36.576604"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:36.577490"}
+,
+{"message": {}, "time": "2023-04-15T21:46:36.675754"}
+,
+{"message": {}, "time": "2023-04-15T21:46:36.680365"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:36.680672"}
+,
+{"message": {}, "time": "2023-04-15T21:46:36.773088"}
+,
+{"message": {}, "time": "2023-04-15T21:46:36.775184"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:36.775425"}
+,
+{"message": {}, "time": "2023-04-15T21:46:36.871919"}
+,
+{"message": {}, "time": "2023-04-15T21:46:36.873556"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:36.873706"}
+,
+{"message": {}, "time": "2023-04-15T21:46:36.964765"}
+,
+{"message": {}, "time": "2023-04-15T21:46:36.966776"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:36.967013"}
+,
+{"message": {}, "time": "2023-04-15T21:46:37.089257"}
+,
+{"message": {}, "time": "2023-04-15T21:46:37.091228"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:37.091547"}
+,
+{"message": {}, "time": "2023-04-15T21:46:37.424324"}
+,
+{"message": {}, "time": "2023-04-15T21:46:37.425730"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:37.425856"}
+,
+{"message": {}, "time": "2023-04-15T21:46:37.840050"}
+,
+{"message": {}, "time": "2023-04-15T21:46:37.843269"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:37.843577"}
+,
+{"message": {}, "time": "2023-04-15T21:46:38.251013"}
+,
+{"message": {}, "time": "2023-04-15T21:46:38.251864"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:38.251937"}
+,
+{"message": {}, "time": "2023-04-15T21:46:38.338430"}
+,
+{"message": {}, "time": "2023-04-15T21:46:38.340060"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:38.340158"}
+,
+{"message": {}, "time": "2023-04-15T21:46:38.433640"}
+,
+{"message": {}, "time": "2023-04-15T21:46:38.435090"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:38.435247"}
+,
+{"message": {}, "time": "2023-04-15T21:46:38.642785"}
+,
+{"message": {}, "time": "2023-04-15T21:46:38.644365"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:38.644540"}
+,
+{"message": {}, "time": "2023-04-15T21:46:39.065739"}
+,
+{"message": {}, "time": "2023-04-15T21:46:39.067396"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:39.067672"}
+,
+{"message": {}, "time": "2023-04-15T21:46:39.155958"}
+,
+{"message": {}, "time": "2023-04-15T21:46:39.157599"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:39.157729"}
+,
+{"message": {}, "time": "2023-04-15T21:46:39.310731"}
+,
+{"message": {}, "time": "2023-04-15T21:46:39.313019"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:39.313659"}
+,
+{"message": {}, "time": "2023-04-15T21:46:39.543840"}
+,
+{"message": {}, "time": "2023-04-15T21:46:39.546327"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:39.546614"}
+,
+{"message": {}, "time": "2023-04-15T21:46:39.659172"}
+,
+{"message": {}, "time": "2023-04-15T21:46:39.661618"}
+,
+{"message": {"api_version": "None", "data": {"input": ["What did Tom do with the kettle?"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:46:39.662006"}
+,
+{"message": {}, "time": "2023-04-15T21:46:39.868280"}
+,
+{"message": {}, "time": "2023-04-15T21:46:41.124819"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "\\n['1. 4. Tom is involved in food preparation and activities related to beverages.', '2. 5. Michael and Tom have a common interest in eating sandwiches.', '3. 3. Michael participates in various activities, both leisure and culinary.', '4. Tom engaged in a tea or coffee-making process', '5. 1. David has engaged in criminal activity and even killed someone.', '6. 2. David and Michael have a strong friendship and value their relationship.', '7. Tom picked up a kettle and poured water into it', '8. Michael and Tom both enjoy eating sandwiches', '9. Michael is involved in recreational activities', '10. David values his friendship with Michael', '11. Tom ate a sandwich', '12. David has committed a crime', '13. Michael went fishing', '14. Michael ate a sandwich', '15. David found out that Michael is a good friend', '16. David killed his neighbour Freddie', '17. Michael discovered a new music artist']\\nWhat 5 high-level insights can you infer from the above statements?\\nWhen referring to people, always specify their full name.\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"insights\": {\"title\": \"Insights\", \"description\": \"A list of insights and the statement numbers that support them.\", \"type\": \"array\", \"items\": {\"$ref\": \"#/definitions/ReflectionInsight\"}}}, \"required\": [\"insights\"], \"definitions\": {\"ReflectionInsight\": {\"title\": \"ReflectionInsight\", \"type\": \"object\", \"properties\": {\"insight\": {\"title\": \"Insight\", \"description\": \"The insight\", \"type\": \"string\"}, \"related_statements\": {\"title\": \"Related Statements\", \"description\": \"A list of the statement numbers that support the insight\", \"type\": \"array\", \"items\": {\"type\": \"integer\"}}}, \"required\": [\"insight\", \"related_statements\"]}}}\\n```"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:46:41.125042"}
+,
+{"message": {}, "time": "2023-04-15T21:47:08.037379"}
+,
+{"message": {}, "time": "2023-04-15T21:47:08.935142"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Tom has an interest in food and beverage-related activities.\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:47:08.937276"}
+,
+{"message": {}, "time": "2023-04-15T21:47:10.166679"}
+,
+{"message": {}, "time": "2023-04-15T21:47:10.185354"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Tom has an interest in food and beverage-related activities."], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:10.185506"}
+,
+{"message": {}, "time": "2023-04-15T21:47:10.275274"}
+,
+{"message": {}, "time": "2023-04-15T21:47:11.361061"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Michael is involved in leisure and culinary activities and enjoys eating sandwiches.\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:47:11.361338"}
+,
+{"message": {}, "time": "2023-04-15T21:47:12.900244"}
+,
+{"message": {}, "time": "2023-04-15T21:47:12.926471"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Michael is involved in leisure and culinary activities and enjoys eating sandwiches."], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:12.926623"}
+,
+{"message": {}, "time": "2023-04-15T21:47:13.083015"}
+,
+{"message": {}, "time": "2023-04-15T21:47:14.290748"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:David is involved in criminal activities and has committed a murder.\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:47:14.291046"}
+,
+{"message": {}, "time": "2023-04-15T21:47:16.442577"}
+,
+{"message": {}, "time": "2023-04-15T21:47:16.483002"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is involved in criminal activities and has committed a murder."], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:16.483144"}
+,
+{"message": {}, "time": "2023-04-15T21:47:16.576293"}
+,
+{"message": {}, "time": "2023-04-15T21:47:17.740924"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Michael and David have a strong friendship and value their relationship.\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:47:17.742486"}
+,
+{"message": {}, "time": "2023-04-15T21:47:18.871861"}
+,
+{"message": {}, "time": "2023-04-15T21:47:18.982954"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Michael and David have a strong friendship and value their relationship."], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:18.983180"}
+,
+{"message": {}, "time": "2023-04-15T21:47:19.095163"}
+,
+{"message": {}, "time": "2023-04-15T21:47:20.754948"}
+,
+{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "You are a memory importance AI. Given the character's profile and the memory description, rate the importance of the memory on a scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance). Be sure to make your rating relative to the character's personality and concerns.\\n\\nExample #1:\\nName: Jojo\\nBio: Jojo is a professional ice-skater who loves specialty coffee. She hopes to compete in the olympics one day.\\nMemory: Jojo sees a new coffee shop\\n\\n Your Response: '3'\\n\\nExample #2:\\nName: Skylar\\nBio: Skylar is a product marketing manager. She works at a growth-stage tech company that makes autonomous cars. She loves cats.\\nMemory: Skylar sees a new coffee shop\\n\\n Your Response: '1'\\n\\nExample #3:\\nName: Bob\\nBio: Bob is a plumber living in the lower east side of New York City. He's been working as a plumber for 20 years. On the weekends he enjoys taking long walks with his wife. \\nMemory: Bob's wife slaps him in the face.\\n\\n Your Response: '9'\\n\\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\\n\\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}}\\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\\n\\nHere is the output schema:\\n```\\n{\"properties\": {\"rating\": {\"title\": \"Rating\", \"description\": \"Importance integer from 1 to 10\", \"type\": \"integer\"}}, \"required\": [\"rating\"]}\\n``` Let's Begin! \\n\\n Name: Tom\\nBio: Bio.TOM_THE_PIRATE\\nMemory:Michael and Tom have a common interest in eating sandwiches.\\n\\n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T21:47:20.755377"}
+,
+{"message": {}, "time": "2023-04-15T21:47:21.775595"}
+,
+{"message": {}, "time": "2023-04-15T21:47:21.800378"}
+,
+{"message": {"api_version": "None", "data": {"input": ["Michael and Tom have a common interest in eating sandwiches."], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:21.800484"}
+,
+{"message": {}, "time": "2023-04-15T21:47:22.184110"}
+,
+{"message": {}, "time": "2023-04-15T21:47:22.781613"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:22.782047"}
+,
+{"message": {}, "time": "2023-04-15T21:47:22.873062"}
+,
+{"message": {}, "time": "2023-04-15T21:47:22.874855"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:22.875223"}
+,
+{"message": {}, "time": "2023-04-15T21:47:22.994335"}
+,
+{"message": {}, "time": "2023-04-15T21:47:22.995969"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:22.996092"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.160955"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.163699"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:23.164110"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.278156"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.279885"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:23.280037"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.457106"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.458196"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:23.458301"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.547500"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.549248"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:23.549466"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.820534"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.821525"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:23.821620"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.948944"}
+,
+{"message": {}, "time": "2023-04-15T21:47:23.950680"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:23.950874"}
+,
+{"message": {}, "time": "2023-04-15T21:47:24.102395"}
+,
+{"message": {}, "time": "2023-04-15T21:47:24.103728"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:24.103864"}
+,
+{"message": {}, "time": "2023-04-15T21:47:24.302758"}
+,
+{"message": {}, "time": "2023-04-15T21:47:24.304299"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:24.304448"}
+,
+{"message": {}, "time": "2023-04-15T21:47:24.432552"}
+,
+{"message": {}, "time": "2023-04-15T21:47:24.434564"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:24.434776"}
+,
+{"message": {}, "time": "2023-04-15T21:47:24.841791"}
+,
+{"message": {}, "time": "2023-04-15T21:47:24.843924"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:24.844145"}
+,
+{"message": {}, "time": "2023-04-15T21:47:24.984977"}
+,
+{"message": {}, "time": "2023-04-15T21:47:24.987069"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:24.987176"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.130194"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.131625"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:25.131762"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.236704"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.238658"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:25.238809"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.335696"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.337270"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:25.337401"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.443741"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.445136"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:25.445318"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.553945"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.555364"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:25.555470"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.646016"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.647641"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:25.647742"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.885691"}
+,
+{"message": {}, "time": "2023-04-15T21:47:25.887757"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:25.887963"}
+,
+{"message": {}, "time": "2023-04-15T21:47:26.044631"}
+,
+{"message": {}, "time": "2023-04-15T21:47:26.046010"}
+,
+{"message": {"api_version": "None", "data": {"input": ["David is going to the fish market"], "model": "text-embedding-ada-002", "encoding_format": "base64"}, "message": "Post details"}, "time": "2023-04-15T21:47:26.046109"}
+,
+{"message": {}, "time": "2023-04-15T21:47:26.336700"}
+]

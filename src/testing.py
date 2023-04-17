@@ -1,27 +1,26 @@
 from dotenv import load_dotenv
 
 from .agent.base import Agent
-
+from .world.base import World
 
 load_dotenv()
 
-def test_reflection(agent: Agent):
-
-    agent.reflect()
-
-    related_memories = agent.related_memories("David is going to the fish market")
-
-    print("Relevant memories:")
-    for item in related_memories:
-        print(item)
-
-
-def test_planning(agent: Agent):
-
-    agent.plan()
-
+discord_world_id = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13"
+jane_smith_id = "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12"
+john_doe_id = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
 
 def main():
+
+    # # Set up the world
+    # world = World.from_id(discord_world_id)
+
+    # print(world.locations)
+    
+    # for location in world.locations:
+    #     print(location.allowed_agent_ids)
+    
+
+    # Set up the agents
 
     jane_observations = [
         "Jane Smith Built a new robot prototype",
@@ -36,12 +35,11 @@ def main():
         "Jane Smith has an interest in AI",
     ]
 
-    jane_smith_id = "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12"
-    john_doe_id = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+    agent = Agent.from_id(jane_smith_id)
+    agent.add_observation_strings(jane_observations)
+    
+    agent.plan()
 
-    jane = Agent.from_db(jane_smith_id)
-    jane.add_observation_strings(jane_observations)
+    # agent.reflect()
 
-    # test_reflection(jane)
 
-    test_planning(jane)

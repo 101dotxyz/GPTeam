@@ -20,7 +20,7 @@ class PromptString(Enum):
     )
 
     MAKE_PLANS = (
-        "You are a plan generating AI. Given the character's bio, goals, recent activity, and current plans, generate additional plans for them to carry out, such that the final set of plans include at least {time_window} of activity. The plan list should be numbered, with each plan containing a description, start time, stop condition, and max duration.\n\nExample Plan: '{{\"index\": 1, \"description\": \"Cook dinner\", \"start_time\": \"20:00 - 12/12/22\",\"max_duration_hrs\": 1.5, \"stop_condition\": \"Dinner is fully prepared\"}}'\n\nName: {full_name}\nBio: {bio}\nGoals: {directives}\nRecent Activity: {recent_activity}\nCurrent Plans: {current_plans}\n\n{format_instructions}"
+        "You are a plan generating AI. Given the character's bio, goals, recent activity, and current plans, generate additional plans for them to carry out, such that the final set of plans include at least {time_window} of activity. The plan list should be numbered, with each plan containing a description, location, start time, stop condition, and max duration.\n\nExample Plan: '{{\"index\": 1, \"description\": \"Cook dinner\", \"location\": \"Jane's Kitchen\",\"start_time\": \"20:00 - 12/12/22\",\"max_duration_hrs\": 1.5, \"stop_condition\": \"Dinner is fully prepared\"}}'\n\nFor each plan, pick the most reasonable location out of this list: {location_descriptions}\n\n{format_instructions}\n\nLet's Begin!\n\nName: {full_name}\nBio: {bio}\nGoals: {directives}\nRecent Activity: {recent_activity}\nCurrent Plans: {current_plans}"
     )
 
 

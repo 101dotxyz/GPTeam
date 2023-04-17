@@ -13,10 +13,10 @@ from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel, ChatModelName
 from ..utils.parameters import PLAN_LENGTH, REFLECTION_MEMORY_COUNT
 from ..utils.prompt import Prompter, PromptString
-from ..world.base import AgentAction
 from .importance import ImportanceRatingResponse
 from .plans import LLMPlanResponse, LLMSinglePlan, SinglePlan
 from .reflection import ReflectionQuestions, ReflectionResponse
+from ..world.base import Location
 
 
 class RelatedMemory(BaseModel):
@@ -28,17 +28,18 @@ class RelatedMemory(BaseModel):
 
 
 class AgentState(BaseModel):
-    description: str
+    plan_id: UUID
+    location_id: UUID
 
 
 class Agent(BaseModel):
     id: str
     full_name: str
     bio: str
-    memories: Optional[list[SingleMemory]] = []
     directives: Optional[list[str]] = None
+    memories: Optional[list[SingleMemory]] = []
     ordered_plan_ids: Optional[list[UUID]] = []
-    state: Optional[AgentState]
+    state: Optional[AgentState] = None
 
     def __init__(
         self,
@@ -60,7 +61,13 @@ class Agent(BaseModel):
             state=state,
         )
 
-        print_to_console("New Agent Initialized: ", Fore.GREEN, self.bio)
+        print_to_console("New Agent Initialized: ", Fore.GREEN, self.full_name)
+
+    @property
+    def allowed_locations(self) -> list[Location]:
+        """Get locations that this agent is allowed to be in."""
+        data, count = supabase.table("Locations").select("*").contains("allowed_agent_ids", [self.id]).execute()
+        return [Location(**location) for location in data[1]]
 
     @classmethod
     def from_json_profile(cls, id: str):
@@ -72,7 +79,7 @@ class Agent(BaseModel):
         return cls(**profile)
 
     @classmethod
-    def from_db(cls, id: UUID):
+    def from_id(cls, id: UUID):
         data, count = supabase.table("Agents").select("*").eq("id", id).execute()
         return cls(**data[1][0])
 
@@ -109,6 +116,7 @@ class Agent(BaseModel):
             "bio": self.bio,
             "directives": self.directives,
             "ordered_plan_ids": [str(plan_id) for plan_id in self.ordered_plan_ids],
+            "state": self.state.dict(),
         }
         print("Updated ", self.full_name, " in db.")
         return supabase.table("Agents").update(row).eq("id", self.id).execute()
@@ -126,9 +134,6 @@ class Agent(BaseModel):
             }
             print("Added plan to db.")
             return supabase.table("Plans").insert(row).execute()
-
-    def update_state(self, description: str):
-        self.state = AgentState(description=description)
 
     def add_observation_strings(self, memory_strings: list[str]):
         for memory_string in memory_strings:
@@ -315,7 +320,8 @@ class Agent(BaseModel):
         plan_prompter = Prompter(
             PromptString.MAKE_PLANS,
             {
-                "time_window": "15 minutes",  # PLAN_LENGTH,
+                "time_window": PLAN_LENGTH,
+                "location_descriptions": [f"'{location.name}' - {location.description}\n" for location in self.allowed_locations],
                 "full_name": self.full_name,
                 "bio": self.bio,
                 "directives": str(self.directives),
@@ -346,6 +352,7 @@ class Agent(BaseModel):
         for plan in parsed_plans_response.plans:
             new_plan = SinglePlan(
                 description=plan.description,
+                location_id=Location.from_name(plan.location_name).id,
                 max_duration_hrs=plan.max_duration_hrs,
                 agent_id=self.id,
                 stop_condition=plan.stop_condition,
@@ -367,9 +374,26 @@ class Agent(BaseModel):
             print_to_console(
                 "Plan ",
                 Fore.YELLOW,
-                f"#{index}: {plan.description} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]",
+                f"#{index}: {plan.description} @ {plan.location_id} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]",
             )
 
-    def act() -> AgentAction:
-        # will need to take some args
-        pass
+    def act(self):
+        """Given the current state, what should we do next?"""
+        # If we have no plans, make some
+        if len(self.ordered_plan_ids) == 0:
+            self.plan()
+
+        # Get the first plan
+        plan = SinglePlan.from_id(self.ordered_plan_ids[0])
+
+        # If the plan is done, delete it and move to the next
+        while plan.completed_at is not None:
+            self.ordered_plan_ids = self.ordered_plan_ids[1:]
+            plan.delete()
+            plan = SinglePlan.from_id(self.ordered_plan_ids[0])
+
+        # Set the agent state
+        self.state = AgentState(plan_id=plan.id, location_id=plan.location_id)
+
+        # Update the agent row
+        data, count = self._update_agent_row()

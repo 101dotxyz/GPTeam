@@ -4,10 +4,13 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
+from ..utils.database import supabase
+
 
 class SinglePlan(BaseModel):
     id: UUID
     description: str
+    location_id: UUID
     max_duration_hrs: float
     created_at: datetime.datetime
     agent_id: UUID
@@ -17,6 +20,7 @@ class SinglePlan(BaseModel):
     def __init__(
         self,
         description: str,
+        location_id: UUID,
         max_duration_hrs: float,
         stop_condition: str,
         agent_id: UUID,
@@ -24,6 +28,7 @@ class SinglePlan(BaseModel):
         super().__init__(
             id=uuid4(),
             description=description,
+            location_id=location_id,
             max_duration_hrs=max_duration_hrs,
             created_at=datetime.datetime.now(),
             agent_id=agent_id,
@@ -31,10 +36,20 @@ class SinglePlan(BaseModel):
             completed_at=None,
         )
 
+    @classmethod
+    def from_id(cls, id: UUID):
+        data, count = supabase.table("Plans").select("*").eq("id", id).execute()
+        return cls(**data[1][0])
+
+    def delete(self):
+        data, count = supabase.table("Plans").delete().eq("id", self.id).execute()
+        return data
+
 
 class LLMSinglePlan(BaseModel):
     index: int = Field(description="The plan number")
     description: str = Field(description="A description of the plan")
+    location_name: str = Field(description="The name of the location")
     start_time: datetime.datetime = Field(
         description="The starting time, using this strftime format string: '%H:%M - %m/%d/%y'"
     )

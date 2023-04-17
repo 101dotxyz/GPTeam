@@ -5,35 +5,16 @@ create type "public"."memory_type" as enum ('reflection', 'observation');
 create type "public"."event_type" as enum ('non_message', 'message');
 
 
-create table "public"."Agents" (
-    "id" uuid DEFAULT uuid_generate_v4() not null,
+CREATE TABLE "public"."Agents" (
+    "id" uuid DEFAULT uuid_generate_v4() NOT NULL,
     "full_name" text,
     "bio" text,
     "directives" text[],
-    "ordered_plan_ids" uuid[]
+    "ordered_plan_ids" uuid[],
+    "state" jsonb,
+    PRIMARY KEY ("id")
 );
 
-create table "public"."Events" (
-    "id" uuid DEFAULT uuid_generate_v4() not null,
-    "type" event_type,
-    "description" text,
-    "world" uuid,
-    "location" uuid,
-    "witnesses" uuid[]
-);
-
-create table "public"."Locations" (
-    "id" uuid DEFAULT uuid_generate_v4() not null,
-    "world_id" uuid,
-    "name" text,
-    "channel_id" text,
-    "allowed_agent_ids" uuid[]
-);
-
-create table "public"."Worlds" (
-    "id" uuid DEFAULT uuid_generate_v4() not null,
-    "name" text
-);
 
 create table "public"."Memories" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
@@ -45,7 +26,8 @@ create table "public"."Memories" (
     "embedding" vector(1536),
     "importance" smallint,
     "last_accessed" timestamp with time zone,
-    "related_agent_ids" uuid[]
+    "related_agent_ids" uuid[],
+    PRIMARY KEY ("id")
 );
 
 create table "public"."Plans" (
@@ -53,19 +35,35 @@ create table "public"."Plans" (
     "created_at" timestamp with time zone default now(),
     "agent_id" uuid,
     "description" text,
+    "location_id" uuid,
     "max_duration_hrs" real,
     "stop_condition" text,
-    "completed_at" timestamp with time zone
+    "completed_at" timestamp with time zone,
+    PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "Agents_pkey" ON public."Agents" USING btree (id);
+create table "public"."Events" (
+    "id" uuid DEFAULT uuid_generate_v4() not null,
+    "type" event_type,
+    "description" text,
+    "world" uuid,
+    "location" uuid,
+    "witnesses" uuid[],
+    PRIMARY KEY ("id")
+);
 
-CREATE UNIQUE INDEX "Memories_pkey" ON public."Memories" USING btree (id);
+create table "public"."Locations" (
+    "id" uuid DEFAULT uuid_generate_v4() not null,
+    "world_id" uuid,
+    "name" text,
+    "description" text,
+    "channel_id" bigint,
+    "allowed_agent_ids" uuid[],
+    PRIMARY KEY ("id")
+);
 
-CREATE UNIQUE INDEX "Plans_pkey" ON public."Plans" USING btree (id);
-
-alter table "public"."Agents" add constraint "Agents_pkey" PRIMARY KEY using index "Agents_pkey";
-
-alter table "public"."Memories" add constraint "Memories_pkey" PRIMARY KEY using index "Memories_pkey";
-
-alter table "public"."Plans" add constraint "Plans_pkey" PRIMARY KEY using index "Plans_pkey";
+create table "public"."Worlds" (
+    "id" uuid DEFAULT uuid_generate_v4() not null,
+    "name" text,
+    PRIMARY KEY ("id")
+);

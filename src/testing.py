@@ -5,19 +5,7 @@ from .agent.base import Agent
 
 load_dotenv()
 
-
-
 def test_reflection(agent: Agent):
-
-    agent.add_observation_strings([
-        "Tom picked up a kettle and poured water into it",
-        "David killed his neighbour Freddie",
-        "Michael went fishing",
-        "Michael discovered a new music artist",
-        "Tom ate a sandwich",
-        "Michael ate a sandwich",
-        "David found out that Michael is a good friend",
-    ])
 
     agent.reflect()
 
@@ -28,19 +16,32 @@ def test_reflection(agent: Agent):
         print(item)
 
 
-def test_planning(agent):
+def test_planning(agent: Agent):
 
     agent.plan()
 
 
 def main():
 
+    jane_observations = [
+        "Jane Smith Built a new robot prototype",
+        "Jane Smith Attended AI conference last month with John Doe",
+        "John Doe is a dedicated researcher",
+        "John Doe told Jane Smith about his upcoming presentation"
+    ]
+
+    john_observations = [
+        "John Doe Attended AI conference last month with Jane Smith",
+        "John Doe Read a new paper on reinforcement learning",
+        "Jane Smith has an interest in AI",
+    ]
+
     jane_smith_id = "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12"
     john_doe_id = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
 
-    agent = Agent.from_db(jane_smith_id)
+    jane = Agent.from_db(jane_smith_id)
+    jane.add_observation_strings(jane_observations)
 
-    test_reflection(agent)
+    # test_reflection(jane)
 
-    # test_reflection()
-    # test_planning()
+    test_planning(jane)

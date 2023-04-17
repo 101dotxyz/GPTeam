@@ -73,7 +73,6 @@ class Agent(BaseModel):
     @classmethod
     def from_db(cls, id: UUID):
         data, count = supabase.table("Agents").select("*").eq("id", id).execute()
-        print(data)
         return (cls(**data[1][0]))
 
     # private
@@ -108,18 +107,28 @@ class Agent(BaseModel):
 
     # private
     def _update_agent_row(self):
-        update = {
+        row = {
             "full_name": self.full_name,
             "bio": self.bio,
             "directives": self.directives,
             "ordered_plan_ids": [str(plan_id) for plan_id in self.ordered_plan_ids],
         }
-        return supabase.table("Agents").update(update).eq("id", self.id).execute()
+        print("Updated ", self.full_name, " in db.")
+        return supabase.table("Agents").update(row).eq("id", self.id).execute()
 
     # private
     def _add_plan_rows(self, plans: list[SinglePlan]):
         for plan in plans:
-            return supabase.table("Plans").insert(plan.dict()).execute()
+            row = {
+                "id": str(plan.id),
+                "description": plan.description,
+                "max_duration_hrs": plan.max_duration_hrs,
+                "agent_id": str(self.id),
+                "created_at": plan.created_at.isoformat(),
+                "stop_condition": plan.stop_condition,
+            }
+            print("Added plan to db.")
+            return supabase.table("Plans").insert(row).execute()
 
     def update_state(self, description: str):
         self.state = AgentState(description=description)
@@ -302,7 +311,7 @@ class Agent(BaseModel):
 
     def plan(self):
 
-        print_to_console("Starting Planning", Fore.YELLOW, "📝")
+        print_to_console("Starting to Plan", Fore.YELLOW, "📝")
 
         low_temp_llm = ChatModel(ChatModelName.GPT4, temperature=0)
 
@@ -351,8 +360,8 @@ class Agent(BaseModel):
         self.ordered_plan_ids = []
 
         # Make a bunch of new plan objects, put em into a list
-        new_plans = list[SinglePlan]
-        ordered_plan_ids = list[UUID]
+        new_plans: list[SinglePlan] = []
+        ordered_plan_ids = []
         for plan in parsed_plans_response.plans:
             new_plan = SinglePlan(
                 description=plan.description,
@@ -374,8 +383,8 @@ class Agent(BaseModel):
             
 
         # Loop through each plan and print it to the console
-        for plan in self.ordered_plan_ids:
-            print_to_console("Plan ", Fore.YELLOW, f"#{plan.index}: {plan.description} ({str(plan.duration)} hrs)")
+        for index, plan in enumerate(new_plans):
+            print_to_console("Plan ", Fore.YELLOW, f"#{index}: {plan.description} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]")
 
 
 

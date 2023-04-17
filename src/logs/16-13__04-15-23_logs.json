@@ -1,4 +1,0 @@
-[{"message": {}, "time": "2023-04-15T23:13:50.707283"}
-,
-{"message": {"api_version": "None", "data": {"messages": [{"role": "system", "content": "Given the following memories, generate a few sentences summarizing what Tom has been doing lately.\\n\\n[]"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1}, "message": "Post details"}, "time": "2023-04-15T23:13:50.707531"}
-]

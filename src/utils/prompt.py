@@ -16,7 +16,7 @@ class PromptString(Enum):
     )
 
     RECENT_ACTIIVITY = (
-        "Given the following memories, generate a few sentences summarizing what {full_name} has been doing lately.\n\n{memory_descriptions}"
+        "Given the following memories, generate a short summary of what {full_name} has been doing lately. Do not make up details that are not specified in the memories. \n\nMemories: {memory_descriptions}"
     )
 
     MAKE_PLANS = (

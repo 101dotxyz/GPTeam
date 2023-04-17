@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Optional
 import datetime
 from uuid import uuid4, UUID
 
@@ -9,7 +10,7 @@ class SinglePlan(BaseModel):
     created_at: datetime.datetime
     agent_id: UUID
     stop_condition: str
-    completed_at: datetime.datetime
+    completed_at: Optional[datetime.datetime] = None
 
     def __init__(self, description: str, max_duration_hrs: float, stop_condition: str, agent_id: UUID):
         super().__init__(

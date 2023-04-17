@@ -2,6 +2,8 @@ CREATE extension if not exists "pgcrypto" with schema "extensions";
 create extension if not exists "vector" with schema "extensions";
 
 create type "public"."memory_type" as enum ('reflection', 'observation');
+create type "public"."event_type" as enum ('non_message', 'message');
+
 
 create table "public"."Agents" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
@@ -9,6 +11,28 @@ create table "public"."Agents" (
     "bio" text,
     "directives" text[],
     "ordered_plan_ids" uuid[]
+);
+
+create table "public"."Events" (
+    "id" uuid DEFAULT uuid_generate_v4() not null,
+    "type" event_type,
+    "description" text,
+    "world" uuid,
+    "location" uuid,
+    "witnesses" uuid[]
+);
+
+create table "public"."Locations" (
+    "id" uuid DEFAULT uuid_generate_v4() not null,
+    "world_id" uuid,
+    "name" text,
+    "channel_id" text,
+    "allowed_agent_ids" uuid[]
+);
+
+create table "public"."Worlds" (
+    "id" uuid DEFAULT uuid_generate_v4() not null,
+    "name" text
 );
 
 create table "public"."Memories" (

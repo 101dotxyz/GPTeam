@@ -1,7 +1,7 @@
 import datetime
 from enum import Enum
 from typing import Optional
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from pydantic import BaseModel
 
@@ -34,7 +34,7 @@ class Location(BaseModel):
 
 
 class EventType(Enum):
-    LOCATION = "location"
+    LOCATION = "non_message"
     MESSAGE = "message"
 
 
@@ -49,12 +49,12 @@ class Event(BaseModel):
     type: EventType
     timestamp: Optional[datetime.datetime] = None
     step: int
-    witnesses: list[str]
+    witnesses: list[UUID]
 
     def __init__(
         self,
         name: str,
-        witnesses: list[str],
+        witnesses: list[UUID],
         timestamp: Optional[datetime.datetime] = None,
         step: Optional[int] = None,
     ):
@@ -70,13 +70,13 @@ class Event(BaseModel):
         )
 
     @staticmethod
-    def from_discord_message(message: DiscordMessage, witnesses: list[str]) -> "Event":
+    def from_discord_message(message: DiscordMessage, witnesses: list[UUID]) -> "Event":
         # parse user provided message into an event
         # witnesses are all agents who were in the same location as the message
         pass
 
     @staticmethod
-    def from_agent_action(action: AgentAction, witnesses: list[str]) -> "Event":
+    def from_agent_action(action: AgentAction, witnesses: list[UUID]) -> "Event":
         # parse agent action into an event
         pass
 
@@ -114,7 +114,7 @@ class World(BaseModel):
         # will need to parse some args
         return [agent.act() for agent in self.agents]
 
-    def get_witnesses(self, location: Location) -> list[Agent]:
+    def get_witnesses(self, location: Location) -> list[UUID]:
         return [
             agent for agent in self.agents if self.state.positions[agent] == location
         ]

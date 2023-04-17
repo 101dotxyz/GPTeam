@@ -13,6 +13,7 @@ from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel, ChatModelName
 from ..utils.parameters import PLAN_LENGTH, REFLECTION_MEMORY_COUNT
 from ..utils.prompt import Prompter, PromptString
+from ..world.base import AgentAction
 from .importance import ImportanceRatingResponse
 from .plans import LLMPlanResponse, LLMSinglePlan, SinglePlan
 from .reflection import ReflectionQuestions, ReflectionResponse
@@ -368,3 +369,7 @@ class Agent(BaseModel):
                 Fore.YELLOW,
                 f"#{index}: {plan.description} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]",
             )
+
+    def act() -> AgentAction:
+        # will need to take some args
+        pass

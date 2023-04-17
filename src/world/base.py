@@ -111,8 +111,8 @@ class World(BaseModel):
         pass
 
     def get_agent_actions(self) -> list[AgentAction]:
-        # get all actions from agents
-        pass
+        # will need to parse some args
+        return [agent.act() for agent in self.agents]
 
     def get_witnesses(self, location: Location) -> list[Agent]:
         return [

@@ -1,5 +1,5 @@
+from pydantic import BaseModel, Field, validator
 
-from pydantic import BaseModel, validator, Field
 
 class ImportanceRatingResponse(BaseModel):
     rating: int = Field(description="Importance integer from 1 to 10")
@@ -10,5 +10,3 @@ class ImportanceRatingResponse(BaseModel):
             raise ValueError(f"rating must be between 1 and 10. Got: {rating}")
 
         return rating
-
-

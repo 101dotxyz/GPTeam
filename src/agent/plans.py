@@ -1,7 +1,9 @@
-from pydantic import BaseModel, Field
-from typing import Optional
 import datetime
-from uuid import uuid4, UUID
+from typing import Optional
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, Field
+
 
 class SinglePlan(BaseModel):
     id: UUID
@@ -12,7 +14,13 @@ class SinglePlan(BaseModel):
     stop_condition: str
     completed_at: Optional[datetime.datetime] = None
 
-    def __init__(self, description: str, max_duration_hrs: float, stop_condition: str, agent_id: UUID):
+    def __init__(
+        self,
+        description: str,
+        max_duration_hrs: float,
+        stop_condition: str,
+        agent_id: UUID,
+    ):
         super().__init__(
             id=uuid4(),
             description=description,
@@ -27,9 +35,15 @@ class SinglePlan(BaseModel):
 class LLMSinglePlan(BaseModel):
     index: int = Field(description="The plan number")
     description: str = Field(description="A description of the plan")
-    start_time: datetime.datetime = Field(description="The starting time, using this strftime format string: '%H:%M - %m/%d/%y'")
-    stop_condition: str = Field(description="The condition that will cause this plan to be completed")
-    max_duration_hrs: float = Field(description="The maximum amount of time to spend on this activity before reassessing")
+    start_time: datetime.datetime = Field(
+        description="The starting time, using this strftime format string: '%H:%M - %m/%d/%y'"
+    )
+    stop_condition: str = Field(
+        description="The condition that will cause this plan to be completed"
+    )
+    max_duration_hrs: float = Field(
+        description="The maximum amount of time to spend on this activity before reassessing"
+    )
 
 
 class LLMPlanResponse(BaseModel):

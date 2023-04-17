@@ -11,8 +11,8 @@ class ReflectionInsight(BaseModel):
         description="A list of the statement numbers that support the insight"
     )
 
+
 class ReflectionResponse(BaseModel):
     insights: list[ReflectionInsight] = Field(
         description="A list of insights and the statement numbers that support them."
     )
-

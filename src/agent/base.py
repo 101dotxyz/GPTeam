@@ -1,20 +1,22 @@
-from pydantic import BaseModel
-from colorama import Fore
-from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
-from typing import Optional
 import json
 import os
+from typing import Optional
 from uuid import UUID
 
-from .importance import ImportanceRatingResponse
-from .reflection import ReflectionQuestions, ReflectionResponse
-from ..memory.base import SingleMemory, MemoryType
-from .plans import SinglePlan, LLMPlanResponse, LLMSinglePlan
-from ..utils.parameters import REFLECTION_MEMORY_COUNT, PLAN_LENGTH
+from colorama import Fore
+from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
+from pydantic import BaseModel
+
+from ..memory.base import MemoryType, SingleMemory
+from ..utils.database import supabase
 from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel, ChatModelName
+from ..utils.parameters import PLAN_LENGTH, REFLECTION_MEMORY_COUNT
 from ..utils.prompt import Prompter, PromptString
-from ..utils.database import supabase
+from .importance import ImportanceRatingResponse
+from .plans import LLMPlanResponse, LLMSinglePlan, SinglePlan
+from .reflection import ReflectionQuestions, ReflectionResponse
+
 
 class RelatedMemory(BaseModel):
     memory: SingleMemory
@@ -38,16 +40,15 @@ class Agent(BaseModel):
     state: Optional[AgentState]
 
     def __init__(
-            self,
-            id: str,
-            full_name: str,
-            bio: str,
-            directives: list[str] = None,
-            memories: list[SingleMemory] = [],
-            ordered_plan_ids: list[UUID] = [], 
-            state: AgentState = None
-        ):
-        
+        self,
+        id: str,
+        full_name: str,
+        bio: str,
+        directives: list[str] = None,
+        memories: list[SingleMemory] = [],
+        ordered_plan_ids: list[UUID] = [],
+        state: AgentState = None,
+    ):
         super().__init__(
             id=id,
             full_name=full_name,
@@ -55,11 +56,10 @@ class Agent(BaseModel):
             directives=directives,
             memories=memories,
             ordered_plan_ids=ordered_plan_ids,
-            state=state
+            state=state,
         )
 
-        print_to_console("New Agent Initialized: ", Fore.GREEN, self.bio) 
-  
+        print_to_console("New Agent Initialized: ", Fore.GREEN, self.bio)
 
     @classmethod
     def from_json_profile(cls, id: str):
@@ -73,35 +73,31 @@ class Agent(BaseModel):
     @classmethod
     def from_db(cls, id: UUID):
         data, count = supabase.table("Agents").select("*").eq("id", id).execute()
-        return (cls(**data[1][0]))
+        return cls(**data[1][0])
 
     # private
     def _add_memory(
-        self, 
+        self,
         description: str,
         type: MemoryType = MemoryType.OBSERVATION,
         related_memory_ids: list[UUID] = [],
-        related_agent_ids: list[UUID] = []
+        related_agent_ids: list[UUID] = [],
     ) -> SingleMemory:
-
         memory = SingleMemory(
             agent_id=self.id,
             type=type,
             description=description,
             importance=self.calculate_importance(description),
             related_memory_ids=related_memory_ids,
-            related_agent_ids=related_agent_ids
+            related_agent_ids=related_agent_ids,
         )
-    
+
         self.memories.append(memory)
 
         # add to database
         data, count = supabase.table("Memories").insert(memory.db_dict()).execute()
 
-
-        print_to_console(
-            "New Memory: ", Fore.BLUE, f"{memory}"
-        )
+        print_to_console("New Memory: ", Fore.BLUE, f"{memory}")
 
         return memory
 
@@ -135,19 +131,12 @@ class Agent(BaseModel):
 
     def add_observation_strings(self, memory_strings: list[str]):
         for memory_string in memory_strings:
-            self._add_memory(
-                memory_string,
-                MemoryType.OBSERVATION
-            )
-    
-    def related_memories(self, query: str, k: int = 5) ->  list[RelatedMemory]:
+            self._add_memory(memory_string, MemoryType.OBSERVATION)
 
+    def related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
         # Calculate relevance for each memory and store it in a list of dictionaries
         memories_with_relevance = [
-            RelatedMemory(
-                memory=memory,
-                relevance=memory.relevance(query)
-            )
+            RelatedMemory(memory=memory, relevance=memory.relevance(query))
             for memory in self.memories
         ]
 
@@ -159,17 +148,18 @@ class Agent(BaseModel):
         return sorted_memories[:k]
 
     def summarize_activity(self, k: int = 20) -> str:
-
         recent_memories = sorted(
             self.memories, key=lambda memory: memory.created_at, reverse=True
         )[:k]
 
         summary_prompter = Prompter(
             PromptString.RECENT_ACTIIVITY,
-            { 
+            {
                 "full_name": self.full_name,
-                "memory_descriptions": str([memory.description for memory in recent_memories]) 
-            }
+                "memory_descriptions": str(
+                    [memory.description for memory in recent_memories]
+                ),
+            },
         )
 
         low_temp_llm = ChatModel(ChatModelName.GPT4, temperature=0)
@@ -180,9 +170,8 @@ class Agent(BaseModel):
         )
 
         return response
- 
-    def calculate_importance(self, memory_description: str) -> int:
 
+    def calculate_importance(self, memory_description: str) -> int:
         # Set up a complex chat model
         complex_llm = ChatModel(ChatModelName.GPT4, temperature=0)
 
@@ -198,8 +187,8 @@ class Agent(BaseModel):
                 "full_name": self.full_name,
                 "bio": self.bio,
                 "memory_description": memory_description,
-                "format_instructions": importance_parser.get_format_instructions()
-            }
+                "format_instructions": importance_parser.get_format_instructions(),
+            },
         )
 
         response = complex_llm.get_chat_completion(
@@ -231,30 +220,27 @@ class Agent(BaseModel):
 
         # Get memory descriptions
         memory_descriptions = [memory.description for memory in recent_memories]
-        
+
         # Create questions Prompter
         questions_prompter = Prompter(
             PromptString.REFLECTION_QUESTIONS,
             {
-                "memory_descriptions": str(memory_descriptions), 
-                "format_instructions": question_parser.get_format_instructions()
-            }
+                "memory_descriptions": str(memory_descriptions),
+                "format_instructions": question_parser.get_format_instructions(),
+            },
         )
 
         # Get the reflection questions
         response = chat_llm.get_chat_completion(
-            questions_prompter.prompt, 
-            loading_text="🤔 Thinking about what to reflect on..."
+            questions_prompter.prompt,
+            loading_text="🤔 Thinking about what to reflect on...",
         )
 
         # Parse the response into an object
-        parsed_questions_response: ReflectionQuestions = question_parser.parse(
-            response
-        )
+        parsed_questions_response: ReflectionQuestions = question_parser.parse(response)
 
         # For each question in the parsed questions...
         for question in parsed_questions_response.questions:
-
             # Get the related memories
             related_memories = self.related_memories(question, 20)
 
@@ -276,10 +262,10 @@ class Agent(BaseModel):
             reflection_prompter = Prompter(
                 PromptString.REFLECTION_INSIGHTS,
                 {
-                    "full_name": self.full_name, 
+                    "full_name": self.full_name,
                     "memory_strings": str(memory_strings),
                     "format_instructions": reflection_parser.get_format_instructions(),
-                }
+                },
             )
 
             # Get the reflection insights
@@ -295,7 +281,6 @@ class Agent(BaseModel):
 
             # For each insight in the parsed insights...
             for reflection_insight in parsed_insights_response.insights:
-
                 # Get the related memory ids
                 related_memory_ids = [
                     related_memories[index - 1].memory.id
@@ -310,7 +295,6 @@ class Agent(BaseModel):
                 )
 
     def plan(self):
-
         print_to_console("Starting to Plan", Fore.YELLOW, "📝")
 
         low_temp_llm = ChatModel(ChatModelName.GPT4, temperature=0)
@@ -324,24 +308,20 @@ class Agent(BaseModel):
         # Get a summary of the recent activity
         recent_activity = self.summarize_activity()
 
-        print_to_console(
-            "Summarized Recent Activity",
-            Fore.YELLOW,
-            recent_activity
-        )
+        print_to_console("Summarized Recent Activity", Fore.YELLOW, recent_activity)
 
         # Make the Plan prompter
         plan_prompter = Prompter(
             PromptString.MAKE_PLANS,
             {
-                "time_window": '15 minutes', # PLAN_LENGTH,
+                "time_window": "15 minutes",  # PLAN_LENGTH,
                 "full_name": self.full_name,
                 "bio": self.bio,
                 "directives": str(self.directives),
                 "recent_activity": recent_activity,
                 "current_plans": str(self.ordered_plan_ids),
-                "format_instructions": plan_parser.get_format_instructions()
-            }
+                "format_instructions": plan_parser.get_format_instructions(),
+            },
         )
 
         # Set up a complex chat model
@@ -367,11 +347,11 @@ class Agent(BaseModel):
                 description=plan.description,
                 max_duration_hrs=plan.max_duration_hrs,
                 agent_id=self.id,
-                stop_condition=plan.stop_condition
+                stop_condition=plan.stop_condition,
             )
             new_plans.append(new_plan)
             ordered_plan_ids.append(new_plan.id)
-        
+
         # update the local agent object
         self.ordered_plan_ids = ordered_plan_ids
 
@@ -380,16 +360,11 @@ class Agent(BaseModel):
 
         # add the plans to the plan table
         data, count = self._add_plan_rows(new_plans)
-            
 
         # Loop through each plan and print it to the console
         for index, plan in enumerate(new_plans):
-            print_to_console("Plan ", Fore.YELLOW, f"#{index}: {plan.description} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]")
-
-
-
-
-
-
-
-
+            print_to_console(
+                "Plan ",
+                Fore.YELLOW,
+                f"#{index}: {plan.description} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]",
+            )

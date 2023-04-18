@@ -1,6 +1,7 @@
 from enum import Enum
 from langchain.schema import BaseMessage
 from langchain.chat_models import ChatOpenAI
+from langchain.llms import OpenAI
 
 from .cache import json_cache
 from .spinner import Spinner
@@ -11,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # set up logging
-set_up_logging()
+# set_up_logging()
 
 class ChatModelName(Enum):
     TURBO = "gpt-3.5-turbo"
@@ -21,12 +22,16 @@ class ChatModel(ChatOpenAI):
     def __init__(self, model_name: ChatModelName, **kwargs):
         super().__init__(model_name=model_name.value, **kwargs)
 
-    @json_cache(sleep_range=(0.4, 1))
+    @json_cache(sleep_range=(0, 0))
     def get_chat_completion(self, messages: list[BaseMessage], **kwargs) -> str:
         with Spinner(kwargs.get("loading_text", "🤔 Thinking... ")):
             resp = super().generate([messages])
 
         return resp.generations[0][0].text
+
+class CompletionModel(OpenAI):
+    def __init__(self, model_name: str, **kwargs):
+        super().__init__(model_name=model_name, **kwargs)
 
 
 def get_chat_model(model_name: ChatModelName, **kwargs) -> ChatModel:

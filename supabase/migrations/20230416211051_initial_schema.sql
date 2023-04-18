@@ -26,7 +26,6 @@ create table "public"."Memories" (
     "embedding" vector(1536),
     "importance" smallint,
     "last_accessed" timestamp with time zone,
-    "related_agent_ids" uuid[],
     PRIMARY KEY ("id")
 );
 
@@ -44,6 +43,8 @@ create table "public"."Plans" (
 
 create table "public"."Events" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
+    "created_at" timestamp with time zone default now(),
+    "step" smallint,
     "type" event_type,
     "description" text,
     "world" uuid,
@@ -65,5 +66,6 @@ create table "public"."Locations" (
 create table "public"."Worlds" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
     "name" text,
+    "current_step" smallint,
     PRIMARY KEY ("id")
 );

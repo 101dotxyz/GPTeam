@@ -24,6 +24,7 @@ def main():
 
     jane_observations = [
         "Jane Smith Built a new robot prototype",
+        "Jane Smith ate some lunch",
         "Jane Smith Attended AI conference last month with John Doe",
         "John Doe is a dedicated researcher",
         "John Doe told Jane Smith about his upcoming presentation"
@@ -38,7 +39,7 @@ def main():
     agent = Agent.from_id(jane_smith_id)
     agent.add_observation_strings(jane_observations)
     
-    agent.plan()
+    agent.act()
 
     # agent.reflect()
 

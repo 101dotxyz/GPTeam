@@ -24,25 +24,34 @@ class SinglePlan(BaseModel):
         max_duration_hrs: float,
         stop_condition: str,
         agent_id: UUID,
+        created_at: Optional[datetime.datetime] = None,
+        completed_at: Optional[datetime.datetime] = None,
+        id: Optional[UUID] = None
     ):
+        if id is None:
+            id = uuid4()
+
+        if created_at is None:
+            created_at = datetime.datetime.now()
+            
         super().__init__(
-            id=uuid4(),
+            id=id,
             description=description,
             location_id=location_id,
             max_duration_hrs=max_duration_hrs,
-            created_at=datetime.datetime.now(),
+            created_at=created_at,
             agent_id=agent_id,
             stop_condition=stop_condition,
-            completed_at=None,
+            completed_at=completed_at,
         )
 
     @classmethod
     def from_id(cls, id: UUID):
-        data, count = supabase.table("Plans").select("*").eq("id", id).execute()
+        data, count = supabase.table("Plans").select("*").eq("id", str(id)).execute()
         return cls(**data[1][0])
 
     def delete(self):
-        data, count = supabase.table("Plans").delete().eq("id", self.id).execute()
+        data, count = supabase.table("Plans").delete().eq("id", str(self.id)).execute()
         return data
 
 

@@ -33,13 +33,16 @@ class Location(BaseModel):
 
     def __init__(
             self, 
-            id: UUID,
             world_id: UUID,
             name: str,
             description: str,
             channel_id: int,
-            allowed_agent_ids: list[UUID]
-        ):
+            allowed_agent_ids: list[UUID],
+            id: Optional[UUID] = None
+    ):
+        if id is None:
+            id = uuid4()
+        
         super().__init__(
             id=id, 
             world_id=world_id,
@@ -51,7 +54,7 @@ class Location(BaseModel):
 
     @classmethod
     def from_id(cls, id: UUID):
-        data, count = supabase.table("Locations").select("*").eq("id", id).execute()
+        data, count = supabase.table("Locations").select("*").eq("id", str(id)).execute()
         return cls(**data[1][0])
     
     @classmethod
@@ -66,11 +69,20 @@ class Location(BaseModel):
         print(data)
         return [agent["id"] for agent in data[1]]
 
+    @property
+    def current_step(self) -> int:
+        """Get the current step in this location."""
+        data, count = supabase.table("Worlds").select("current_step").eq("id", str(self.world_id)).execute()
+        return data[1][0]["current_step"]
+    
+    def pull_events(self):
+        """Get current step events from the events table that have happened in this location."""
+        data, count = supabase.table("Events").select("*").eq("location_id", str(self.id)).eq("step", self.current_step).execute()
+        return data[1]
 
 class EventType(Enum):
     LOCATION = "non_message"
     MESSAGE = "message"
-
 
 class DiscordMessage(BaseModel):
     content: str
@@ -79,19 +91,24 @@ class DiscordMessage(BaseModel):
 
 
 class Event(BaseModel):
-    id: str
+    id: UUID
     type: EventType
+    description: str
     timestamp: Optional[datetime.datetime] = None
     step: int
-    witnesses: list[UUID]
+    location_id: UUID
 
     def __init__(
         self,
-        name: str,
-        witnesses: list[UUID],
+        type: EventType,
+        description: str,
         timestamp: Optional[datetime.datetime] = None,
         step: Optional[int] = None,
+        id: Optional[UUID] = None
     ):
+        if id is None:
+            id = uuid4()
+        
         if timestamp is None and step is None:
             raise ValueError("Either timestamp or step must be provided")
 
@@ -100,7 +117,11 @@ class Event(BaseModel):
             pass
 
         super().__init__(
-            id=uuid4(), name=name, timestamp=timestamp, _step=step, witnesses=witnesses
+            id=id, 
+            type=type,
+            description=description,
+            timestamp=timestamp, 
+            step=step,
         )
 
     @staticmethod
@@ -115,34 +136,26 @@ class Event(BaseModel):
     #     pass
 
 
-class WorldState(BaseModel):
-    agent_positions: dict[UUID, Location]
-
-
 class World(BaseModel):
     id: UUID
     name: str
-    history: list[WorldState]
+    current_step: int
 
     def __init__(
         self, 
-        id: UUID, 
         name: str,
-        history: list[WorldState] = [],
-    ) -> None:
+        current_step: int = 0,
+        id: Optional[UUID] = None
+    ):
+        if id is None:
+            id = uuid4()
+        
         super().__init__(
             id=id,
             name=name,
-            history=history,
+            current_step=current_step
         )
 
-    @property
-    def state(self) -> WorldState:
-        return self.history[-1]
-
-    @property
-    def current_step(self) -> int:
-        return len(self.history)
     
     @property
     def locations(self) -> list[Location]:
@@ -152,7 +165,12 @@ class World(BaseModel):
 
     @classmethod
     def from_id(cls, id: UUID):
-        data, count = supabase.table("Worlds").select("*").eq("id", id).execute()
+        data, count = supabase.table("Worlds").select("*").eq("id", str(id)).execute()
+        return cls(**data[1][0])
+
+    @classmethod
+    def from_name(cls, name: str):
+        data, count = supabase.table("Worlds").select("*").eq("name", name).execute()
         return cls(**data[1][0])
 
     def get_discord_messages(self) -> list[DiscordMessage]:
@@ -191,3 +209,7 @@ class World(BaseModel):
             new_state.positions[action.agent] = action.location
 
         self.history.append(new_state)
+
+def get_worlds():
+    data, count = supabase.table("Worlds").select("*").execute()
+    return [World(**world) for world in data[1]]

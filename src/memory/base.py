@@ -29,7 +29,6 @@ class SingleMemory(BaseModel):
     created_at: datetime
     last_accessed: datetime
     related_memory_ids: list[UUID]
-    related_agent_ids: list[UUID]
 
     @property
     def recency(self) -> float:
@@ -49,12 +48,15 @@ class SingleMemory(BaseModel):
         type: MemoryType,
         description: str,
         importance: int,
-        related_memory_ids: list[UUID] = [],
-        related_agent_ids: list[UUID] = [],
+        related_memory_ids: Optional[list[UUID]] = [],
+        id: Optional[UUID] = None
     ):
+        if id is None:
+            id = uuid4()
+        
         embedding = get_embedding(description)
         super().__init__(
-            id=uuid4(),
+            id=id,
             agent_id=agent_id,
             type=type,
             description=description,
@@ -62,8 +64,7 @@ class SingleMemory(BaseModel):
             importance=importance,
             created_at=datetime.now(),
             last_accessed=datetime.now(),
-            related_memory_ids=related_memory_ids,
-            related_agent_ids=related_agent_ids
+            related_memory_ids=related_memory_ids
         )
     
     def db_dict(self):
@@ -76,8 +77,7 @@ class SingleMemory(BaseModel):
             "importance": self.importance,
             "created_at": self.created_at.isoformat(),
             "last_accessed": self.last_accessed.isoformat(),
-            "related_memory_ids": [str(related_memory_id) for related_memory_id in self.related_memory_ids],
-            "related_agent_ids": [str(related_agent_id) for related_agent_id in self.related_agent_ids]
+            "related_memory_ids": [str(related_memory_id) for related_memory_id in self.related_memory_ids]
         }
 
     # Customize the printing behavior

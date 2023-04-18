@@ -1,9 +1,9 @@
 -- AGENTS TABLE
-INSERT INTO public."Agents" (id, full_name, bio, directives, state)
-VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'John Doe', 'John is an AI researcher and developer', ARRAY['Improve AI models'], '{"plan_id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13", "location_id": "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15"}'::jsonb);
+INSERT INTO public."Agents" (id, full_name, bio, directives, ordered_plan_ids, state)
+VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'John Doe', 'John is an AI researcher and developer', ARRAY['Improve AI models'], ARRAY['a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13']::uuid[], '{"plan_id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13", "location_id": "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15"}'::jsonb);
 
-INSERT INTO public."Agents" (id, full_name, bio, directives, state)
-VALUES ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'Jane Smith', 'Jane is a Robotics engineer. She is currently getting her PHD at the University of California, Los Angeles. She loves riding her bike on the weekends, and has a secret passion for horseback riding.', ARRAY['Develop new robotic applications'], '{"plan_id": "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14", "location_id": "c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a16"}'::jsonb);
+INSERT INTO public."Agents" (id, full_name, bio, directives, ordered_plan_ids, state)
+VALUES ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'Jane Smith', 'Jane is a Robotics engineer. She is currently getting her PHD at the University of California, Los Angeles. She loves riding her bike on the weekends, and has a secret passion for horseback riding.', ARRAY['Develop new robotic applications'], ARRAY['b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14']::uuid[], '{"plan_id": "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14", "location_id": "c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a16"}'::jsonb);
 
 -- PLANS TABLE
 INSERT INTO public."Plans" (id, agent_id, description, max_duration_hrs, stop_condition, location_id)

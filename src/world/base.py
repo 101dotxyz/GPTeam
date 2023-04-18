@@ -191,6 +191,7 @@ class World(BaseModel):
     id: UUID
     name: str
     current_step: int
+    _locations: list[Location]
 
     def __init__(self, name: str, current_step: int = 0, id: Optional[UUID] = None):
         if id is None:
@@ -200,11 +201,16 @@ class World(BaseModel):
 
     @property
     def locations(self) -> list[Location]:
+        if self._locations:
+            return self._locations
+
         # get all locations with this id as world_id
         data, count = (
             supabase.table("Locations").select("*").eq("world_id", self.id).execute()
         )
-        return [Location(**location) for location in data[1]]
+        self._locations = [Location(**location) for location in data[1]]
+
+        return self._locations
 
     @classmethod
     def from_id(cls, id: UUID):

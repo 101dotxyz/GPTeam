@@ -1,11 +1,12 @@
-import logging
 import atexit
-from json_log_formatter import JSONFormatter
+import datetime
+import json
+import logging
+import os
 import re
 from typing import List
-import json
-import os
-import datetime
+
+from json_log_formatter import JSONFormatter
 
 
 def clean_json_string(json_string):

@@ -1,18 +1,14 @@
 from enum import Enum
-from langchain.schema import BaseMessage
+
+from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAI
+from langchain.schema import BaseMessage
 
 from .cache import json_cache
 from .spinner import Spinner
-from .my_logging import set_up_logging
-from dotenv import load_dotenv
 
-# load env variables
 load_dotenv()
-
-# set up logging
-# set_up_logging()
 
 
 class ChatModelName(Enum):

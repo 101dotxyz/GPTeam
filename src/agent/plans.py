@@ -5,12 +5,13 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
 from ..utils.database import supabase
+from ..world.base import Location
 
 
 class SinglePlan(BaseModel):
     id: UUID
     description: str
-    location_id: UUID
+    location: Location
     max_duration_hrs: float
     created_at: datetime.datetime
     agent_id: UUID
@@ -20,7 +21,7 @@ class SinglePlan(BaseModel):
     def __init__(
         self,
         description: str,
-        location_id: UUID,
+        location: Location,
         max_duration_hrs: float,
         stop_condition: str,
         agent_id: UUID,
@@ -37,7 +38,7 @@ class SinglePlan(BaseModel):
         super().__init__(
             id=id,
             description=description,
-            location_id=location_id,
+            location=location,
             max_duration_hrs=max_duration_hrs,
             created_at=created_at,
             agent_id=agent_id,
@@ -48,6 +49,7 @@ class SinglePlan(BaseModel):
     @classmethod
     def from_id(cls, id: UUID):
         data, count = supabase.table("Plans").select("*").eq("id", str(id)).execute()
+
         return cls(**data[1][0])
 
     def delete(self):

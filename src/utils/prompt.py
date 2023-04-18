@@ -1,5 +1,7 @@
+import re
 from enum import Enum
-from langchain.schema import SystemMessage, BaseMessage
+
+from langchain.schema import BaseMessage, SystemMessage
 from pydantic import BaseModel
 
 
@@ -23,6 +25,14 @@ class Prompter(BaseModel):
 
     def __init__(self, template: PromptString, inputs: dict) -> None:
         super().__init__(inputs=inputs, template=template.value)
+
+        # Find all variables in the template string
+        input_names = set(re.findall(r"{(\w+)}", self.template))
+
+        # Check that all variables are present in the inputs dictionary
+        missing_vars = input_names - set(self.inputs.keys())
+        if missing_vars:
+            raise ValueError(f"Missing inputs: {missing_vars}")
 
     @property
     def prompt(self) -> list[BaseMessage]:

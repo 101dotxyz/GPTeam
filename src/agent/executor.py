@@ -1,7 +1,8 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent, AgentOutputParser
+from langchain.tools import BaseTool
+from langchain.agents import initialize_agent, AgentExecutor, LLMSingleActionAgent, AgentOutputParser
 from langchain.prompts import BaseChatPromptTemplate
 from langchain import LLMChain
 from typing import List, Union
@@ -9,7 +10,7 @@ from langchain.schema import AgentAction, AgentFinish, HumanMessage
 import re
 
 from ..utils.prompt import PromptString
-from ..utils.models import ChatModel
+from ..utils.models import ChatModel, ChatModelName
 from ..tools.base import all_tools
 
 # set_up_logging()
@@ -20,7 +21,7 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
     # The template to use
     template: str
     # The list of tools available
-    tools: List[Tool]
+    tools: List[BaseTool]
     
     def format_messages(self, **kwargs) -> str:
         # Get the intermediate steps (AgentAction, Observation tuples)
@@ -66,7 +67,7 @@ def run_executor(input: str):
     print("Runing agent executor")
 
     prompt = CustomPromptTemplate(
-        template=PromptString.EXECUTE_PLAN,
+        template=PromptString.EXECUTE_PLAN.value,
         tools=all_tools,
         # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
         # This includes the `intermediate_steps` variable because that is needed
@@ -76,7 +77,7 @@ def run_executor(input: str):
     output_parser = CustomOutputParser()
 
     # set up a simple completion llm
-    llm = ChatModel(temperature=0)
+    llm = ChatModel(model_name=ChatModelName.GPT4,temperature=0)
 
     # LLM chain consisting of the LLM and a prompt
     llm_chain = LLMChain(llm=llm, prompt=prompt)

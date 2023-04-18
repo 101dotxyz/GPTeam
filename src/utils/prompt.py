@@ -24,7 +24,7 @@ class PromptString(Enum):
     )
 
     EXECUTE_PLAN = (
-        "Given the tools, complete the task as best you can. You have access to the following tools:\n\n{tools}\n\nUse the following format:\n\nTask: the task you must complete\nThought: you should always think about what to do\nAction: the action to take, should be one of [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeat N times)\nThought: 'I have completed the task'\nFinal Response: the final response to the task\n\nBegin!\n\nTask: {input}\n\n{agent_scratchpad}"
+        "Given the tools, complete the task as best you can. You have access to the following tools:\n\n{tools}\n\nUse the following format:\n\nTask: the task you must complete\nThought: you should always think about what to do\nAction: the action to take, should be one of [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeat N times)\nThought: 'I have completed the task'\nFinal Response: the final response to the task\n\nIf you determine that you are incapable of completing the task with the tools you have been given, return 'Final Response: Task Failed'\nBegin!\n\nTask: {input}\n\n{agent_scratchpad}"
     )
 
 

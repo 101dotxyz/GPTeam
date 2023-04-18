@@ -43,13 +43,12 @@ create table "public"."Plans" (
 
 create table "public"."Events" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
-    "created_at" timestamp with time zone default now(),
+    "timestamp" timestamp with time zone default now(),
     "step" smallint,
     "type" event_type,
     "description" text,
-    "world" uuid,
-    "location" uuid,
-    "witnesses" uuid[],
+    "location_id" uuid,
+    "witness_ids" uuid[],
     PRIMARY KEY ("id")
 );
 

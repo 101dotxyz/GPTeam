@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 # from ..agent.base import Agent
 from ..utils.database import supabase
+from ..utils.parameters import DEFAULT_WORLD_ID
 
 
 class ActionType(Enum):
@@ -25,23 +26,29 @@ class ActionType(Enum):
 
 class Location(BaseModel):
     id: UUID
-    world_id: UUID
     name: str
     description: str
     channel_id: str
-    allowed_agent_ids: list[UUID]
+    allowed_agent_ids: list[UUID] = []
+    world_id: UUID = None
 
     def __init__(
-            self, 
-            world_id: UUID,
+            self,
             name: str,
             description: str,
             channel_id: int,
-            allowed_agent_ids: list[UUID],
-            id: Optional[UUID] = None
+            allowed_agent_ids: list[UUID] = None,
+            id: Optional[UUID] = None,
+            world_id: UUID = None
     ):
         if id is None:
             id = uuid4()
+        
+        if world_id is None:
+            world_id = DEFAULT_WORLD_ID
+        
+        if allowed_agent_ids is None:
+            allowed_agent_ids = []
         
         super().__init__(
             id=id, 
@@ -52,6 +59,16 @@ class Location(BaseModel):
             allowed_agent_ids=allowed_agent_ids
         )
 
+    def db_dict(self):
+        return {
+            "id": str(self.id),
+            "name": self.name,
+            "description": self.description,
+            "channel_id": self.channel_id,
+            "allowed_agent_ids": [str(agent_id) for agent_id in self.allowed_agent_ids],
+            "world_id": str(self.world_id)
+        }
+    
     @classmethod
     def from_id(cls, id: UUID):
         data, count = supabase.table("Locations").select("*").eq("id", str(id)).execute()
@@ -81,7 +98,7 @@ class Location(BaseModel):
         return data[1]
 
 class EventType(Enum):
-    LOCATION = "non_message"
+    NON_MESSAGE = "non_message"
     MESSAGE = "message"
 
 class DiscordMessage(BaseModel):
@@ -92,16 +109,19 @@ class DiscordMessage(BaseModel):
 
 class Event(BaseModel):
     id: UUID
-    type: EventType
-    description: str
     timestamp: Optional[datetime.datetime] = None
     step: int
+    type: EventType
+    description: str
     location_id: UUID
+    witness_ids: list[UUID]
 
     def __init__(
         self,
         type: EventType,
         description: str,
+        location_id: UUID,
+        witness_ids: list[UUID],
         timestamp: Optional[datetime.datetime] = None,
         step: Optional[int] = None,
         id: Optional[UUID] = None
@@ -122,7 +142,20 @@ class Event(BaseModel):
             description=description,
             timestamp=timestamp, 
             step=step,
+            location_id=location_id,
+            witness_ids=witness_ids
         )
+
+    def db_dict(self):
+        return {
+            "id": str(self.id),
+            "timestamp": str(self.timestamp),
+            "step": self.step,
+            "type": self.type.value,
+            "description": self.description,
+            "location_id": str(self.location_id),
+            "witness_ids": [str(witness_id) for witness_id in self.witness_ids]
+        }
 
     @staticmethod
     def from_discord_message(message: DiscordMessage, witnesses: list[UUID]) -> "Event":

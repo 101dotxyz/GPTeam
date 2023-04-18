@@ -6,19 +6,19 @@ from uuid import UUID, uuid4
 from colorama import Fore
 from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from pydantic import BaseModel
+import datetime
 
 from ..memory.base import MemoryType, SingleMemory
 from ..utils.database import supabase
 from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel, ChatModelName
-from ..utils.parameters import PLAN_LENGTH, REFLECTION_MEMORY_COUNT, DEFAULT_LOCATION
+from ..utils.parameters import PLAN_LENGTH, REFLECTION_MEMORY_COUNT, DEFAULT_LOCATION_ID
 from ..utils.prompt import Prompter, PromptString
 from .importance import ImportanceRatingResponse
 from .plans import LLMPlanResponse, LLMSinglePlan, SinglePlan
 from .executor import run_executor
 from .reflection import ReflectionQuestions, ReflectionResponse
-from ..world.base import Location
-
+from ..world.base import Location, Event, EventType
 
 class RelatedMemory(BaseModel):
     memory: SingleMemory
@@ -33,9 +33,16 @@ class AgentState(BaseModel):
     location_id: UUID
 
     def __init__(self,
-        location_id: UUID,
-        plan_id: Optional[UUID] = None
+        location_id: UUID | str,
+        plan_id: Optional[UUID | str] = None
     ):
+        if plan_id is None:
+            print("none")
+        if isinstance(plan_id, str):
+            plan_id = UUID(plan_id)
+        if isinstance(location_id, str):
+            location_id = UUID(location_id)
+    
         super().__init__(
             location_id=location_id,
             plan_id=plan_id
@@ -65,16 +72,20 @@ class Agent(BaseModel):
         memories: list[SingleMemory] = [],
         ordered_plan_ids: list[UUID] = [],
         state: AgentState = None,
-        id: Optional[UUID] = None
+        id: Optional[str | UUID] = None
     ):
         if id is None:
             id = uuid4()
-        
+        elif isinstance(id, str):
+            id = UUID(id)
+
         # if the state is None, put them into the default location
         if state is None:
             state = AgentState(
-                location_id=Location.from_name(DEFAULT_LOCATION).id
+                location_id=DEFAULT_LOCATION_ID
             )
+        elif isinstance(state, dict):
+            state = AgentState(**state)
         
         super().__init__(
             id=id,
@@ -86,7 +97,7 @@ class Agent(BaseModel):
             state=state,
         )
 
-        print_to_console("New Agent Initialized: ", Fore.GREEN, self.full_name)
+        print_to_console("Agent: ", Fore.GREEN, self.full_name)
 
     @property
     def allowed_locations(self) -> list[Location]:
@@ -111,6 +122,7 @@ class Agent(BaseModel):
     @classmethod
     def from_id(cls, id: UUID):
         data, count = supabase.table("Agents").select("*").eq("id", str(id)).execute()
+        print(data[1][0])
         return cls(**data[1][0])
 
     # private
@@ -163,6 +175,16 @@ class Agent(BaseModel):
             }
             print("Added plan to db.")
             return supabase.table("Plans").insert(row).execute()
+
+    def db_dict(self):
+        return {
+            "id": str(self.id),
+            "full_name": self.full_name,
+            "bio": self.bio,
+            "directives": self.directives,
+            "ordered_plan_ids": [str(plan_id) for plan_id in self.ordered_plan_ids],
+            "state": self.state.db_dict()
+        }
 
     def add_observation_strings(self, memory_strings: list[str]):
         for memory_string in memory_strings:
@@ -237,6 +259,39 @@ class Agent(BaseModel):
 
         return rating
 
+    def move_to_location(self, location_id: UUID):
+        """Move the agents state, send event to Events table"""
+
+        # first emit the depature event to the db
+        event = Event(
+            timestamp=datetime.datetime.now(),
+            type=EventType.NON_MESSAGE,
+            description=f"{self.full_name} left location: {Location.from_id(location_id).name}",
+            location_id=self.state.location_id,
+            witness_ids=Location.from_id(self.state.location_id).local_agent_ids
+        )
+
+        data, count = supabase.table("Events").insert(event.db_dict()).execute()
+
+        # Update the agents state to the new location
+        self.state.location_id = location_id
+
+        print_to_console("Moved to ", Fore.BLUE, f"{Location.from_id(location_id).name}")
+
+        # emit the arrival to the db
+        event = Event(
+            timestamp=datetime.datetime.now(),
+            type=EventType.NON_MESSAGE,
+            description=f"{self.full_name} arrived at location: {Location.from_id(location_id).name}",
+            location_id=self.state.location_id,
+            witness_ids=Location.from_id(self.state.location_id).local_agent_ids
+        )
+
+        data, count = supabase.table("Events").insert(event.db_dict()).execute()
+        
+        # update the agents row in the db
+        self._update_agent_row()
+        
     def reflect(self):
         recent_memories = sorted(
             self.memories, key=lambda memory: memory.last_accessed, reverse=True
@@ -437,13 +492,23 @@ class Agent(BaseModel):
             
             print_to_console("Acting on Plan", Fore.YELLOW, f"{current_plan.description}")
 
+            # If we are not in the right location, move to the new location
+            if self.state.location_id != current_plan.location_id:
+                self.move_to_location(current_plan.location_id)
+
             # Execute the plan
             steps_left = steps - step_duration # TODO: stop executor when this is 0
 
+            # TODO: Tools are dependent on the location
             output = run_executor(current_plan.description)
 
+            if 'Final Response: Task Failed' in output:
+                print_to_console("Plan Failed", Fore.RED, f"{current_plan.description}")
+                # TODO: handle plan failure with a human
+                return
+
             # If the plan is done, remove it from the list of plans
-            if 'Final Response' in output:
+            elif 'Final Response' in output:
                 self.ordered_plan_ids.remove(current_plan.id)
                 self.state = AgentState(plan_id=None, location_id=None)
 

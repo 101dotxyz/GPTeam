@@ -20,7 +20,7 @@ from .plans import LLMPlanResponse, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .executor import run_executor, ExecutorStatus
 from .reflection import ReflectionQuestions, ReflectionResponse
-from ..event.base import Event, EventType
+from ..event.base import Event, EventManager, EventType
 from ..location.base import Location
 
 
@@ -108,7 +108,7 @@ class Agent(BaseModel):
         # if the memories are None, retrieve them
         if memories is None or len(memories) == 0:
             self.memories = self._get_memories()
-        
+
         print_to_console("Agent: ", Fore.GREEN, self.full_name)
 
     @property
@@ -261,7 +261,6 @@ class Agent(BaseModel):
         # Get the k most recent memories
         print("memory descriptions:", [memory.description for memory in self.memories])
 
-
         recent_memories = sorted(
             self.memories, key=lambda memory: memory.created_at, reverse=True
         )[:k]
@@ -316,7 +315,7 @@ class Agent(BaseModel):
 
         return rating
 
-    def _move_to_location(self, location_id: UUID):
+    def _move_to_location(self, location_id: UUID, event_manager: EventManager):
         """Move the agents state, send event to Events table"""
 
         # first emit the depature event to the db
@@ -325,10 +324,8 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {Location.from_id(location_id).name}",
             location_id=self.state.location_id,
-
         )
-
-        data, count = supabase.table("Events").insert(event._db_dict()).execute()
+        event_manager.add_event(event)
 
         # Update the agents state to the new location
         self.state.location_id = location_id
@@ -343,8 +340,7 @@ class Agent(BaseModel):
             location_id=self.state.location_id,
 
         )
-
-        data, count = supabase.table("Events").insert(event._db_dict()).execute()
+        event_manager.add_event(event)
 
         # update the agents row in the db
         self._update_agent_row()
@@ -518,14 +514,14 @@ class Agent(BaseModel):
                 Fore.YELLOW,
                 f"#{index}: {plan.description} @ {plan.location_id} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]",
             )
-        
+
         return new_plans
 
-    def _react(self) -> Reaction:
+    def _react(self, event_manager: EventManager) -> Reaction:
         """Get the recent activity and decide whether to replan to carry on"""
-        
+
         # Pull in latest events
-        new_events = self.state.location.pull_events()
+        new_events = event_manager.get_events_by_location(self.location_id)
 
         # Store them as observations for this agent
         self.add_observation_strings([event.description for event in new_events])
@@ -563,7 +559,7 @@ class Agent(BaseModel):
 
         return parsed_reaction_response
 
-    def _do_first_plan(self) -> None:
+    def _do_first_plan(self, event_manager: EventManager) -> None:
         """Do the first plan in the list"""
 
         current_plan = None
@@ -574,7 +570,7 @@ class Agent(BaseModel):
             # If we have no plans, make some
             if len(self.ordered_plan_ids) == 0:
                 plans = self._plan()
-            
+
             # Otherwise, just use the existing plans
             else:
                 plans = [SinglePlan.from_id(plan_id) for plan_id in self.ordered_plan_ids]
@@ -583,15 +579,15 @@ class Agent(BaseModel):
             self.state = AgentState(plan_id=plans[0].id, location_id=plans[0].location_id)
 
             current_plan = plans[0]
-        
+
         # Get the current plan
         current_plan = SinglePlan.from_id(self.state.plan_id) if current_plan is None else current_plan
-        
+
         print_to_console("Acting on Plan", Fore.YELLOW, f"{current_plan.description}")
 
         # If we are not in the right location, move to the new location
         if self.state.location_id != current_plan.location_id:
-            self._move_to_location(current_plan.location_id)
+            self._move_to_location(current_plan.location_id, event_manager)
 
         # Execute the plan
 
@@ -599,12 +595,11 @@ class Agent(BaseModel):
         timeout = int(os.getenv('STEP_DURATION'))
         resp = run_executor(current_plan.description, timeout=timeout)
 
-
         if resp.status == ExecutorStatus.NEEDS_HELP:
             print_to_console("Plan Failed: Needs Help", Fore.RED, f"{current_plan.description} Error: {resp.output}")
             # TODO: handle plan failure with a human
             return
-        
+
         elif resp.status == ExecutorStatus.TIMED_OUT:
             print_to_console("Plan Timed Out", Fore.RED, f"{current_plan.description} Error: {resp.output}")
             return
@@ -614,19 +609,19 @@ class Agent(BaseModel):
             self.ordered_plan_ids.remove(current_plan.id)
             self.state.plan_id = None
             print_to_console("Plan Completed: ", Fore.GREEN, f"{current_plan.description}")
- 
-    def run_for_one_step(self):
+
+    def run_for_one_step(self, events_manager: EventManager):
 
         # First we decide if we need to reflect
         if self._should_reflect():
             self._reflect()
 
         # Generate a reaction to the latest events
-        reaction = self._react()
+        reaction = self._react(events_manager)
 
         # If the reaction calls for a new plan, make one
         if reaction == Reaction.REPLAN:
             self._plan()
-        
+
         # Work through the plans
-        self._do_first_plan()
+        self._do_first_plan(event_manager=events_manager)

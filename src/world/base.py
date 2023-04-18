@@ -5,6 +5,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
+from src.event.base import EventManager
+
 from ..location.base import Event, Location
 from ..agent.base import Agent
 from ..world.base import Event
@@ -16,12 +18,13 @@ class World(BaseModel):
     name: str
     current_step: int
     agents: list[Agent] = []
+    event_manager: EventManager
 
     def __init__(self, name: str, current_step: int = 0, id: Optional[UUID] = None):
         if id is None:
             id = uuid4()
 
-        super().__init__(id=id, name=name, current_step=current_step)
+        super().__init__(id=id, name=name, current_step=current_step, event_manager=EventManager(current_step))
         self.load_agents()
 
     @property
@@ -84,8 +87,9 @@ class World(BaseModel):
         self.history.append(new_state)
 
     def run_step(self):
+        self.event_manager.refresh_events()
         for agent in self.agents:
-            agent.run()
+            agent.run_for_one_step(self.event_manager)
         self.current_step += 1
         supabase.table("Worlds").update({"current_step": self.current_step}).eq("id", str(self.id)).execute()
 

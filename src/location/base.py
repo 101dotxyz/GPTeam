@@ -9,7 +9,7 @@ from pydantic import BaseModel
 # from ..agent.base import Agent
 from ..utils.database import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
-from ..event.base import Event
+
 
 class ActionType(Enum):
     MOVE = "move"
@@ -82,35 +82,3 @@ class Location(BaseModel):
     def from_name(cls, name: str):
         data, count = supabase.table("Locations").select("*").eq("name", name).execute()
         return cls(**data[1][0])
-
-    @property
-    def local_agent_ids(self) -> list[UUID]:
-        """Get IDs of agents who are currently in this location."""
-        data, count = (
-            supabase.table("Agents").select("id").eq("location_id", self.id).execute()
-        )
-        print(data)
-        return [agent["id"] for agent in data[1]]
-
-    @property
-    def current_step(self) -> int:
-        """Get the current step in this location."""
-        data, count = (
-            supabase.table("Worlds")
-            .select("current_step")
-            .eq("id", str(self.world_id))
-            .execute()
-        )
-        return data[1][0]["current_step"]
-
-    def pull_events(self) -> list[Event]:
-        """Get current step events from the events table that have happened in this location."""
-        data, count = (
-            supabase.table("Events")
-            .select("*")
-            .eq("location_id", str(self.id))
-            .eq("step", self.current_step)
-            .execute()
-        )
-        return [Event(**event) for event in data[1]]
-

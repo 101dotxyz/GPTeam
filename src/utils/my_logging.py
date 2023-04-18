@@ -9,8 +9,10 @@ import datetime
 
 
 def clean_json_string(json_string):
-    cleaned_string = re.sub(r'\\\'', r"'", json_string) # replace \' with '
-    cleaned_string = re.sub(r'\\"', r'"', cleaned_string) # replace \" with " on cleaned_string
+    cleaned_string = re.sub(r"\\\'", r"'", json_string)  # replace \' with '
+    cleaned_string = re.sub(
+        r'\\"', r'"', cleaned_string
+    )  # replace \" with " on cleaned_string
     return cleaned_string
 
 
@@ -21,11 +23,12 @@ def get_completion_data(text) -> List[str]:
 
     for match in matches:
         for item in match:
-            if item != '':
+            if item != "":
                 cleaned_matches.append(item)
                 break
 
     return cleaned_matches
+
 
 def get_key_value(text):
     pattern = r"(\w+)=((?:\"(?:\\\"|[^\"])*\")|(?:\'(?:\\\'|[^'])*\'))"
@@ -43,9 +46,11 @@ def get_key_value(text):
 
     return result
 
+
 class OpenAIFilter(logging.Filter):
     def filter(self, record):
         return "openai" in record.name
+
 
 class CustomJsonFormatter(JSONFormatter):
     def json_record(self, message, extra, record):
@@ -53,7 +58,7 @@ class CustomJsonFormatter(JSONFormatter):
 
         message_dict = {}
 
-        matches = get_completion_data(json_data['message'])
+        matches = get_completion_data(json_data["message"])
         if len(matches) == 3:
             for match in matches:
                 key = match.split("=")[0]
@@ -64,7 +69,7 @@ class CustomJsonFormatter(JSONFormatter):
                     value = value[1:-1]
 
                 cleaned = clean_json_string(value)
-                
+
                 try:
                     value = json.loads(cleaned)
                 except:
@@ -72,22 +77,23 @@ class CustomJsonFormatter(JSONFormatter):
 
                 message_dict[key] = value
 
-        json_data['message'] = message_dict
+        json_data["message"] = message_dict
 
         return json_data
 
+
 class JsonArrayFileHandler(logging.FileHandler):
-    def __init__(self, filename, mode='a', encoding=None, delay=False):
+    def __init__(self, filename, mode="a", encoding=None, delay=False):
         super().__init__(filename, mode, encoding, delay)
         self.closed_properly = False
-        self.stream.write('[')
+        self.stream.write("[")
         atexit.register(self.close)
 
     def close(self):
         self.acquire()
         try:
             if not self.closed_properly:
-                self.stream.write(']')
+                self.stream.write("]")
                 self.closed_properly = True
             super().close()
         finally:
@@ -95,8 +101,9 @@ class JsonArrayFileHandler(logging.FileHandler):
 
     def emit(self, record):
         if self.stream.tell() > 1:
-            self.stream.write(',\n')
+            self.stream.write(",\n")
         super().emit(record)
+
 
 def set_up_logging():
     # Set up logging to a file
@@ -104,11 +111,14 @@ def set_up_logging():
     logger.setLevel(logging.DEBUG)
     # set path to be this current directory
     timestamp = datetime.datetime.now().strftime("%H-%M__%m-%d-%y")
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), f"logs/{timestamp}_logs.json")
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        f"logs/{timestamp}_logs.json",
+    )
     file_handler = JsonArrayFileHandler(path)
     file_handler.setLevel(logging.DEBUG)
     file_handler.addFilter(OpenAIFilter())
-    
+
     # Add the custom JSON formatter to the file handler
     formatter = CustomJsonFormatter()
     # formatter = JSONFormatter()

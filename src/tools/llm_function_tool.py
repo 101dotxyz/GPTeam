@@ -24,6 +24,6 @@ class LLMFunctionTool(Tool):
         )
         human_message = HumanMessage(content=f"{args}")
 
-        response = self.chat_llm.get_chat_completion([system_message, human_message]) 
+        response = self.chat_llm.get_chat_completion([system_message, human_message])
 
         return response

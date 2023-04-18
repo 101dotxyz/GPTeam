@@ -307,7 +307,7 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {Location.from_id(location_id).name}",
             location_id=self.state.location_id,
-            # witness_ids=Location.from_id(self.state.location_id).local_agent_ids
+            
         )
 
         data, count = supabase.table("Events").insert(event._db_dict()).execute()
@@ -323,7 +323,7 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {Location.from_id(location_id).name}",
             location_id=self.state.location_id,
-            # witness_ids=Location.from_id(self.state.location_id).local_agent_ids
+
         )
 
         data, count = supabase.table("Events").insert(event._db_dict()).execute()

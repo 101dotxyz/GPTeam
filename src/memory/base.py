@@ -14,9 +14,11 @@ from ..utils.parameters import (
     TIME_SPEED_MULTIPLIER,
 )
 
+
 class MemoryType(Enum):
     OBSERVATION = "observation"
     REFLECTION = "reflection"
+
 
 class SingleMemory(BaseModel):
 
@@ -49,11 +51,11 @@ class SingleMemory(BaseModel):
         description: str,
         importance: int,
         related_memory_ids: Optional[list[UUID]] = [],
-        id: Optional[UUID] = None
+        id: Optional[UUID] = None,
     ):
         if id is None:
             id = uuid4()
-        
+
         embedding = get_embedding(description)
         super().__init__(
             id=id,
@@ -64,9 +66,9 @@ class SingleMemory(BaseModel):
             importance=importance,
             created_at=datetime.now(),
             last_accessed=datetime.now(),
-            related_memory_ids=related_memory_ids
+            related_memory_ids=related_memory_ids,
         )
-    
+
     def db_dict(self):
         return {
             "id": str(self.id),
@@ -77,7 +79,9 @@ class SingleMemory(BaseModel):
             "importance": self.importance,
             "created_at": self.created_at.isoformat(),
             "last_accessed": self.last_accessed.isoformat(),
-            "related_memory_ids": [str(related_memory_id) for related_memory_id in self.related_memory_ids]
+            "related_memory_ids": [
+                str(related_memory_id) for related_memory_id in self.related_memory_ids
+            ],
         }
 
     # Customize the printing behavior
@@ -97,8 +101,3 @@ class SingleMemory(BaseModel):
             + SIMILARITY_WEIGHT * self.similarity(query)
             + RECENCY_WEIGHT * self.recency
         )
-
-    
-
-        
-

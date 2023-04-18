@@ -26,14 +26,14 @@ class SinglePlan(BaseModel):
         agent_id: UUID,
         created_at: Optional[datetime.datetime] = None,
         completed_at: Optional[datetime.datetime] = None,
-        id: Optional[UUID] = None
+        id: Optional[UUID] = None,
     ):
         if id is None:
             id = uuid4()
 
         if created_at is None:
             created_at = datetime.datetime.now()
-            
+
         super().__init__(
             id=id,
             description=description,

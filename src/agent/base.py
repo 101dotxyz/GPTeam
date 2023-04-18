@@ -20,6 +20,7 @@ from .executor import run_executor
 from .reflection import ReflectionQuestions, ReflectionResponse
 from ..world.base import Location, Event, EventType
 
+
 class RelatedMemory(BaseModel):
     memory: SingleMemory
     relevance: float
@@ -32,27 +33,18 @@ class AgentState(BaseModel):
     plan_id: Optional[UUID]
     location_id: UUID
 
-    def __init__(self,
-        location_id: UUID | str,
-        plan_id: Optional[UUID | str] = None
-    ):
+    def __init__(self, location_id: UUID | str, plan_id: Optional[UUID | str] = None):
         if plan_id is None:
             print("none")
         if isinstance(plan_id, str):
             plan_id = UUID(plan_id)
         if isinstance(location_id, str):
             location_id = UUID(location_id)
-    
-        super().__init__(
-            location_id=location_id,
-            plan_id=plan_id
-        )
+
+        super().__init__(location_id=location_id, plan_id=plan_id)
 
     def db_dict(self) -> dict:
-        return {
-            "plan_id": str(self.plan_id),
-            "location_id": str(self.location_id)
-        }
+        return {"plan_id": str(self.plan_id), "location_id": str(self.location_id)}
 
 
 class Agent(BaseModel):
@@ -72,7 +64,7 @@ class Agent(BaseModel):
         memories: list[SingleMemory] = [],
         ordered_plan_ids: list[UUID] = [],
         state: AgentState = None,
-        id: Optional[str | UUID] = None
+        id: Optional[str | UUID] = None,
     ):
         if id is None:
             id = uuid4()
@@ -81,12 +73,10 @@ class Agent(BaseModel):
 
         # if the state is None, put them into the default location
         if state is None:
-            state = AgentState(
-                location_id=DEFAULT_LOCATION_ID
-            )
+            state = AgentState(location_id=DEFAULT_LOCATION_ID)
         elif isinstance(state, dict):
             state = AgentState(**state)
-        
+
         super().__init__(
             id=id,
             full_name=full_name,
@@ -102,7 +92,12 @@ class Agent(BaseModel):
     @property
     def allowed_locations(self) -> list[Location]:
         """Get locations that this agent is allowed to be in."""
-        data, count = supabase.table("Locations").select("*").contains("allowed_agent_ids", [str(self.id)]).execute()
+        data, count = (
+            supabase.table("Locations")
+            .select("*")
+            .contains("allowed_agent_ids", [str(self.id)])
+            .execute()
+        )
         return [Location(**location) for location in data[1]]
 
     @property
@@ -130,14 +125,14 @@ class Agent(BaseModel):
         self,
         description: str,
         type: MemoryType = MemoryType.OBSERVATION,
-        related_memory_ids: list[UUID] = []
+        related_memory_ids: list[UUID] = [],
     ) -> SingleMemory:
         memory = SingleMemory(
             agent_id=self.id,
             type=type,
             description=description,
             importance=self.calculate_importance(description),
-            related_memory_ids=related_memory_ids
+            related_memory_ids=related_memory_ids,
         )
         print("made new memory ", memory.id)
 
@@ -157,7 +152,7 @@ class Agent(BaseModel):
             "bio": self.bio,
             "directives": self.directives,
             "ordered_plan_ids": [str(plan_id) for plan_id in self.ordered_plan_ids],
-            "state": self.state.db_dict()
+            "state": self.state.db_dict(),
         }
         print("Updated ", self.full_name, " in db.")
         return supabase.table("Agents").update(row).eq("id", str(self.id)).execute()
@@ -183,7 +178,7 @@ class Agent(BaseModel):
             "bio": self.bio,
             "directives": self.directives,
             "ordered_plan_ids": [str(plan_id) for plan_id in self.ordered_plan_ids],
-            "state": self.state.db_dict()
+            "state": self.state.db_dict(),
         }
 
     def add_observation_strings(self, memory_strings: list[str]):
@@ -268,7 +263,7 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {Location.from_id(location_id).name}",
             location_id=self.state.location_id,
-            witness_ids=Location.from_id(self.state.location_id).local_agent_ids
+            witness_ids=Location.from_id(self.state.location_id).local_agent_ids,
         )
 
         data, count = supabase.table("Events").insert(event.db_dict()).execute()
@@ -276,7 +271,9 @@ class Agent(BaseModel):
         # Update the agents state to the new location
         self.state.location_id = location_id
 
-        print_to_console("Moved to ", Fore.BLUE, f"{Location.from_id(location_id).name}")
+        print_to_console(
+            "Moved to ", Fore.BLUE, f"{Location.from_id(location_id).name}"
+        )
 
         # emit the arrival to the db
         event = Event(
@@ -284,14 +281,14 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {Location.from_id(location_id).name}",
             location_id=self.state.location_id,
-            witness_ids=Location.from_id(self.state.location_id).local_agent_ids
+            witness_ids=Location.from_id(self.state.location_id).local_agent_ids,
         )
 
         data, count = supabase.table("Events").insert(event.db_dict()).execute()
-        
+
         # update the agents row in the db
         self._update_agent_row()
-        
+
     def reflect(self):
         recent_memories = sorted(
             self.memories, key=lambda memory: memory.last_accessed, reverse=True
@@ -406,12 +403,18 @@ class Agent(BaseModel):
             PromptString.MAKE_PLANS,
             {
                 "time_window": PLAN_LENGTH,
-                "location_descriptions": [f"'{location.name}' - {location.description}\n" for location in self.allowed_locations],
+                "location_descriptions": [
+                    f"'{location.name}' - {location.description}\n"
+                    for location in self.allowed_locations
+                ],
                 "full_name": self.full_name,
                 "bio": self.bio,
                 "directives": str(self.directives),
                 "recent_activity": recent_activity,
-                "current_plans": [f"{index}. {plan.description}" for index, plan in enumerate(self.ordered_plans)],
+                "current_plans": [
+                    f"{index}. {plan.description}"
+                    for index, plan in enumerate(self.ordered_plans)
+                ],
                 "format_instructions": plan_parser.get_format_instructions(),
             },
         )
@@ -461,13 +464,13 @@ class Agent(BaseModel):
                 Fore.YELLOW,
                 f"#{index}: {plan.description} @ {plan.location_id} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]",
             )
-        
+
         return new_plans
-    
+
     def run(self, steps: int = 1) -> None:
 
         step_duration = 0
-        while (step_duration < steps):
+        while step_duration < steps:
 
             current_plan = None
 
@@ -477,39 +480,47 @@ class Agent(BaseModel):
                 # If we have no plans, make some
                 if len(self.ordered_plan_ids) == 0:
                     plans = self.plan()
-                
+
                 # Otherwise, just use the existing plans
                 else:
-                    plans = [SinglePlan.from_id(plan_id) for plan_id in self.ordered_plan_ids]
+                    plans = [
+                        SinglePlan.from_id(plan_id) for plan_id in self.ordered_plan_ids
+                    ]
 
                 # Set the agent state
-                self.state = AgentState(plan_id=plans[0].id, location_id=plans[0].location_id)
+                self.state = AgentState(
+                    plan_id=plans[0].id, location_id=plans[0].location_id
+                )
 
                 current_plan = plans[0]
-            
+
             # Get the current plan
-            current_plan = SinglePlan.from_id(self.state.plan_id) if current_plan is None else current_plan
-            
-            print_to_console("Acting on Plan", Fore.YELLOW, f"{current_plan.description}")
+            current_plan = (
+                SinglePlan.from_id(self.state.plan_id)
+                if current_plan is None
+                else current_plan
+            )
+
+            print_to_console(
+                "Acting on Plan", Fore.YELLOW, f"{current_plan.description}"
+            )
 
             # If we are not in the right location, move to the new location
             if self.state.location_id != current_plan.location_id:
                 self.move_to_location(current_plan.location_id)
 
             # Execute the plan
-            steps_left = steps - step_duration # TODO: stop executor when this is 0
+            steps_left = steps - step_duration  # TODO: stop executor when this is 0
 
             # TODO: Tools are dependent on the location
             output = run_executor(current_plan.description)
 
-            if 'Final Response: Task Failed' in output:
+            if "Final Response: Task Failed" in output:
                 print_to_console("Plan Failed", Fore.RED, f"{current_plan.description}")
                 # TODO: handle plan failure with a human
                 return
 
             # If the plan is done, remove it from the list of plans
-            elif 'Final Response' in output:
+            elif "Final Response" in output:
                 self.ordered_plan_ids.remove(current_plan.id)
                 self.state = AgentState(plan_id=None, location_id=None)
-
-            

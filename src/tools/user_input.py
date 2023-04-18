@@ -9,9 +9,9 @@ class UserInputTool(Tool):
         super().__init__(
             name="Ask User A Question",
             func=self.get_user_input,
-            description="Get an answer from the user to a question."
+            description="Get an answer from the user to a question.",
         )
-    
+
     @staticmethod
     def get_user_input(question):
         print_to_console("\nQuestion", Fore.MAGENTA, question)

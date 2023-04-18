@@ -13,6 +13,7 @@ from ..agent.base import Agent
 from ..world.base import Event
 from ..utils.database import supabase
 
+
 class World(BaseModel):
     id: UUID
     name: str
@@ -84,6 +85,16 @@ class World(BaseModel):
             new_state.positions[action.agent] = action.location
 
         self.history.append(new_state)
+
+    def run_step(self):
+        for agent in self.agents:
+            agent.run()
+        self.current_step += 1
+        supabase.table("Worlds").update({"current_step": self.current_step}).eq("id", str(self.id)).execute()
+
+    def run(self, steps: int = 1):
+        for _ in range(steps):
+            self.run_step()
 
 
 def get_worlds():

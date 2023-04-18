@@ -1,5 +1,12 @@
 
-### To set up a local supabase instance
+### We have the prod db set up now.
+
+If you're using prod make sure to get the url and key,
+and populate the .env file with them and also make sure
+database/supabase.py is using the prod url and key
+
+
+### If you want to set up a local supabase instance
 `supabase login` 
 `supabase init`
 `supabase start`

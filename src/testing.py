@@ -1,7 +1,6 @@
 from dotenv import load_dotenv
 
 from .agent.base import Agent
-from .world.base import World
 
 load_dotenv()
 

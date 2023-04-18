@@ -1,8 +1,7 @@
 from dotenv import load_dotenv
-load_dotenv()
 
 from langchain.tools import BaseTool
-from langchain.agents import initialize_agent, AgentExecutor, LLMSingleActionAgent, AgentOutputParser
+from langchain.agents import AgentExecutor, LLMSingleActionAgent, AgentOutputParser
 from langchain.prompts import BaseChatPromptTemplate
 from langchain import LLMChain
 from typing import List, Union
@@ -13,6 +12,8 @@ from ..utils.prompt import PromptString
 from ..utils.models import ChatModel, ChatModelName
 from ..tools.base import all_tools
 
+load_dotenv()
+
 # set_up_logging()
 
 
@@ -22,7 +23,7 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
     template: str
     # The list of tools available
     tools: List[BaseTool]
-    
+
     def format_messages(self, **kwargs) -> str:
         # Get the intermediate steps (AgentAction, Observation tuples)
         # Format them in a particular way
@@ -40,9 +41,10 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         formatted = self.template.format(**kwargs)
         return [HumanMessage(content=formatted)]
 
+
 # set up the output parser
 class CustomOutputParser(AgentOutputParser):
-    
+
     def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
         # Check if agent should finish
         if "Final Response:" in llm_output:
@@ -62,6 +64,7 @@ class CustomOutputParser(AgentOutputParser):
         # Return the action and action input
         return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
 
+
 def run_executor(input: str):
 
     print("Runing agent executor")
@@ -77,7 +80,7 @@ def run_executor(input: str):
     output_parser = CustomOutputParser()
 
     # set up a simple completion llm
-    llm = ChatModel(model_name=ChatModelName.GPT4,temperature=0)
+    llm = ChatModel(model_name=ChatModelName.GPT4, temperature=0)
 
     # LLM chain consisting of the LLM and a prompt
     llm_chain = LLMChain(llm=llm, prompt=prompt)

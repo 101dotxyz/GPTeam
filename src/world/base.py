@@ -6,6 +6,7 @@ from uuid import uuid4, UUID
 from pydantic import BaseModel
 
 # from ..agent.base import Agent
+from ..world.base import Event
 from ..utils.database import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
 
@@ -92,10 +93,17 @@ class Location(BaseModel):
         data, count = supabase.table("Worlds").select("current_step").eq("id", str(self.world_id)).execute()
         return data[1][0]["current_step"]
     
-    def pull_events(self):
+    def pull_events(self) -> list[Event]:
         """Get current step events from the events table that have happened in this location."""
-        data, count = supabase.table("Events").select("*").eq("location_id", str(self.id)).eq("step", self.current_step).execute()
-        return data[1]
+        data, count = (
+            supabase
+            .table("Events")
+            .select("*")
+            .eq("location_id", str(self.id))
+            .eq("step", self.current_step)
+            .execute()
+        )
+        return [Event(**event) for event in data[1]]
 
 class EventType(Enum):
     NON_MESSAGE = "non_message"
@@ -105,7 +113,6 @@ class DiscordMessage(BaseModel):
     content: str
     location: Location
     timestamp: datetime.datetime
-
 
 class Event(BaseModel):
     id: UUID
@@ -123,19 +130,12 @@ class Event(BaseModel):
         location_id: UUID,
         witness_ids: list[UUID],
         timestamp: Optional[datetime.datetime] = None,
-        step: Optional[int] = None,
+        step: [int],
         id: Optional[UUID] = None
     ):
         if id is None:
             id = uuid4()
         
-        if timestamp is None and step is None:
-            raise ValueError("Either timestamp or step must be provided")
-
-        if timestamp:
-            # calculate step from timestamp
-            pass
-
         super().__init__(
             id=id, 
             type=type,
@@ -167,7 +167,6 @@ class Event(BaseModel):
     # def from_agent_action(action: AgentAction, witnesses: list[UUID]) -> "Event":
     #     # parse agent action into an event
     #     pass
-
 
 class World(BaseModel):
     id: UUID

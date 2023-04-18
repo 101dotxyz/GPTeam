@@ -6,10 +6,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel
 
 from ..location.base import Event, Location
-
 from ..agent.base import Agent
-
-# from ..agent.base import Agent
 from ..world.base import Event
 from ..utils.database import supabase
 

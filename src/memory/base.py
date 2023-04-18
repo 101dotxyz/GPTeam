@@ -52,11 +52,18 @@ class SingleMemory(BaseModel):
         importance: int,
         related_memory_ids: Optional[list[UUID]] = [],
         id: Optional[UUID] = None,
+        created_at: Optional[datetime] = datetime.now(),
+        embedding: Optional[np.ndarray] = None,
+        last_accessed: Optional[datetime] = None,
     ):
         if id is None:
             id = uuid4()
 
-        embedding = get_embedding(description)
+        if embedding is None:
+            embedding = get_embedding(description)
+        else:
+            embedding = np.array(embedding)
+
         super().__init__(
             id=id,
             agent_id=agent_id,
@@ -64,8 +71,8 @@ class SingleMemory(BaseModel):
             description=description,
             embedding=embedding,
             importance=importance,
-            created_at=datetime.now(),
-            last_accessed=datetime.now(),
+            created_at=created_at,
+            last_accessed=last_accessed,
             related_memory_ids=related_memory_ids,
         )
 

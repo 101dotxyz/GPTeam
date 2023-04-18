@@ -5,8 +5,7 @@ import re
 from typing import List
 import json
 import os
-import datetime
-
+from datetime import datetime
 
 def clean_json_string(json_string):
     cleaned_string = re.sub(r"\\\'", r"'", json_string)  # replace \' with '
@@ -110,7 +109,7 @@ def set_up_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     # set path to be this current directory
-    timestamp = datetime.datetime.now().strftime("%H-%M__%m-%d-%y")
+    timestamp = datetime.now().strftime("%H-%M__%m-%d-%y")
     path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         f"logs/{timestamp}_logs.json",

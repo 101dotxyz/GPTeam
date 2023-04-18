@@ -6,21 +6,22 @@ from uuid import UUID, uuid4
 from colorama import Fore
 from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from pydantic import BaseModel
-import datetime
+from datetime import datetime
 import os
 
 from ..memory.base import MemoryType, SingleMemory
 from ..utils.database import supabase
 from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel, ChatModelName
-from ..utils.parameters import PLAN_LENGTH, REFLECTION_MEMORY_COUNT, DEFAULT_LOCATION_ID
+from ..utils.parameters import PLAN_LENGTH, REFLECTION_MEMORY_COUNT, DEFAULT_LOCATION_ID, DEFAULT_WORLD_ID
 from ..utils.prompt import Prompter, PromptString
 from .importance import ImportanceRatingResponse
 from .plans import LLMPlanResponse, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .executor import run_executor, ExecutorStatus
 from .reflection import ReflectionQuestions, ReflectionResponse
-from ..world.base import Location, Event, EventType
+from ..event.base import Event, EventType
+from ..location.base import Location
 
 
 class RelatedMemory(BaseModel):
@@ -34,24 +35,21 @@ class RelatedMemory(BaseModel):
 class AgentState(BaseModel):
     plan_id: Optional[UUID]
     location_id: UUID
-    location: Optional[Location] = None
+    location: Location
 
     def __init__(
         self,
-        location_id: UUID | str,
+        location_id: UUID | str = None,
         plan_id: Optional[UUID | str] = None
     ):
-        if plan_id is None:
-            print("none")
-        if isinstance(plan_id, str):
-            plan_id = UUID(plan_id)
-        if isinstance(location_id, str):
-            location_id = UUID(location_id)
+
+        if location_id is None:
+            location_id = DEFAULT_LOCATION_ID
 
         super().__init__(
             location_id=location_id,
             plan_id=plan_id,
-            Location=Location.from_id(location_id)
+            location=Location.from_id(location_id)
         )
 
     def _db_dict(self) -> dict:
@@ -69,6 +67,7 @@ class Agent(BaseModel):
     memories: Optional[list[SingleMemory]] = []
     ordered_plan_ids: Optional[list[UUID]] = []
     state: Optional[AgentState] = None
+    world_id: Optional[UUID] = None
 
     def __init__(
         self,
@@ -78,7 +77,8 @@ class Agent(BaseModel):
         memories: list[SingleMemory] = [],
         ordered_plan_ids: list[UUID] = [],
         state: AgentState = None,
-        id: Optional[str | UUID] = None
+        id: Optional[str | UUID] = None,
+        world_id: Optional[UUID] = DEFAULT_WORLD_ID
     ):
         if id is None:
             id = uuid4()
@@ -93,6 +93,7 @@ class Agent(BaseModel):
         elif isinstance(state, dict):
             state = AgentState(**state)
 
+        # initialize the base model
         super().__init__(
             id=id,
             full_name=full_name,
@@ -101,8 +102,13 @@ class Agent(BaseModel):
             memories=memories,
             ordered_plan_ids=ordered_plan_ids,
             state=state,
+            world_id=world_id
         )
 
+        # if the memories are None, retrieve them
+        if memories is None or len(memories) == 0:
+            self.memories = self._get_memories()
+        
         print_to_console("Agent: ", Fore.GREEN, self.full_name)
 
     @property
@@ -130,6 +136,11 @@ class Agent(BaseModel):
         data, count = supabase.table("Agents").select("*").eq("id", str(id)).execute()
         print(data[1][0])
         return cls(**data[1][0])
+
+    def _get_memories(self):
+        data, count = supabase.table("Memories").select("*").eq("agent_id", str(self.id)).execute()
+        memories = [SingleMemory(**memory) for memory in data[1]]
+        return memories
 
     def _add_memory(
         self,
@@ -186,7 +197,7 @@ class Agent(BaseModel):
             .select("*")
             .eq("agent_id", str(self.id))
             .gt("created_at", date)
-            .order("created_at", ascending=False)
+            .order("created_at", desc=True)
             .execute()
         )
         memories = [SingleMemory(**memory) for memory in data[1]]
@@ -203,12 +214,12 @@ class Agent(BaseModel):
             .select("type", "created_at", "agent_id")
             .eq("agent_id", str(self.id))
             .eq("type", MemoryType.REFLECTION.value)
-            .order("created_at", ascending=False)
+            .order("created_at", desc=True)
             .limit(1)
             .execute()
         )
 
-        last_reflection_time = data[1][0]["created_at"] if count > 0 else datetime(1970, 1, 1)
+        last_reflection_time = data[1][0]["created_at"] if len(data[1]) > 0 else datetime(1970, 1, 1)
 
         memories_since_last_reflection = self._get_memories_since(last_reflection_time)
 
@@ -231,6 +242,7 @@ class Agent(BaseModel):
             self._add_memory(memory_string, MemoryType.OBSERVATION)
 
     def _related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
+
         # Calculate relevance for each memory and store it in a list of dictionaries
         memories_with_relevance = [
             RelatedMemory(memory=memory, relevance=memory.relevance(query))
@@ -245,6 +257,11 @@ class Agent(BaseModel):
         return sorted_memories[:k]
 
     def _summarize_activity(self, k: int = 20) -> str:
+
+        # Get the k most recent memories
+        print("memory descriptions:", [memory.description for memory in self.memories])
+
+
         recent_memories = sorted(
             self.memories, key=lambda memory: memory.created_at, reverse=True
         )[:k]
@@ -304,7 +321,7 @@ class Agent(BaseModel):
 
         # first emit the depature event to the db
         event = Event(
-            timestamp=datetime.datetime.now(),
+            timestamp=datetime.now(),
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {Location.from_id(location_id).name}",
             location_id=self.state.location_id,
@@ -320,7 +337,7 @@ class Agent(BaseModel):
 
         # emit the arrival to the db
         event = Event(
-            timestamp=datetime.datetime.now(),
+            timestamp=datetime.now(),
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {Location.from_id(location_id).name}",
             location_id=self.state.location_id,

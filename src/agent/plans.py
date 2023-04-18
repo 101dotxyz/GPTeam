@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
@@ -12,10 +12,10 @@ class SinglePlan(BaseModel):
     description: str
     location_id: UUID
     max_duration_hrs: float
-    created_at: datetime.datetime
+    created_at: datetime
     agent_id: UUID
     stop_condition: str
-    completed_at: Optional[datetime.datetime] = None
+    completed_at: Optional[datetime] = None
 
     def __init__(
         self,
@@ -24,15 +24,15 @@ class SinglePlan(BaseModel):
         max_duration_hrs: float,
         stop_condition: str,
         agent_id: UUID,
-        created_at: Optional[datetime.datetime] = None,
-        completed_at: Optional[datetime.datetime] = None,
+        created_at: Optional[datetime] = None,
+        completed_at: Optional[datetime] = None,
         id: Optional[UUID] = None,
     ):
         if id is None:
             id = uuid4()
 
         if created_at is None:
-            created_at = datetime.datetime.now()
+            created_at = datetime.now()
 
         super().__init__(
             id=id,
@@ -59,7 +59,7 @@ class LLMSinglePlan(BaseModel):
     index: int = Field(description="The plan number")
     description: str = Field(description="A description of the plan")
     location_name: str = Field(description="The name of the location")
-    start_time: datetime.datetime = Field(
+    start_time: datetime = Field(
         description="The starting time, using this strftime format string: '%H:%M - %m/%d/%y'"
     )
     stop_condition: str = Field(

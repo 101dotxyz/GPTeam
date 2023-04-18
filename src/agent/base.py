@@ -18,7 +18,7 @@ from .importance import ImportanceRatingResponse
 from .plans import LLMPlanResponse, LLMSinglePlan, SinglePlan
 from .executor import run_executor
 from .reflection import ReflectionQuestions, ReflectionResponse
-from ..world.base import Location, Event, EventType
+from ..location.base import Location, Event, EventType
 
 
 class RelatedMemory(BaseModel):
@@ -51,6 +51,7 @@ class Agent(BaseModel):
     id: UUID
     full_name: str
     bio: str
+    world_id: Optional[UUID] = None
     directives: Optional[list[str]] = None
     memories: Optional[list[SingleMemory]] = []
     ordered_plan_ids: Optional[list[UUID]] = []
@@ -65,6 +66,7 @@ class Agent(BaseModel):
         ordered_plan_ids: list[UUID] = [],
         state: AgentState = None,
         id: Optional[str | UUID] = None,
+        world_id: Optional[UUID] = None,
     ):
         if id is None:
             id = uuid4()
@@ -85,6 +87,7 @@ class Agent(BaseModel):
             memories=memories,
             ordered_plan_ids=ordered_plan_ids,
             state=state,
+            world_id=world_id,
         )
 
         print_to_console("Agent: ", Fore.GREEN, self.full_name)

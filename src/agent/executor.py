@@ -2,22 +2,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from langchain.tools import BaseTool
+import re
+from typing import List, Union
+
+from langchain import LLMChain
 from langchain.agents import (
-    initialize_agent,
     AgentExecutor,
-    LLMSingleActionAgent,
     AgentOutputParser,
+    LLMSingleActionAgent,
+    initialize_agent,
 )
 from langchain.prompts import BaseChatPromptTemplate
-from langchain import LLMChain
-from typing import List, Union
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
-import re
+from langchain.tools import BaseTool
 
-from ..utils.prompt import PromptString
-from ..utils.models import ChatModel, ChatModelName
 from ..tools.base import all_tools
+from ..utils.models import ChatModel, ChatModelName
+from ..utils.prompt import PromptString
 
 # set_up_logging()
 
@@ -76,7 +77,6 @@ class CustomOutputParser(AgentOutputParser):
 
 
 def run_executor(input: str):
-
     print("Runing agent executor")
 
     prompt = CustomPromptTemplate(

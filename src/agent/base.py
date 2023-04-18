@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 from typing import Optional
@@ -6,19 +7,18 @@ from uuid import UUID, uuid4
 from colorama import Fore
 from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from pydantic import BaseModel
-import datetime
 
 from ..memory.base import MemoryType, SingleMemory
 from ..utils.database import supabase
 from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel, ChatModelName
-from ..utils.parameters import PLAN_LENGTH, REFLECTION_MEMORY_COUNT, DEFAULT_LOCATION_ID
+from ..utils.parameters import DEFAULT_LOCATION_ID, PLAN_LENGTH, REFLECTION_MEMORY_COUNT
 from ..utils.prompt import Prompter, PromptString
+from ..world.base import Event, EventType, Location
+from .executor import run_executor
 from .importance import ImportanceRatingResponse
 from .plans import LLMPlanResponse, LLMSinglePlan, SinglePlan
-from .executor import run_executor
 from .reflection import ReflectionQuestions, ReflectionResponse
-from ..world.base import Location, Event, EventType
 
 
 class RelatedMemory(BaseModel):
@@ -382,7 +382,6 @@ class Agent(BaseModel):
                 )
 
     def plan(self) -> list[SinglePlan]:
-
         print_to_console("Starting to Plan", Fore.YELLOW, "📝")
 
         low_temp_llm = ChatModel(ChatModelName.GPT4, temperature=0)
@@ -468,15 +467,12 @@ class Agent(BaseModel):
         return new_plans
 
     def run(self, steps: int = 1) -> None:
-
         step_duration = 0
         while step_duration < steps:
-
             current_plan = None
 
             # If we do not have a plan state, consult the plans or plan something new
             if self.state.plan_id is None:
-
                 # If we have no plans, make some
                 if len(self.ordered_plan_ids) == 0:
                     plans = self.plan()

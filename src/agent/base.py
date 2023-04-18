@@ -7,6 +7,7 @@ from colorama import Fore
 from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from pydantic import BaseModel
 import datetime
+import os
 
 from ..memory.base import MemoryType, SingleMemory
 from ..utils.database import supabase
@@ -17,7 +18,7 @@ from ..utils.prompt import Prompter, PromptString
 from .importance import ImportanceRatingResponse
 from .plans import LLMPlanResponse, SinglePlan
 from .react import LLMReactionResponse, Reaction
-from .executor import run_executor
+from .executor import run_executor, ExecutorStatus
 from .reflection import ReflectionQuestions, ReflectionResponse
 from ..world.base import Location, Event, EventType
 
@@ -307,7 +308,7 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {Location.from_id(location_id).name}",
             location_id=self.state.location_id,
-            
+
         )
 
         data, count = supabase.table("Events").insert(event._db_dict()).execute()
@@ -545,54 +546,59 @@ class Agent(BaseModel):
 
         return parsed_reaction_response
 
-    def _work_through_plans(self, steps: int = 1) -> None:
+    def _do_first_plan(self) -> None:
+        """Do the first plan in the list"""
 
-        step_duration = 0
-        while (step_duration < steps):
+        current_plan = None
 
-            current_plan = None
+        # If we do not have a plan state, consult the plans or plan something new
+        if self.state.plan_id is None:
 
-            # If we do not have a plan state, consult the plans or plan something new
-            if self.state.plan_id is None:
-
-                # If we have no plans, make some
-                if len(self.ordered_plan_ids) == 0:
-                    plans = self._plan()
-                
-                # Otherwise, just use the existing plans
-                else:
-                    plans = [SinglePlan.from_id(plan_id) for plan_id in self.ordered_plan_ids]
-
-                # Set the agent state
-                self.state = AgentState(plan_id=plans[0].id, location_id=plans[0].location_id)
-
-                current_plan = plans[0]
+            # If we have no plans, make some
+            if len(self.ordered_plan_ids) == 0:
+                plans = self._plan()
             
-            # Get the current plan
-            current_plan = SinglePlan.from_id(self.state.plan_id) if current_plan is None else current_plan
-            
-            print_to_console("Acting on Plan", Fore.YELLOW, f"{current_plan.description}")
+            # Otherwise, just use the existing plans
+            else:
+                plans = [SinglePlan.from_id(plan_id) for plan_id in self.ordered_plan_ids]
 
-            # If we are not in the right location, move to the new location
-            if self.state.location_id != current_plan.location_id:
-                self._move_to_location(current_plan.location_id)
+            # Set the agent state
+            self.state = AgentState(plan_id=plans[0].id, location_id=plans[0].location_id)
 
-            # Execute the plan
+            current_plan = plans[0]
+        
+        # Get the current plan
+        current_plan = SinglePlan.from_id(self.state.plan_id) if current_plan is None else current_plan
+        
+        print_to_console("Acting on Plan", Fore.YELLOW, f"{current_plan.description}")
 
-            # TODO: Tools are dependent on the location
-            output = run_executor(current_plan.description)
+        # If we are not in the right location, move to the new location
+        if self.state.location_id != current_plan.location_id:
+            self._move_to_location(current_plan.location_id)
 
-            if 'Final Response: Task Failed' in output:
-                print_to_console("Plan Failed", Fore.RED, f"{current_plan.description}")
-                # TODO: handle plan failure with a human
-                return
+        # Execute the plan
 
-            # If the plan is done, remove it from the list of plans
-            elif 'Final Response' in output:
-                self.ordered_plan_ids.remove(current_plan.id)
-                self.state = AgentState(plan_id=None, location_id=None)
+        # TODO: Tools are dependent on the location
+        timeout = int(os.getenv('STEP_DURATION'))
+        resp = run_executor(current_plan.description, timeout=timeout)
 
-    def run(self, steps: int = 1):
+
+        if resp.status == ExecutorStatus.NEEDS_HELP:
+            print_to_console("Plan Failed: Needs Help", Fore.RED, f"{current_plan.description} Error: {resp.output}")
+            # TODO: handle plan failure with a human
+            return
+        
+        elif resp.status == ExecutorStatus.TIMED_OUT:
+            print_to_console("Plan Timed Out", Fore.RED, f"{current_plan.description} Error: {resp.output}")
+            return
+
+        # If the plan is done, remove it from the list of plans
+        elif resp.status == ExecutorStatus.COMPLETED:
+            self.ordered_plan_ids.remove(current_plan.id)
+            self.state.plan_id = None
+            print_to_console("Plan Completed: ", Fore.GREEN, f"{current_plan.description}")
+ 
+    def run_for_one_step(self):
 
         # First we decide if we need to reflect
         if self._should_reflect():
@@ -606,4 +612,4 @@ class Agent(BaseModel):
             self._plan()
         
         # Work through the plans
-        self._work_through_plans(steps=steps)
+        self._do_first_plan()

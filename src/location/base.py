@@ -9,7 +9,7 @@ from pydantic import BaseModel
 # from ..agent.base import Agent
 from ..utils.database import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
-
+from ..world.base import Event
 
 class ActionType(Enum):
     MOVE = "move"
@@ -103,7 +103,7 @@ class Location(BaseModel):
         )
         return data[1][0]["current_step"]
 
-    def pull_events(self):
+    def pull_events(self) -> list[Event]:
         """Get current step events from the events table that have happened in this location."""
         data, count = (
             supabase.table("Events")
@@ -112,7 +112,7 @@ class Location(BaseModel):
             .eq("step", self.current_step)
             .execute()
         )
-        return data[1]
+        return [Event(**event) for event in data[1]]
 
 
 class EventType(Enum):

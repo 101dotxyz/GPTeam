@@ -1,7 +1,7 @@
 from uuid import uuid4, UUID
 
 from .agent.base import Agent
-from .world.base import World, Location
+from .location.base import Location
 from .utils.database import supabase
 
 

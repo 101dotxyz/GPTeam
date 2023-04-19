@@ -1,11 +1,11 @@
-import datetime
+from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
+from ..location.base import Location
 from ..utils.database import supabase
-from ..world.base import Location
 
 
 class SinglePlan(BaseModel):
@@ -13,10 +13,10 @@ class SinglePlan(BaseModel):
     description: str
     location: Location
     max_duration_hrs: float
-    created_at: datetime.datetime
+    created_at: datetime
     agent_id: UUID
     stop_condition: str
-    completed_at: Optional[datetime.datetime] = None
+    completed_at: Optional[datetime] = None
 
     def __init__(
         self,
@@ -25,15 +25,15 @@ class SinglePlan(BaseModel):
         max_duration_hrs: float,
         stop_condition: str,
         agent_id: UUID,
-        created_at: Optional[datetime.datetime] = None,
-        completed_at: Optional[datetime.datetime] = None,
+        created_at: Optional[datetime] = None,
+        completed_at: Optional[datetime] = None,
         id: Optional[UUID] = None,
     ):
         if id is None:
             id = uuid4()
 
         if created_at is None:
-            created_at = datetime.datetime.now()
+            created_at = datetime.now()
 
         super().__init__(
             id=id,
@@ -49,11 +49,11 @@ class SinglePlan(BaseModel):
     @classmethod
     def from_id(cls, id: UUID):
         data, count = supabase.table("Plans").select("*").eq("id", str(id)).execute()
-        plan = data[1][0]
-        plan["location"] = Location.from_id(plan["location_id"])
-        del plan["location_id"]
+        plan_data = data[1][0]
+        plan_data["location"] = Location.from_id(plan_data["location_id"])
+        del plan_data["location_id"]
 
-        return cls(**data[1][0])
+        return cls(**plan_data)
 
     def delete(self):
         data, count = supabase.table("Plans").delete().eq("id", str(self.id)).execute()
@@ -64,7 +64,7 @@ class LLMSinglePlan(BaseModel):
     index: int = Field(description="The plan number")
     description: str = Field(description="A description of the plan")
     location_name: str = Field(description="The name of the location")
-    start_time: datetime.datetime = Field(
+    start_time: datetime = Field(
         description="The starting time, using this strftime format string: '%H:%M - %m/%d/%y'"
     )
     stop_condition: str = Field(

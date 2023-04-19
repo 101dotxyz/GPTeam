@@ -1,9 +1,9 @@
 import atexit
-import datetime
 import json
 import logging
 import os
 import re
+from datetime import datetime
 from typing import List
 
 from json_log_formatter import JSONFormatter
@@ -111,7 +111,7 @@ def set_up_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     # set path to be this current directory
-    timestamp = datetime.datetime.now().strftime("%H-%M__%m-%d-%y")
+    timestamp = datetime.now().strftime("%H-%M__%m-%d-%y")
     path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         f"logs/{timestamp}_logs.json",

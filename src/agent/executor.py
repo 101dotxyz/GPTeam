@@ -1,26 +1,21 @@
-from dotenv import load_dotenv
-
-load_dotenv()
-
+import os
 import re
+from enum import Enum
 from typing import List, Union
 
+from dotenv import load_dotenv
 from langchain import LLMChain
-from langchain.agents import (
-    AgentExecutor,
-    AgentOutputParser,
-    LLMSingleActionAgent,
-    initialize_agent,
-)
+from langchain.agents import AgentExecutor, AgentOutputParser, LLMSingleActionAgent
 from langchain.prompts import BaseChatPromptTemplate
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
 from langchain.tools import BaseTool
+from pydantic import BaseModel
 
 from ..tools.base import all_tools
 from ..utils.models import ChatModel, ChatModelName
 from ..utils.prompt import PromptString
 
-# set_up_logging()
+load_dotenv()
 
 
 # Set up a prompt template
@@ -76,7 +71,22 @@ class CustomOutputParser(AgentOutputParser):
         )
 
 
-def run_executor(input: str):
+class ExecutorStatus(Enum):
+    COMPLETED = "completed"
+    TIMED_OUT = "timed_out"
+    NEEDS_HELP = "needs_help"
+
+
+class ExecutorResponse(BaseModel):
+    status: ExecutorStatus
+    output: str
+
+
+def run_executor(
+    input: str, timeout: int = int(os.getenv("STEP_DURATION"))
+) -> ExecutorResponse:
+    """Runs the executor for a max of 1 step"""
+
     print("Runing agent executor")
 
     prompt = CustomPromptTemplate(
@@ -90,7 +100,7 @@ def run_executor(input: str):
     output_parser = CustomOutputParser()
 
     # set up a simple completion llm
-    llm = ChatModel(model_name=ChatModelName.GPT4, temperature=0)
+    llm = ChatModel(model_name=ChatModelName.GPT4, temperature=0).defaultModel
 
     # LLM chain consisting of the LLM and a prompt
     llm_chain = LLMChain(llm=llm, prompt=prompt)
@@ -104,7 +114,19 @@ def run_executor(input: str):
     )
 
     agent_executor = AgentExecutor.from_agent_and_tools(
-        agent=agent, tools=all_tools, verbose=True
+        agent=agent,
+        tools=all_tools,
+        verbose=True,
+        max_execution_time=timeout,
     )
 
-    return agent_executor.run(input)
+    output = agent_executor.run(input)
+
+    if "Agent stopped" in output:
+        return ExecutorResponse(status=ExecutorStatus.TIMED_OUT, output=output)
+
+    elif "Need Help" in output:
+        return ExecutorResponse(status=ExecutorStatus.NEEDS_HELP, output=output)
+
+    else:
+        return ExecutorResponse(status=ExecutorStatus.COMPLETED, output=output)

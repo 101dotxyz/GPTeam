@@ -357,7 +357,7 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {location.name}",
             location_id=self.state.location.id,
-            witness_ids=self.state.location.local_agent_ids,
+            witness_ids=self.state.location.allowed_agent_ids,
         )
 
         print("event: ", event)
@@ -375,7 +375,7 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {location.name}",
             location_id=self.state.location.id,
-            witness_ids=location.local_agent_ids,
+            witness_ids=location.allowed_agent_ids,
         )
         event_manager.add_event(event)
 

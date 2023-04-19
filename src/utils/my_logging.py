@@ -1,11 +1,13 @@
-import logging
 import atexit
-from json_log_formatter import JSONFormatter
-import re
-from typing import List
 import json
+import logging
 import os
+import re
 from datetime import datetime
+from typing import List
+
+from json_log_formatter import JSONFormatter
+
 
 def clean_json_string(json_string):
     cleaned_string = re.sub(r"\\\'", r"'", json_string)  # replace \' with '

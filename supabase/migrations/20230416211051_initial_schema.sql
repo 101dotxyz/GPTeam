@@ -10,6 +10,7 @@ CREATE TABLE "public"."Agents" (
     "full_name" text,
     "bio" text,
     "directives" text[],
+    "world_id" uuid,
     "ordered_plan_ids" uuid[],
     "state" jsonb,
     PRIMARY KEY ("id")

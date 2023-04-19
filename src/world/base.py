@@ -5,11 +5,10 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
-from src.event.base import EventManager
+from src.event.base import Event, EventManager
 
-from ..location.base import Event, Location
 from ..agent.base import Agent
-from ..world.base import Event
+from ..location.base import Location
 from ..utils.database import supabase
 
 
@@ -17,6 +16,7 @@ class World(BaseModel):
     id: UUID
     name: str
     current_step: int
+    _locations: list[Location]
     agents: list[Agent] = []
     event_manager: EventManager
 
@@ -24,16 +24,26 @@ class World(BaseModel):
         if id is None:
             id = uuid4()
 
-        super().__init__(id=id, name=name, current_step=current_step, event_manager=EventManager(current_step))
+        super().__init__(
+            id=id,
+            name=name,
+            current_step=current_step,
+            event_manager=EventManager(current_step),
+        )
         self.load_agents()
 
     @property
     def locations(self) -> list[Location]:
+        if self._locations:
+            return self._locations
+
         # get all locations with this id as world_id
         data, count = (
             supabase.table("Locations").select("*").eq("world_id", self.id).execute()
         )
-        return [Location(**location) for location in data[1]]
+        self._locations = [Location(**location) for location in data[1]]
+
+        return self._locations
 
     @classmethod
     def from_id(cls, id: UUID):
@@ -46,7 +56,9 @@ class World(BaseModel):
         return cls(**data[1][0])
 
     def get_agents(self):
-        data, count = supabase.table("Agents").select("*").eq("world_id", str(self.id)).execute()
+        data, count = (
+            supabase.table("Agents").select("*").eq("world_id", str(self.id)).execute()
+        )
         agents = [Agent(**agent) for agent in data[1]]
         return agents
 
@@ -91,7 +103,9 @@ class World(BaseModel):
         for agent in self.agents:
             agent.run_for_one_step(self.event_manager)
         self.current_step += 1
-        supabase.table("Worlds").update({"current_step": self.current_step}).eq("id", str(self.id)).execute()
+        supabase.table("Worlds").update({"current_step": self.current_step}).eq(
+            "id", str(self.id)
+        ).execute()
 
     def run(self, steps: int = 1):
         for _ in range(steps):

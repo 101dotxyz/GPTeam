@@ -7,14 +7,9 @@ from langchain.llms import OpenAI
 from langchain.schema import BaseMessage
 
 from .cache import json_cache
-from .my_logging import set_up_logging
 from .spinner import Spinner
 
-# load env variables
 load_dotenv()
-
-# set up logging
-# set_up_logging()
 
 
 class ChatModelName(Enum):

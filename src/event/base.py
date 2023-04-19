@@ -5,6 +5,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
+from ..location.base import Location
+
 # from ..agent.base import Agent
 from ..utils.database import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
@@ -126,8 +128,8 @@ class EventManager(BaseModel):
     def get_events(self):
         return self.events
 
-    def get_events_by_location(self, location_id: UUID):
-        return [event for event in self.events if event.location_id == location_id]
+    def get_events_by_location(self, location: Location):
+        return [event for event in self.events if event.location_id == location.id]
 
     def get_events_by_step(self, step: int):
         return [event for event in self.events if event.step == step]

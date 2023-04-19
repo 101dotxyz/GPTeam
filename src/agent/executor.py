@@ -17,8 +17,6 @@ from ..utils.prompt import PromptString
 
 load_dotenv()
 
-# set_up_logging()
-
 
 # Set up a prompt template
 class CustomPromptTemplate(BaseChatPromptTemplate):

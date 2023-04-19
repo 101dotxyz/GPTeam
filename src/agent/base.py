@@ -23,7 +23,7 @@ from ..utils.parameters import (
 from ..utils.prompt import Prompter, PromptString
 from .executor import ExecutorStatus, run_executor
 from .importance import ImportanceRatingResponse
-from .plans import LLMPlanResponse, SinglePlan
+from .plans import LLMPlanResponse, LLMSinglePlan, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
 
@@ -37,35 +37,25 @@ class RelatedMemory(BaseModel):
 
 
 class AgentState(BaseModel):
-    plan_id: Optional[UUID]
-    location_id: UUID
+    plan: Optional[SinglePlan]
     location: Location
 
-    def __init__(
-        self, location_id: UUID | str = None, plan_id: Optional[UUID | str] = None
-    ):
-        if location_id is None:
-            location_id = DEFAULT_LOCATION_ID
+    def __init__(self, location: Location, plan: Optional[SinglePlan] = None):
+        super().__init__(location=location, plan=plan)
 
-        super().__init__(
-            location_id=location_id,
-            plan_id=plan_id,
-            location=Location.from_id(location_id),
-        )
-
-    def _db_dict(self) -> dict:
-        return {"plan_id": str(self.plan_id), "location_id": str(self.location_id)}
+    def db_dict(self) -> dict:
+        return {"plan_id": str(self.plan.id), "location_id": str(self.location.id)}
 
 
 class Agent(BaseModel):
     id: UUID
     full_name: str
     bio: str
-    directives: Optional[list[str]] = None
-    memories: Optional[list[SingleMemory]] = []
-    ordered_plan_ids: Optional[list[UUID]] = []
-    state: Optional[AgentState] = None
-    world_id: Optional[UUID] = None
+    directives: Optional[list[str]]
+    memories: list[SingleMemory]
+    plans: list[SinglePlan]
+    state: Optional[AgentState]
+    world_id: UUID
 
     def __init__(
         self,
@@ -73,7 +63,7 @@ class Agent(BaseModel):
         bio: str,
         directives: list[str] = None,
         memories: list[SingleMemory] = [],
-        ordered_plan_ids: list[UUID] = [],
+        plans: list[SinglePlan] = [],
         state: AgentState = None,
         id: Optional[str | UUID] = None,
         world_id: Optional[UUID] = DEFAULT_WORLD_ID,
@@ -85,9 +75,12 @@ class Agent(BaseModel):
 
         # if the state is None, put them into the default location
         if state is None:
-            state = AgentState(location_id=DEFAULT_LOCATION_ID)
+            state = AgentState(location=Location.from_id(DEFAULT_LOCATION_ID))
         elif isinstance(state, dict):
-            state = AgentState(**state)
+            state = AgentState(
+                location=Location.from_id(state["location_id"]),
+                plan=SinglePlan.from_id(state["plan_id"]),
+            )
 
         # initialize the base model
         super().__init__(
@@ -96,7 +89,7 @@ class Agent(BaseModel):
             bio=bio,
             directives=directives,
             memories=memories,
-            ordered_plan_ids=ordered_plan_ids,
+            plans=plans,
             state=state,
             world_id=world_id,
         )
@@ -118,11 +111,6 @@ class Agent(BaseModel):
         )
         return [Location(**location) for location in data[1]]
 
-    @property
-    def ordered_plans(self) -> list[SinglePlan]:
-        """Get the full plans for this agent."""
-        return [SinglePlan.from_id(id) for id in self.ordered_plan_ids]
-
     @classmethod
     def from_json_profile(cls, id: str):
         path = os.path.dirname(os.path.abspath(__file__)) + f"/profiles/{id}.json"
@@ -134,9 +122,48 @@ class Agent(BaseModel):
 
     @classmethod
     def from_id(cls, id: UUID):
-        data, count = supabase.table("Agents").select("*").eq("id", str(id)).execute()
-        print(data[1][0])
-        return cls(**data[1][0])
+        agents_data, agents_count = (
+            supabase.table("Agents").select("*").eq("id", str(id)).execute()
+        )
+        if agents_count == 0:
+            raise ValueError("No agent with that id")
+        agent = agents_data[1][0]
+
+        plans_data, plans_count = (
+            supabase.table("Plans").select("*").eq("agent_id", str(id)).execute()
+        )
+
+        locations_data, locations_count = (
+            supabase.table("Locations").select("*").execute()
+        )
+
+        memories_data, memories_count = (
+            supabase.table("Memories").select("*").eq("agent_id", str(id)).execute()
+        )
+
+        plans = [
+            SinglePlan(
+                **{key: value for key, value in plan.items() if key != "location_id"},
+                location=Location.from_id(plan["location_id"]),
+            )
+            for plan in plans_data[1]
+        ]
+
+        state = AgentState(
+            plan=SinglePlan.from_id(agent["state"]["plan_id"]),
+            location=Location.from_id(agent["state"]["location_id"]),
+        )
+
+        return Agent(
+            id=id,
+            full_name=agent.get("full_name"),
+            bio=agent.get("bio"),
+            directives=agent.get("directives"),
+            memories=[SingleMemory(**memory) for memory in memories_data[1]],
+            plans=plans,
+            state=state,
+            world_id=agent.get("world_id"),
+        )
 
     def _get_memories(self):
         data, count = (
@@ -177,8 +204,8 @@ class Agent(BaseModel):
             "full_name": self.full_name,
             "bio": self.bio,
             "directives": self.directives,
-            "ordered_plan_ids": [str(plan_id) for plan_id in self.ordered_plan_ids],
-            "state": self.state._db_dict(),
+            "ordered_plan_ids": [str(plan.id) for plan in self.plans],
+            "state": self.state.db_dict(),
         }
         print("Updated ", self.full_name, " in db.")
         return supabase.table("Agents").update(row).eq("id", str(self.id)).execute()
@@ -241,8 +268,8 @@ class Agent(BaseModel):
             "full_name": self.full_name,
             "bio": self.bio,
             "directives": self.directives,
-            "ordered_plan_ids": [str(plan_id) for plan_id in self.ordered_plan_ids],
-            "state": self.state._db_dict(),
+            "ordered_plan_ids": [str(plan.id) for plan in self.plans],
+            "state": self.state.db_dict(),
         }
 
     def add_observation_strings(self, memory_strings: list[str]):
@@ -321,15 +348,16 @@ class Agent(BaseModel):
 
         return rating
 
-    def _move_to_location(self, location_id: UUID, event_manager: EventManager):
+    def _move_to_location(self, location: Location, event_manager: EventManager):
         """Move the agents state, send event to Events table"""
 
         # first emit the depature event to the db
         event = Event(
             timestamp=datetime.now(),
             type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} left location: {Location.from_id(location_id).name}",
-            location_id=self.state.location_id,
+            description=f"{self.full_name} left location: {location.name}",
+            location_id=self.state.location.id,
+            witness_ids=self.state.location.local_agent_ids,
         )
 
         print("event: ", event)
@@ -337,18 +365,17 @@ class Agent(BaseModel):
         event_manager.add_event(event)
 
         # Update the agents state to the new location
-        self.state.location_id = location_id
+        self.state.location = location
 
-        print_to_console(
-            "Moved to ", Fore.BLUE, f"{Location.from_id(location_id).name}"
-        )
+        print_to_console("Moved to ", Fore.BLUE, f"{location.name}")
 
         # emit the arrival to the db
         event = Event(
             timestamp=datetime.now(),
             type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} arrived at location: {Location.from_id(location_id).name}",
-            location_id=self.state.location_id,
+            description=f"{self.full_name} arrived at location: {location.name}",
+            location_id=self.state.location.id,
+            witness_ids=location.local_agent_ids,
         )
         event_manager.add_event(event)
 
@@ -478,7 +505,7 @@ class Agent(BaseModel):
                 "recent_activity": recent_activity,
                 "current_plans": [
                     f"{index}. {plan.description}"
-                    for index, plan in enumerate(self.ordered_plans)
+                    for index, plan in enumerate(self.plans)
                 ],
                 "format_instructions": plan_parser.get_format_instructions(),
             },
@@ -499,24 +526,23 @@ class Agent(BaseModel):
         parsed_plans_response: LLMPlanResponse = plan_parser.parse(response)
 
         # Delete existing plans
-        self.ordered_plan_ids = []
+        self.plans = []
 
         # Make a bunch of new plan objects, put em into a list
         new_plans: list[SinglePlan] = []
-        ordered_plan_ids = []
+
         for plan in parsed_plans_response.plans:
             new_plan = SinglePlan(
                 description=plan.description,
-                location_id=Location.from_name(plan.location_name).id,
+                location=Location.from_name(plan.location_name),
                 max_duration_hrs=plan.max_duration_hrs,
                 agent_id=self.id,
                 stop_condition=plan.stop_condition,
             )
             new_plans.append(new_plan)
-            ordered_plan_ids.append(new_plan.id)
 
         # update the local agent object
-        self.ordered_plan_ids = ordered_plan_ids
+        self.plans = new_plans
 
         # update the db agent row
         data, count = self._update_agent_row()
@@ -529,7 +555,7 @@ class Agent(BaseModel):
             print_to_console(
                 "Plan ",
                 Fore.YELLOW,
-                f"#{index}: {plan.description} @ {plan.location_id} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]",
+                f"#{index}: {plan.description} @ {plan.location.name} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]",
             )
 
         return new_plans
@@ -538,7 +564,7 @@ class Agent(BaseModel):
         """Get the recent activity and decide whether to replan to carry on"""
 
         # Pull in latest events
-        new_events = event_manager.get_events_by_location(self.state.location_id)
+        new_events = event_manager.get_events_by_location(self.state.location.id)
 
         # Store them as observations for this agent
         self.add_observation_strings([event.description for event in new_events])
@@ -561,7 +587,7 @@ class Agent(BaseModel):
                 "recent_activity": self._summarize_activity(),
                 "current_plans": [
                     f"{index}. {plan.description}"
-                    for index, plan in enumerate(self.ordered_plans)
+                    for index, plan in enumerate(self.plans)
                 ],
                 "event_descriptions": [
                     f"{index}. {event.description}"
@@ -588,36 +614,27 @@ class Agent(BaseModel):
         current_plan = None
 
         # If we do not have a plan state, consult the plans or plan something new
-        if self.state.plan_id is None:
+        if self.state.plan is None:
             # If we have no plans, make some
-            if len(self.ordered_plan_ids) == 0:
+            if len(self.plans) == 0:
                 plans = self._plan()
-
             # Otherwise, just use the existing plans
             else:
-                plans = [
-                    SinglePlan.from_id(plan_id) for plan_id in self.ordered_plan_ids
-                ]
+                plans = self.plans
 
             # Set the agent state
-            self.state = AgentState(
-                plan_id=plans[0].id, location_id=plans[0].location_id
-            )
+            self.state = AgentState(plan=plans[0], location=plans[0].location)
 
             current_plan = plans[0]
 
         # Get the current plan
-        current_plan = (
-            SinglePlan.from_id(self.state.plan_id)
-            if current_plan is None
-            else current_plan
-        )
+        current_plan = self.state.plan if current_plan is None else current_plan
 
         print_to_console("Acting on Plan", Fore.YELLOW, f"{current_plan.description}")
 
         # If we are not in the right location, move to the new location
-        if self.state.location_id != current_plan.location_id:
-            self._move_to_location(current_plan.location_id, event_manager)
+        if self.state.location.id != current_plan.location.id:
+            self._move_to_location(current_plan.location, event_manager)
 
         # Execute the plan
 
@@ -644,8 +661,9 @@ class Agent(BaseModel):
 
         # If the plan is done, remove it from the list of plans
         elif resp.status == ExecutorStatus.COMPLETED:
-            self.ordered_plan_ids.remove(current_plan.id)
-            self.state.plan_id = None
+            # TODO: make sure current_plan is indeed a plan from the list, and not a reconstruction of one.
+            self.plans.remove(current_plan)
+            self.state.plan = None
             print_to_console(
                 "Plan Completed: ", Fore.GREEN, f"{current_plan.description}"
             )

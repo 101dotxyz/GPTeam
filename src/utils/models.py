@@ -6,7 +6,7 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.llms import OpenAI
 from langchain.schema import BaseMessage
 
-from .cache import json_cache
+from .cache import chat_json_cache, json_cache
 from .spinner import Spinner
 
 load_dotenv()
@@ -42,7 +42,7 @@ class ChatModel:
         self.defaultModel = get_chat_model(default_model_name, **kwargs)
         self.backupModel = get_chat_model(backup_model_name, **kwargs)
 
-    @json_cache(sleep_range=(0, 0))
+    @chat_json_cache(sleep_range=(0, 0))
     def get_chat_completion(self, messages: list[BaseMessage], **kwargs) -> str:
         with Spinner(kwargs.get("loading_text", "🤔 Thinking... ")):
             try:
@@ -59,7 +59,7 @@ class OpenAIChatModel(ChatOpenAI):
     def __init__(self, model_name: ChatModelName, **kwargs):
         super().__init__(model_name=model_name.value, **kwargs)
 
-    @json_cache(sleep_range=(0, 0))
+    @chat_json_cache(sleep_range=(0, 0))
     def get_chat_completion(self, messages: list[BaseMessage], **kwargs) -> str:
         with Spinner(kwargs.get("loading_text", "🤔 Thinking... ")):
             resp = super().generate([messages])

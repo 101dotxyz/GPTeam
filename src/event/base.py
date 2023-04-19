@@ -131,6 +131,9 @@ class EventManager(BaseModel):
     def get_events_by_location(self, location: Location):
         return [event for event in self.events if event.location_id == location.id]
 
+    def get_events_by_location_id(self, location_id: UUID):
+        return [event for event in self.events if event.location_id == location_id]
+
     def get_events_by_step(self, step: int):
         return [event for event in self.events if event.step == step]
 

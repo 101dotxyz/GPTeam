@@ -81,4 +81,6 @@ class Location(BaseModel):
     @classmethod
     def from_name(cls, name: str):
         data, count = supabase.table("Locations").select("*").eq("name", name).execute()
+        if count == 0:
+            raise ValueError(f"Location with name {name} not found")
         return cls(**data[1][0])

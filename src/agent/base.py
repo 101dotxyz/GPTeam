@@ -109,7 +109,14 @@ class Agent(BaseModel):
             .contains("allowed_agent_ids", [str(self.id)])
             .execute()
         )
-        return [Location(**location) for location in data[1]]
+        # For testing purposes include locations with 0 allowed agents as well
+        other_data, count = (
+            supabase.table("Locations")
+            .select("*")
+            .eq("allowed_agent_ids", '{}')
+            .execute()
+        )
+        return [Location(**location) for location in data[1] + other_data[1]]
 
     @classmethod
     def from_json_profile(cls, id: str):
@@ -150,7 +157,7 @@ class Agent(BaseModel):
         ]
 
         state = AgentState(
-            plan=SinglePlan.from_id(agent["state"]["plan_id"]),
+            plan=SinglePlan.from_id(agent["state"]["plan_id"]) if agent["state"]["plan_id"] else None,
             location=Location.from_id(agent["state"]["location_id"]),
         )
 
@@ -524,7 +531,6 @@ class Agent(BaseModel):
 
         # Parse the response into an object
         parsed_plans_response: LLMPlanResponse = plan_parser.parse(response)
-
         # Delete existing plans
         self.plans = []
 
@@ -532,9 +538,20 @@ class Agent(BaseModel):
         new_plans: list[SinglePlan] = []
 
         for plan in parsed_plans_response.plans:
+            try:
+                location = Location.from_name(plan.location_name)
+            except ValueError:
+                print_to_console(
+                    "Invalid Location",
+                    Fore.RED,
+                    f"Plan generated location '{plan.location_name}' which is not a valid location",
+                )
+                raise ValueError(
+                    f"Plan generated location '{plan.location_name}' which is not a valid location"
+                )
             new_plan = SinglePlan(
                 description=plan.description,
-                location=Location.from_name(plan.location_name),
+                location=location,
                 max_duration_hrs=plan.max_duration_hrs,
                 agent_id=self.id,
                 stop_condition=plan.stop_condition,
@@ -564,7 +581,7 @@ class Agent(BaseModel):
         """Get the recent activity and decide whether to replan to carry on"""
 
         # Pull in latest events
-        new_events = event_manager.get_events_by_location(self.state.location.id)
+        new_events = event_manager.get_events_by_location(self.state.location)
 
         # Store them as observations for this agent
         self.add_observation_strings([event.description for event in new_events])

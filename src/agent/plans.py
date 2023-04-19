@@ -49,6 +49,9 @@ class SinglePlan(BaseModel):
     @classmethod
     def from_id(cls, id: UUID):
         data, count = supabase.table("Plans").select("*").eq("id", str(id)).execute()
+        plan = data[1][0]
+        plan["location"] = Location.from_id(plan["location_id"])
+        del plan["location_id"]
 
         return cls(**data[1][0])
 

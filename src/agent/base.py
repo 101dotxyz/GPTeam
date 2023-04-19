@@ -126,11 +126,17 @@ class Agent(BaseModel):
             supabase.table("Memories").select("*").eq("agent_id", str(id)).execute()
         )
 
-        plans = [SinglePlan(**plan) for plan in plans_data[1]]
+        plans = [
+            SinglePlan(
+                **{key: value for key, value in plan.items() if key != "location_id"},
+                location=Location.from_id(plan["location_id"]),
+            )
+            for plan in plans_data[1]
+        ]
 
         state = AgentState(
-            plan=SinglePlan.from_id(data["state"]["plan_id"]),
-            location=Location.from_id(data["state"]["location_id"]),
+            plan=SinglePlan.from_id(agent["state"]["plan_id"]),
+            location=Location.from_id(agent["state"]["location_id"]),
         )
 
         return Agent(
@@ -138,9 +144,10 @@ class Agent(BaseModel):
             full_name=agent.get("full_name"),
             bio=agent.get("bio"),
             directives=agent.get("directives"),
-            memories=[SingleMemory(**memory) for memory in data.get("memories")],
+            memories=[SingleMemory(**memory) for memory in memories_data[1]],
             plans=plans,
             state=state,
+            world_id=agent.get("world_id"),
         )
 
     # private

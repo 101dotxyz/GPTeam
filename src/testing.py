@@ -15,9 +15,4 @@ load_dotenv()
 def main():
     world = World.from_name("AI Discord Server")
 
-    agents = world.get_agents()
-
-    print(agents)
-
-    # events_manager = EventManager(events=[], starting_step=0)
-    # jane_smith.run_for_one_step(events_manager=events_manager)
+    world.run_step()

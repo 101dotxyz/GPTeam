@@ -1,6 +1,6 @@
 -- WORLDS TABLE
-INSERT INTO public."Worlds" (id, name)
-VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'AI Discord Server');
+INSERT INTO public."Worlds" (id, name, current_step)
+VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'AI Discord Server', 0);
 
 -- AGENTS TABLE
 INSERT INTO public."Agents" (id, full_name, bio, directives, ordered_plan_ids, world_id, state)

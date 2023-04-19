@@ -107,14 +107,14 @@ class EventManager(BaseModel):
         if starting_step:
             self.starting_step = starting_step
 
-        data = (
+        data, count = (
             supabase.table("Events")
             .select("*")
             .gte("step", self.starting_step)
             .execute()
         )
 
-        self.events = [Event(**event) for event in data]
+        self.events = [Event(**event) for event in list(data[1])]
         return self.events
 
     def add_event(self, event: Event):

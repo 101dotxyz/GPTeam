@@ -1,27 +1,31 @@
 import json
 import os
+from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
 from colorama import Fore
 from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from pydantic import BaseModel
-from datetime import datetime
-import os
 
+from ..event.base import Event, EventManager, EventType
+from ..location.base import Location
 from ..memory.base import MemoryType, SingleMemory
 from ..utils.database import supabase
 from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel, ChatModelName
-from ..utils.parameters import PLAN_LENGTH, REFLECTION_MEMORY_COUNT, DEFAULT_LOCATION_ID, DEFAULT_WORLD_ID
+from ..utils.parameters import (
+    DEFAULT_LOCATION_ID,
+    DEFAULT_WORLD_ID,
+    PLAN_LENGTH,
+    REFLECTION_MEMORY_COUNT,
+)
 from ..utils.prompt import Prompter, PromptString
+from .executor import ExecutorStatus, run_executor
 from .importance import ImportanceRatingResponse
 from .plans import LLMPlanResponse, SinglePlan
 from .react import LLMReactionResponse, Reaction
-from .executor import run_executor, ExecutorStatus
 from .reflection import ReflectionQuestions, ReflectionResponse
-from ..event.base import Event, EventManager, EventType
-from ..location.base import Location
 
 
 class RelatedMemory(BaseModel):
@@ -38,25 +42,19 @@ class AgentState(BaseModel):
     location: Location
 
     def __init__(
-        self,
-        location_id: UUID | str = None,
-        plan_id: Optional[UUID | str] = None
+        self, location_id: UUID | str = None, plan_id: Optional[UUID | str] = None
     ):
-
         if location_id is None:
             location_id = DEFAULT_LOCATION_ID
 
         super().__init__(
             location_id=location_id,
             plan_id=plan_id,
-            location=Location.from_id(location_id)
+            location=Location.from_id(location_id),
         )
 
     def _db_dict(self) -> dict:
-        return {
-            "plan_id": str(self.plan_id),
-            "location_id": str(self.location_id)
-        }
+        return {"plan_id": str(self.plan_id), "location_id": str(self.location_id)}
 
 
 class Agent(BaseModel):
@@ -78,7 +76,7 @@ class Agent(BaseModel):
         ordered_plan_ids: list[UUID] = [],
         state: AgentState = None,
         id: Optional[str | UUID] = None,
-        world_id: Optional[UUID] = DEFAULT_WORLD_ID
+        world_id: Optional[UUID] = DEFAULT_WORLD_ID,
     ):
         if id is None:
             id = uuid4()
@@ -87,9 +85,7 @@ class Agent(BaseModel):
 
         # if the state is None, put them into the default location
         if state is None:
-            state = AgentState(
-                location_id=DEFAULT_LOCATION_ID
-            )
+            state = AgentState(location_id=DEFAULT_LOCATION_ID)
         elif isinstance(state, dict):
             state = AgentState(**state)
 
@@ -102,7 +98,7 @@ class Agent(BaseModel):
             memories=memories,
             ordered_plan_ids=ordered_plan_ids,
             state=state,
-            world_id=world_id
+            world_id=world_id,
         )
 
         # if the memories are None, retrieve them
@@ -114,7 +110,12 @@ class Agent(BaseModel):
     @property
     def allowed_locations(self) -> list[Location]:
         """Get locations that this agent is allowed to be in."""
-        data, count = supabase.table("Locations").select("*").contains("allowed_agent_ids", [str(self.id)]).execute()
+        data, count = (
+            supabase.table("Locations")
+            .select("*")
+            .contains("allowed_agent_ids", [str(self.id)])
+            .execute()
+        )
         return [Location(**location) for location in data[1]]
 
     @property
@@ -138,7 +139,12 @@ class Agent(BaseModel):
         return cls(**data[1][0])
 
     def _get_memories(self):
-        data, count = supabase.table("Memories").select("*").eq("agent_id", str(self.id)).execute()
+        data, count = (
+            supabase.table("Memories")
+            .select("*")
+            .eq("agent_id", str(self.id))
+            .execute()
+        )
         memories = [SingleMemory(**memory) for memory in data[1]]
         return memories
 
@@ -146,14 +152,14 @@ class Agent(BaseModel):
         self,
         description: str,
         type: MemoryType = MemoryType.OBSERVATION,
-        related_memory_ids: list[UUID] = []
+        related_memory_ids: list[UUID] = [],
     ) -> SingleMemory:
         memory = SingleMemory(
             agent_id=self.id,
             type=type,
             description=description,
             importance=self._calculate_importance(description),
-            related_memory_ids=related_memory_ids
+            related_memory_ids=related_memory_ids,
         )
         print("made new memory ", memory.id)
 
@@ -172,7 +178,7 @@ class Agent(BaseModel):
             "bio": self.bio,
             "directives": self.directives,
             "ordered_plan_ids": [str(plan_id) for plan_id in self.ordered_plan_ids],
-            "state": self.state._db_dict()
+            "state": self.state._db_dict(),
         }
         print("Updated ", self.full_name, " in db.")
         return supabase.table("Agents").update(row).eq("id", str(self.id)).execute()
@@ -192,8 +198,7 @@ class Agent(BaseModel):
 
     def _get_memories_since(self, date: datetime):
         data, count = (
-            supabase
-            .table("Memories")
+            supabase.table("Memories")
             .select("*")
             .eq("agent_id", str(self.id))
             .gt("created_at", date)
@@ -205,12 +210,11 @@ class Agent(BaseModel):
 
     def _should_reflect(self) -> bool:
         """Check if the agent should reflect on their memories.
-            Returns True if the cumulative importance score of memories
-            since the last reflection is over 100
+        Returns True if the cumulative importance score of memories
+        since the last reflection is over 100
         """
         data, count = (
-            supabase
-            .table("Memories")
+            supabase.table("Memories")
             .select("type", "created_at", "agent_id")
             .eq("agent_id", str(self.id))
             .eq("type", MemoryType.REFLECTION.value)
@@ -219,11 +223,15 @@ class Agent(BaseModel):
             .execute()
         )
 
-        last_reflection_time = data[1][0]["created_at"] if len(data[1]) > 0 else datetime(1970, 1, 1)
+        last_reflection_time = (
+            data[1][0]["created_at"] if len(data[1]) > 0 else datetime(1970, 1, 1)
+        )
 
         memories_since_last_reflection = self._get_memories_since(last_reflection_time)
 
-        cumulative_importance = sum([memory.importance for memory in memories_since_last_reflection])
+        cumulative_importance = sum(
+            [memory.importance for memory in memories_since_last_reflection]
+        )
 
         return cumulative_importance > 100
 
@@ -234,7 +242,7 @@ class Agent(BaseModel):
             "bio": self.bio,
             "directives": self.directives,
             "ordered_plan_ids": [str(plan_id) for plan_id in self.ordered_plan_ids],
-            "state": self.state._db_dict()
+            "state": self.state._db_dict(),
         }
 
     def add_observation_strings(self, memory_strings: list[str]):
@@ -242,7 +250,6 @@ class Agent(BaseModel):
             self._add_memory(memory_string, MemoryType.OBSERVATION)
 
     def _related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
-
         # Calculate relevance for each memory and store it in a list of dictionaries
         memories_with_relevance = [
             RelatedMemory(memory=memory, relevance=memory.relevance(query))
@@ -257,7 +264,6 @@ class Agent(BaseModel):
         return sorted_memories[:k]
 
     def _summarize_activity(self, k: int = 20) -> str:
-
         # Get the k most recent memories
         print("memory descriptions:", [memory.description for memory in self.memories])
 
@@ -325,12 +331,17 @@ class Agent(BaseModel):
             description=f"{self.full_name} left location: {Location.from_id(location_id).name}",
             location_id=self.state.location_id,
         )
+
+        print("event: ", event)
+
         event_manager.add_event(event)
 
         # Update the agents state to the new location
         self.state.location_id = location_id
 
-        print_to_console("Moved to ", Fore.BLUE, f"{Location.from_id(location_id).name}")
+        print_to_console(
+            "Moved to ", Fore.BLUE, f"{Location.from_id(location_id).name}"
+        )
 
         # emit the arrival to the db
         event = Event(
@@ -338,7 +349,6 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {Location.from_id(location_id).name}",
             location_id=self.state.location_id,
-
         )
         event_manager.add_event(event)
 
@@ -438,7 +448,6 @@ class Agent(BaseModel):
                 )
 
     def _plan(self) -> list[SinglePlan]:
-
         print_to_console("Starting to Plan", Fore.YELLOW, "📝")
 
         low_temp_llm = ChatModel(ChatModelName.GPT4, temperature=0, streaming=True)
@@ -459,18 +468,26 @@ class Agent(BaseModel):
             PromptString.MAKE_PLANS,
             {
                 "time_window": PLAN_LENGTH,
-                "location_descriptions": [f"'{location.name}' - {location.description}\n" for location in self.allowed_locations],
+                "location_descriptions": [
+                    f"'{location.name}' - {location.description}\n"
+                    for location in self.allowed_locations
+                ],
                 "full_name": self.full_name,
                 "bio": self.bio,
                 "directives": str(self.directives),
                 "recent_activity": recent_activity,
-                "current_plans": [f"{index}. {plan.description}" for index, plan in enumerate(self.ordered_plans)],
+                "current_plans": [
+                    f"{index}. {plan.description}"
+                    for index, plan in enumerate(self.ordered_plans)
+                ],
                 "format_instructions": plan_parser.get_format_instructions(),
             },
         )
 
         # Set up a complex chat model
-        chat_llm = ChatModel(ChatModelName.GPT4, temperature=0.5, streaming=True, request_timeout=600)
+        chat_llm = ChatModel(
+            ChatModelName.GPT4, temperature=0.5, streaming=True, request_timeout=600
+        )
 
         # Get the plans
         response = chat_llm.get_chat_completion(
@@ -542,9 +559,15 @@ class Agent(BaseModel):
                 "bio": self.bio,
                 "directives": str(self.directives),
                 "recent_activity": self._summarize_activity(),
-                "current_plans": [f"{index}. {plan.description}" for index, plan in enumerate(self.ordered_plans)],
-                "event_descriptions": [f"{index}. {event.description}" for index, event in enumerate(new_events)]
-            }
+                "current_plans": [
+                    f"{index}. {plan.description}"
+                    for index, plan in enumerate(self.ordered_plans)
+                ],
+                "event_descriptions": [
+                    f"{index}. {event.description}"
+                    for index, event in enumerate(new_events)
+                ],
+            },
         )
 
         # Get the reaction
@@ -566,22 +589,29 @@ class Agent(BaseModel):
 
         # If we do not have a plan state, consult the plans or plan something new
         if self.state.plan_id is None:
-
             # If we have no plans, make some
             if len(self.ordered_plan_ids) == 0:
                 plans = self._plan()
 
             # Otherwise, just use the existing plans
             else:
-                plans = [SinglePlan.from_id(plan_id) for plan_id in self.ordered_plan_ids]
+                plans = [
+                    SinglePlan.from_id(plan_id) for plan_id in self.ordered_plan_ids
+                ]
 
             # Set the agent state
-            self.state = AgentState(plan_id=plans[0].id, location_id=plans[0].location_id)
+            self.state = AgentState(
+                plan_id=plans[0].id, location_id=plans[0].location_id
+            )
 
             current_plan = plans[0]
 
         # Get the current plan
-        current_plan = SinglePlan.from_id(self.state.plan_id) if current_plan is None else current_plan
+        current_plan = (
+            SinglePlan.from_id(self.state.plan_id)
+            if current_plan is None
+            else current_plan
+        )
 
         print_to_console("Acting on Plan", Fore.YELLOW, f"{current_plan.description}")
 
@@ -592,26 +622,35 @@ class Agent(BaseModel):
         # Execute the plan
 
         # TODO: Tools are dependent on the location
-        timeout = int(os.getenv('STEP_DURATION'))
+        timeout = int(os.getenv("STEP_DURATION"))
         resp = run_executor(current_plan.description, timeout=timeout)
 
         if resp.status == ExecutorStatus.NEEDS_HELP:
-            print_to_console("Plan Failed: Needs Help", Fore.RED, f"{current_plan.description} Error: {resp.output}")
+            print_to_console(
+                "Plan Failed: Needs Help",
+                Fore.RED,
+                f"{current_plan.description} Error: {resp.output}",
+            )
             # TODO: handle plan failure with a human
             return
 
         elif resp.status == ExecutorStatus.TIMED_OUT:
-            print_to_console("Plan Timed Out", Fore.RED, f"{current_plan.description} Error: {resp.output}")
+            print_to_console(
+                "Plan Timed Out",
+                Fore.RED,
+                f"{current_plan.description} Error: {resp.output}",
+            )
             return
 
         # If the plan is done, remove it from the list of plans
         elif resp.status == ExecutorStatus.COMPLETED:
             self.ordered_plan_ids.remove(current_plan.id)
             self.state.plan_id = None
-            print_to_console("Plan Completed: ", Fore.GREEN, f"{current_plan.description}")
+            print_to_console(
+                "Plan Completed: ", Fore.GREEN, f"{current_plan.description}"
+            )
 
     def run_for_one_step(self, events_manager: EventManager):
-
         # First we decide if we need to reflect
         if self._should_reflect():
             self._reflect()

@@ -1,28 +1,24 @@
-from dotenv import load_dotenv
-from enum import Enum
-
-from langchain.tools import BaseTool
-from langchain.agents import (
-    AgentExecutor,
-    LLMSingleActionAgent,
-    AgentOutputParser,
-)
-from langchain.prompts import BaseChatPromptTemplate
-from langchain import LLMChain
-from typing import List, Union
-from langchain.schema import AgentAction, AgentFinish, HumanMessage
-import re
 import os
+import re
+from enum import Enum
+from typing import List, Union
 
+from dotenv import load_dotenv
+from langchain import LLMChain
+from langchain.agents import AgentExecutor, AgentOutputParser, LLMSingleActionAgent
+from langchain.prompts import BaseChatPromptTemplate
+from langchain.schema import AgentAction, AgentFinish, HumanMessage
+from langchain.tools import BaseTool
 from pydantic import BaseModel
 
-from ..utils.prompt import PromptString
-from ..utils.models import ChatModel, ChatModelName
 from ..tools.base import all_tools
+from ..utils.models import ChatModel, ChatModelName
+from ..utils.prompt import PromptString
 
 load_dotenv()
 
 # set_up_logging()
+
 
 # Set up a prompt template
 class CustomPromptTemplate(BaseChatPromptTemplate):
@@ -76,17 +72,21 @@ class CustomOutputParser(AgentOutputParser):
             tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output
         )
 
+
 class ExecutorStatus(Enum):
     COMPLETED = "completed"
     TIMED_OUT = "timed_out"
     NEEDS_HELP = "needs_help"
+
 
 class ExecutorResponse(BaseModel):
     status: ExecutorStatus
     output: str
 
 
-def run_executor(input: str, timeout: int = int(os.getenv('STEP_DURATION'))) -> ExecutorResponse:
+def run_executor(
+    input: str, timeout: int = int(os.getenv("STEP_DURATION"))
+) -> ExecutorResponse:
     """Runs the executor for a max of 1 step"""
 
     print("Runing agent executor")
@@ -119,7 +119,7 @@ def run_executor(input: str, timeout: int = int(os.getenv('STEP_DURATION'))) -> 
         agent=agent,
         tools=all_tools,
         verbose=True,
-        max_execution_time = timeout,
+        max_execution_time=timeout,
     )
 
     output = agent_executor.run(input)
@@ -129,7 +129,6 @@ def run_executor(input: str, timeout: int = int(os.getenv('STEP_DURATION'))) -> 
 
     elif "Need Help" in output:
         return ExecutorResponse(status=ExecutorStatus.NEEDS_HELP, output=output)
-    
+
     else:
         return ExecutorResponse(status=ExecutorStatus.COMPLETED, output=output)
-

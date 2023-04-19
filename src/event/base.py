@@ -5,11 +5,9 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
-
 # from ..agent.base import Agent
 from ..utils.database import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
-
 
 # class DiscordMessage(BaseModel):
 #     content: str
@@ -25,7 +23,7 @@ class EventType(Enum):
 class Event(BaseModel):
     id: UUID
     timestamp: Optional[datetime] = None
-    step: int
+    step: Optional[int] = None
     type: EventType
     description: str
     location_id: UUID
@@ -93,7 +91,12 @@ class EventManager(BaseModel):
 
     def __init__(self, events: list[Event] = None, starting_step: int = 0):
         if not events:
-            data, count = supabase.table("Events").select("*").gte("step", starting_step).execute()
+            data, count = (
+                supabase.table("Events")
+                .select("*")
+                .gte("step", starting_step)
+                .execute()
+            )
             print(data)
             events = [Event(**event) for event in data[1]]
         super().__init__(events=events, starting_step=starting_step)
@@ -101,17 +104,21 @@ class EventManager(BaseModel):
     def refresh_events(self, starting_step: int = None):
         if starting_step:
             self.starting_step = starting_step
-        data, error = supabase.table("Events").select("*").gte("step", self.starting_step).execute()
-        if error:
-            raise error
+
+        data = (
+            supabase.table("Events")
+            .select("*")
+            .gte("step", self.starting_step)
+            .execute()
+        )
+
         self.events = [Event(**event) for event in data]
         return self.events
 
     def add_event(self, event: Event):
         # add event to database
-        data, error = supabase.table("Events").insert(event.db_dict()).execute()
-        if error:
-            raise error
+        data = supabase.table("Events").insert(event.db_dict()).execute()
+
         # add event to local events list
         self.events.append(event)
         return self.events

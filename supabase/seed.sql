@@ -10,7 +10,7 @@ INSERT INTO public."Plans" (id, agent_id, description, max_duration_hrs, stop_co
 VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Research new semantic embedding algorithms', 2, 'Research is complete', 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15');
 
 INSERT INTO public."Plans" (id, agent_id, description, max_duration_hrs, stop_condition, location_id)
-VALUES ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'Write a paper on advanced robotics', 2, 'Biked for 5 miles', 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15');
+VALUES ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'Write a paper on advanced robotics', 2, 'Paper is written', 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15');
 
 -- WORLDS TABLE
 INSERT INTO public."Worlds" (id, name)

@@ -441,7 +441,7 @@ class Agent(BaseModel):
 
         print_to_console("Starting to Plan", Fore.YELLOW, "📝")
 
-        low_temp_llm = ChatModel(ChatModelName.GPT4, temperature=0)
+        low_temp_llm = ChatModel(ChatModelName.GPT4, temperature=0, streaming=True)
 
         # Make the plan parser
         plan_parser = OutputFixingParser.from_llm(
@@ -470,7 +470,7 @@ class Agent(BaseModel):
         )
 
         # Set up a complex chat model
-        chat_llm = ChatModel(ChatModelName.GPT4, temperature=0.5)
+        chat_llm = ChatModel(ChatModelName.GPT4, temperature=0.5, streaming=True, request_timeout=600)
 
         # Get the plans
         response = chat_llm.get_chat_completion(
@@ -521,7 +521,7 @@ class Agent(BaseModel):
         """Get the recent activity and decide whether to replan to carry on"""
 
         # Pull in latest events
-        new_events = event_manager.get_events_by_location(self.location_id)
+        new_events = event_manager.get_events_by_location(self.state.location_id)
 
         # Store them as observations for this agent
         self.add_observation_strings([event.description for event in new_events])

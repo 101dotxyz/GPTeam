@@ -29,20 +29,23 @@ class Event(BaseModel):
     type: EventType
     description: str
     location_id: UUID
-    witness_ids: list[UUID]
+    witness_ids: list[UUID] = []
 
     def __init__(
         self,
         type: EventType,
         description: str,
         location_id: UUID,
-        witness_ids: list[UUID],
+        witness_ids: list[UUID] = [],
         timestamp: Optional[datetime] = None,
         step: Optional[int] = None,
         id: Optional[UUID] = None,
     ):
         if id is None:
             id = uuid4()
+
+        if witness_ids is None:
+            witness_ids = []
 
         if timestamp is None and step is None:
             raise ValueError("Either timestamp or step must be provided")
@@ -89,14 +92,11 @@ class EventManager(BaseModel):
     starting_step: int = 0
 
     def __init__(self, events: list[Event] = None, starting_step: int = 0):
-        self.starting_step = starting_step
-        if events:
-            self.events = events
-        elif starting_step:
-            data, error = supabase.table("Events").select("*").gte("step", starting_step).execute()
-            if error:
-                raise error
-            self.events = [Event(**event) for event in data]
+        if not events:
+            data, count = supabase.table("Events").select("*").gte("step", starting_step).execute()
+            print(data)
+            events = [Event(**event) for event in data[1]]
+        super().__init__(events=events, starting_step=starting_step)
 
     def refresh_events(self, starting_step: int = None):
         if starting_step:
@@ -121,9 +121,6 @@ class EventManager(BaseModel):
 
     def get_events_by_location(self, location_id: UUID):
         return [event for event in self.events if event.location_id == location_id]
-
-    def get_events_by_witness(self, witness_id: UUID):
-        return [event for event in self.events if witness_id in event.witness_ids]
 
     def get_events_by_step(self, step: int):
         return [event for event in self.events if event.step == step]

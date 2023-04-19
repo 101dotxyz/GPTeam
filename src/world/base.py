@@ -55,11 +55,11 @@ class World(BaseModel):
         data, count = supabase.table("Worlds").select("*").eq("name", name).execute()
         return cls(**data[1][0])
 
-    def get_agents(self):
+    def get_agents(self) -> list[Agent]:
         data, count = (
             supabase.table("Agents").select("*").eq("world_id", str(self.id)).execute()
         )
-        agents = [Agent(**agent) for agent in data[1]]
+        agents = [Agent.from_id(agent["id"]) for agent in data[1]]
         return agents
 
     def load_agents(self):
@@ -71,7 +71,7 @@ class World(BaseModel):
 
     def get_witnesses(self, location: Location) -> list[UUID]:
         return [
-            agent for agent in self.agents if self.state.positions[agent] == location
+            agent for agent in self.agents if agent.state.location.id == location.id
         ]
 
     def update(self) -> None:

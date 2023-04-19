@@ -102,7 +102,7 @@ def run_executor(
     output_parser = CustomOutputParser()
 
     # set up a simple completion llm
-    llm = ChatModel(model_name=ChatModelName.GPT4, temperature=0)
+    llm = ChatModel(model_name=ChatModelName.GPT4, temperature=0).defaultModel
 
     # LLM chain consisting of the LLM and a prompt
     llm_chain = LLMChain(llm=llm, prompt=prompt)

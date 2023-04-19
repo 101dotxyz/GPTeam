@@ -296,7 +296,7 @@ class Agent(BaseModel):
 
         importance_parser = OutputFixingParser.from_llm(
             parser=PydanticOutputParser(pydantic_object=ImportanceRatingResponse),
-            llm=complex_llm,
+            llm=complex_llm.defaultModel,
         )
 
         # make importance prompter
@@ -368,7 +368,7 @@ class Agent(BaseModel):
         # Set up the parser
         question_parser = OutputFixingParser.from_llm(
             parser=PydanticOutputParser(pydantic_object=ReflectionQuestions),
-            llm=chat_llm,
+            llm=chat_llm.defaultModel,
         )
 
         # Get memory descriptions
@@ -406,7 +406,7 @@ class Agent(BaseModel):
             # Make the reflection parser
             reflection_parser = OutputFixingParser.from_llm(
                 parser=PydanticOutputParser(pydantic_object=ReflectionResponse),
-                llm=chat_llm,
+                llm=chat_llm.defaultModel,
             )
 
             print_to_console("Reflecting on Question", Fore.GREEN, f"{question}")
@@ -455,7 +455,7 @@ class Agent(BaseModel):
         # Make the plan parser
         plan_parser = OutputFixingParser.from_llm(
             parser=PydanticOutputParser(pydantic_object=LLMPlanResponse),
-            llm=low_temp_llm,
+            llm=low_temp_llm.defaultModel,
         )
 
         # Get a summary of the recent activity
@@ -547,7 +547,7 @@ class Agent(BaseModel):
         # Make the reaction parser
         reaction_parser = OutputFixingParser.from_llm(
             parser=PydanticOutputParser(pydantic_object=LLMReactionResponse),
-            llm=ChatModel(ChatModelName.GPT4, temperature=0),
+            llm=ChatModel(ChatModelName.GPT4, temperature=0).defaultModel,
         )
 
         # Make the reaction prompter

@@ -137,7 +137,7 @@ class Agent(BaseModel):
         )
 
         locations = {
-            location["id"]: Location(
+            str(location["id"]): Location(
                 id=location["id"],
                 name=location["name"],
                 description=location["description"],

@@ -1,11 +1,17 @@
 from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
-
 from pydantic import BaseModel, Field
+from enum import Enum
 
 from ..location.base import Location
 from ..utils.database import supabase
+
+
+class PlanStatus(Enum):
+    IN_PROGRESS = "in_progress"
+    TODO = "todo"
+    DONE = "done"
 
 
 class SinglePlan(BaseModel):
@@ -16,6 +22,8 @@ class SinglePlan(BaseModel):
     created_at: datetime
     agent_id: UUID
     stop_condition: str
+    status: PlanStatus
+    scratchpad: Optional[str]
     completed_at: Optional[datetime] = None
 
     def __init__(
@@ -25,6 +33,8 @@ class SinglePlan(BaseModel):
         max_duration_hrs: float,
         stop_condition: str,
         agent_id: UUID,
+        status: PlanStatus = PlanStatus.TODO,
+        scratchpad: Optional[str] = "",
         created_at: Optional[datetime] = None,
         completed_at: Optional[datetime] = None,
         id: Optional[UUID] = None,
@@ -44,6 +54,8 @@ class SinglePlan(BaseModel):
             agent_id=agent_id,
             stop_condition=stop_condition,
             completed_at=completed_at,
+            status=status,
+            scratchpad=scratchpad,
         )
 
     @classmethod

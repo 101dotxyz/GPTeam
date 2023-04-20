@@ -137,7 +137,7 @@ class Agent(BaseModel):
             for plan in ordered_plans_data
         ]
 
-        location = Location.from_id(agent["location"]) if agent["location"] else Location(None, None, None)
+        location = Location.from_id(agent["location"]) if agent["location"] else Location("", "", 0)
 
         return Agent(
             id=id,

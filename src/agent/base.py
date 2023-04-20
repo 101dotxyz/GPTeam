@@ -224,6 +224,7 @@ class Agent(BaseModel):
                 "description": plan.description,
                 "max_duration_hrs": plan.max_duration_hrs,
                 "agent_id": str(self.id),
+                "location_id": str(plan.location.id),
                 "created_at": plan.created_at.isoformat(),
                 "stop_condition": plan.stop_condition,
             }

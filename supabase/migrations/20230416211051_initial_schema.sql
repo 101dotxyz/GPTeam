@@ -13,7 +13,7 @@ CREATE TABLE "public"."Agents" (
     "world_id" uuid,
     "ordered_plan_ids" uuid[],
     "state" jsonb,
-    "location" uuid,
+    "location_id" uuid,
     PRIMARY KEY ("id")
 );
 
@@ -73,7 +73,7 @@ create table "public"."Worlds" (
     PRIMARY KEY ("id")
 );
 
-alter table "public"."Agents" add constraint "Agents_location_fkey" FOREIGN KEY (location) REFERENCES "Locations"(id) not valid;
+alter table "public"."Agents" add constraint "Agents_location_fkey" FOREIGN KEY (location_id) REFERENCES "Locations"(id) not valid;
 
 alter table "public"."Agents" validate constraint "Agents_location_fkey";
 

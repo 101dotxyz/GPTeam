@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import Optional
-from uuid import UUID, uuid4
-from pydantic import BaseModel, Field
 from enum import Enum
+from typing import Generic, List, Literal, Optional, TypeVar
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, Field, validator
 
 from ..location.base import Location
 from ..utils.database import supabase
@@ -60,8 +61,14 @@ class SinglePlan(BaseModel):
 
     @classmethod
     def from_id(cls, id: UUID):
-        data, count = supabase.table("Plans").select("*").eq("id", str(id)).execute()
-        plan_data = data[1][0]
+        (_, data), (_, count) = (
+            supabase.table("Plans").select("*").eq("id", str(id)).execute()
+        )
+
+        if not count:
+            raise ValueError(f"Plan with id {id} does not exist")
+
+        plan_data = data[0]
         plan_data["location"] = Location.from_id(plan_data["location_id"])
         del plan_data["location_id"]
 

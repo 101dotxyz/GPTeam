@@ -144,6 +144,7 @@ class Agent(BaseModel):
         plans = [
             SinglePlan(
                 **{key: value for key, value in plan.items() if key != "location_id"},
+                # TODO: this is a hacky way to get the location, should load all locations at once and then get the one with the right id
                 location=Location.from_id(plan["location_id"]),
             )
             for plan in plans_data[1]
@@ -375,6 +376,7 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {location.name}",
             location_id=self.state.location.id,
+            # TODO: Get witnesses
             witness_ids=location.allowed_agent_ids,
         )
         event_manager.add_event(event)

@@ -21,7 +21,6 @@ class MemoryType(Enum):
 
 
 class SingleMemory(BaseModel):
-
     id: UUID
     agent_id: UUID
     type: MemoryType

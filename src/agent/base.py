@@ -93,7 +93,7 @@ class Agent(BaseModel):
         other_data, count = (
             supabase.table("Locations")
             .select("*")
-            .eq("allowed_agent_ids", '{}')
+            .eq("allowed_agent_ids", "{}")
             .execute()
         )
         return [Location(**location) for location in data[1] + other_data[1]]
@@ -117,9 +117,14 @@ class Agent(BaseModel):
         agent = agents_data[1][0]
         # get all the plans in db that are in the agent's plan list
         plans_data, plans_count = (
-            supabase.table("Plans").select("*").in_("id", agent["ordered_plan_ids"]).execute()
+            supabase.table("Plans")
+            .select("*")
+            .in_("id", agent["ordered_plan_ids"])
+            .execute()
         )
-        ordered_plans_data = sorted(plans_data[1], key=lambda plan: agent["ordered_plan_ids"].index(plan["id"]))
+        ordered_plans_data = sorted(
+            plans_data[1], key=lambda plan: agent["ordered_plan_ids"].index(plan["id"])
+        )
 
         locations_data, locations_count = (
             supabase.table("Locations").select("*").execute()
@@ -132,12 +137,17 @@ class Agent(BaseModel):
         plans = [
             SinglePlan(
                 **{key: value for key, value in plan.items() if key != "location_id"},
+                # TODO: this is a hacky way to get the location, should load all locations at once and then get the one with the right id
                 location=Location.from_id(plan["location_id"]),
             )
             for plan in ordered_plans_data
         ]
 
-        location = Location.from_id(agent["location"]) if agent["location"] else Location("", "", 0)
+        location = (
+            Location.from_id(agent["location"])
+            if agent["location"]
+            else Location(None, None, None)
+        )
 
         return Agent(
             id=id,

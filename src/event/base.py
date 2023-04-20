@@ -120,7 +120,17 @@ class EventManager(BaseModel):
 
     def add_event(self, event: Event):
         # add event to database
-        data = supabase.table("Events").insert(event.db_dict()).execute()
+
+        (_, witness_data), count = (
+            supabase.table("Agents")
+            .select("id")
+            .eq("location_id", event.location_id)
+            .execute()
+        )
+
+        event.witness_ids = [witness["id"] for witness in witness_data]
+
+        supabase.table("Events").insert(event.db_dict()).execute()
 
         # add event to local events list
         self.events.append(event)

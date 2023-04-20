@@ -1,10 +1,11 @@
-from enum import Enum
-from pydantic import BaseModel
-from datetime import datetime, timedelta
-import numpy as np
 import math
+from datetime import datetime, timedelta
+from enum import Enum
 from typing import Optional
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
+
+import numpy as np
+from pydantic import BaseModel
 
 from ..utils.embeddings import cosine_similarity, get_embedding
 from ..utils.parameters import (
@@ -28,7 +29,7 @@ class SingleMemory(BaseModel):
     embedding: np.ndarray
     importance: int
     created_at: datetime
-    last_accessed: datetime
+    last_accessed: Optional[datetime] = None
     related_memory_ids: list[UUID]
 
     @property

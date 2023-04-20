@@ -201,7 +201,7 @@ class Agent(BaseModel):
         self.memories.append(memory)
 
         # add to database
-        data, count = supabase.table("Memories").insert(memory._db_dict()).execute()
+        data, count = supabase.table("Memories").insert(memory.db_dict()).execute()
 
         print_to_console("New Memory: ", Fore.BLUE, f"{memory}")
 
@@ -366,7 +366,6 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {location.name}",
             location_id=self.location.id,
-            witness_ids=self.location.allowed_agent_ids,
         )
 
         print("event: ", event)
@@ -384,7 +383,6 @@ class Agent(BaseModel):
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {location.name}",
             location_id=self.location.id,
-            witness_ids=location.allowed_agent_ids,
         )
         event_manager.add_event(event)
 
@@ -680,6 +678,7 @@ class Agent(BaseModel):
         # If we are not in the right location, move to the new location
         if self.location.id != current_plan.location.id:
             self._move_to_location(current_plan.location, event_manager)
+            return
 
         # Execute the plan
 

@@ -3,7 +3,7 @@ create extension if not exists "vector" with schema "extensions";
 
 create type "public"."memory_type" as enum ('reflection', 'observation');
 create type "public"."event_type" as enum ('non_message', 'message');
-
+create type "public"."plan_status" as enum ('in_progress', 'todo', 'done');
 
 CREATE TABLE "public"."Agents" (
     "id" uuid DEFAULT uuid_generate_v4() NOT NULL,
@@ -13,6 +13,7 @@ CREATE TABLE "public"."Agents" (
     "world_id" uuid,
     "ordered_plan_ids" uuid[],
     "state" jsonb,
+    "location" uuid,
     PRIMARY KEY ("id")
 );
 
@@ -39,6 +40,8 @@ create table "public"."Plans" (
     "max_duration_hrs" real,
     "stop_condition" text,
     "completed_at" timestamp with time zone,
+    "scratchpad" text,
+    "status" plan_status not null default 'todo'::plan_status,
     PRIMARY KEY ("id")
 );
 
@@ -69,3 +72,11 @@ create table "public"."Worlds" (
     "current_step" smallint,
     PRIMARY KEY ("id")
 );
+
+alter table "public"."Agents" add constraint "Agents_location_fkey" FOREIGN KEY (location) REFERENCES "Locations"(id) not valid;
+
+alter table "public"."Agents" validate constraint "Agents_location_fkey";
+
+alter table "public"."Agents" add constraint "Agents_world_id_fkey" FOREIGN KEY (world_id) REFERENCES "Worlds"(id) ON DELETE CASCADE not valid;
+
+alter table "public"."Agents" validate constraint "Agents_world_id_fkey";

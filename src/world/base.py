@@ -70,9 +70,7 @@ class World(BaseModel):
     #     return [agent.act() for agent in self.agents]
 
     def get_witnesses(self, location: Location) -> list[UUID]:
-        return [
-            agent for agent in self.agents if agent.state.location.id == location.id
-        ]
+        return [agent for agent in self.agents if agent.location.id == location.id]
 
     def update(self) -> None:
         # very rough draft of how this might work

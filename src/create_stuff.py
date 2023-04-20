@@ -6,7 +6,6 @@ from .utils.database import supabase
 
 
 def create_world(name: str):
-
     ## add to db
     data, count = supabase.table("Worlds").insert({"name": name}).execute()
 
@@ -18,7 +17,6 @@ def create_world(name: str):
 def create_location(
     name: str, description: str, channel_id: str, allowed_agent_ids: list[UUID] = []
 ):
-
     location = Location(
         name=name,
         description=description,

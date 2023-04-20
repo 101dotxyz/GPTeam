@@ -1,15 +1,19 @@
 import os
 import re
+import time
 from enum import Enum
-from typing import List, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from dotenv import load_dotenv
 from langchain import LLMChain
 from langchain.agents import AgentExecutor, AgentOutputParser, LLMSingleActionAgent
+from langchain.input import get_color_mapping
+from langchain.output_parsers import OutputFixingParser
 from langchain.prompts import BaseChatPromptTemplate
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
 from langchain.tools import BaseTool
 from pydantic import BaseModel
+from typing_extensions import override
 
 from ..tools.base import all_tools
 from ..utils.models import ChatModel, ChatModelName
@@ -83,11 +87,76 @@ class ExecutorResponse(BaseModel):
 
 
 def run_executor(
-    input: str, timeout: int = int(os.getenv("STEP_DURATION"))
+    input: str,
+    timeout: int = int(os.getenv("STEP_DURATION")),
+    intermediate_steps_old: List[Tuple[AgentAction, str]] = [],
 ) -> ExecutorResponse:
     """Runs the executor for a max of 1 step"""
 
     print("Runing agent executor")
+
+    class PreemptableExecutor(AgentExecutor):
+        @override
+        def _call(self, inputs: Dict[str, str]) -> Dict[str, Any]:
+            """Run text through and get agent response."""
+            # Construct a mapping of tool name to tool for easy lookup
+            name_to_tool_map = {tool.name: tool for tool in self.tools}
+            # We construct a mapping from each tool to a color, used for logging.
+            color_mapping = get_color_mapping(
+                [tool.name for tool in self.tools], excluded_colors=["green"]
+            )
+            intermediate_steps: List[Tuple[AgentAction, str]] = intermediate_steps_old
+            # Let's start tracking the number of iterations and time elapsed
+            iterations = 0
+            time_elapsed = 0.0
+            start_time = time.time()
+            # We now enter the agent loop (until it returns something).
+            while self._should_continue(iterations, time_elapsed):
+                next_step_output = self._take_next_step(
+                    name_to_tool_map, color_mapping, inputs, intermediate_steps
+                )
+                if isinstance(next_step_output, AgentFinish):
+                    return self._return(next_step_output, intermediate_steps)
+
+                intermediate_steps.extend(next_step_output)
+                if len(next_step_output) == 1:
+                    next_step_action = next_step_output[0]
+                    # See if tool should return directly
+                    tool_return = self._get_tool_return(next_step_action)
+                    if tool_return is not None:
+                        return self._return(tool_return, intermediate_steps)
+                iterations += 1
+                time_elapsed = time.time() - start_time
+            output = self.agent.return_stopped_response(
+                self.early_stopping_method, intermediate_steps, **inputs
+            )
+            return self._return(output, intermediate_steps)
+
+        @override
+        def run(self, *args: Any, **kwargs: Any) -> str:
+            """Run the chain as text in, text out or multiple variables, text out."""
+            if len(self.output_keys) != 1:
+                raise ValueError(
+                    f"`run` not supported when there is not exactly "
+                    f"one output key. Got {self.output_keys}."
+                )
+
+            if args and not kwargs:
+                if len(args) != 1:
+                    raise ValueError("`run` supports only one positional argument.")
+                result = self(args[0])
+                print(result)
+                return result[self.output_keys[0]]
+
+            if kwargs and not args:
+                result = self(kwargs)
+                print(result)
+                return result[self.output_keys[0]]
+
+            raise ValueError(
+                f"`run` supported with either positional arguments or keyword arguments"
+                f" but not both. Got args: {args} and kwargs: {kwargs}."
+            )
 
     prompt = CustomPromptTemplate(
         template=PromptString.EXECUTE_PLAN.value,
@@ -97,13 +166,13 @@ def run_executor(
         input_variables=["input", "intermediate_steps"],
     )
 
-    output_parser = CustomOutputParser()
-
     # set up a simple completion llm
     llm = ChatModel(model_name=ChatModelName.GPT4, temperature=0).defaultModel
 
     # LLM chain consisting of the LLM and a prompt
     llm_chain = LLMChain(llm=llm, prompt=prompt)
+
+    output_parser = CustomOutputParser()
 
     tool_names = [tool.name for tool in all_tools]
     agent = LLMSingleActionAgent(
@@ -113,7 +182,7 @@ def run_executor(
         allowed_tools=tool_names,
     )
 
-    agent_executor = AgentExecutor.from_agent_and_tools(
+    agent_executor = PreemptableExecutor.from_agent_and_tools(
         agent=agent,
         tools=all_tools,
         verbose=True,
@@ -121,7 +190,8 @@ def run_executor(
     )
 
     output = agent_executor.run(input)
-
+    print("output")
+    print(output)
     if "Agent stopped" in output:
         return ExecutorResponse(status=ExecutorStatus.TIMED_OUT, output=output)
 

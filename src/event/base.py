@@ -93,14 +93,15 @@ class EventManager(BaseModel):
 
     def __init__(self, events: list[Event] = None, starting_step: int = 0):
         if not events:
-            data, count = (
+            (_, data), count = (
                 supabase.table("Events")
                 .select("*")
                 .gte("step", starting_step)
                 .execute()
             )
             print(data)
-            events = [Event(**event) for event in data[1]]
+            events = [Event(**event) for event in data]
+
         super().__init__(events=events, starting_step=starting_step)
 
     def refresh_events(self, starting_step: int = None):

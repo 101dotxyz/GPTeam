@@ -1,11 +1,14 @@
 import json
 import os
+from ctypes import Union
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional, Type, cast
+from uu import Error
 from uuid import UUID, uuid4
 
 from colorama import Fore
 from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
+from langchain.schema import AIMessage, HumanMessage
 from pydantic import BaseModel
 
 from ..event.base import Event, EventManager, EventType
@@ -126,9 +129,24 @@ class Agent(BaseModel):
             plans_data[1], key=lambda plan: agent["ordered_plan_ids"].index(plan["id"])
         )
 
-        locations_data, locations_count = (
-            supabase.table("Locations").select("*").execute()
+        (_, locations_data), _ = (
+            supabase.table("Locations")
+            .select("*")
+            .eq("world_id", agent["world_id"])
+            .execute()
         )
+
+        locations = {
+            str(location["id"]): Location(
+                id=location["id"],
+                name=location["name"],
+                description=location["description"],
+                channel_id=location["channel_id"],
+                world_id=location["world_id"],
+                allowed_agent_ids=location["allowed_agent_ids"],
+            )
+            for location in locations_data
+        }
 
         memories_data, memories_count = (
             supabase.table("Memories").select("*").eq("agent_id", str(id)).execute()
@@ -137,17 +155,12 @@ class Agent(BaseModel):
         plans = [
             SinglePlan(
                 **{key: value for key, value in plan.items() if key != "location_id"},
-                # TODO: this is a hacky way to get the location, should load all locations at once and then get the one with the right id
-                location=Location.from_id(plan["location_id"]),
+                location=locations[plan["location_id"]],
             )
             for plan in ordered_plans_data
         ]
 
-        location = (
-            Location.from_id(agent["location"])
-            if agent["location"]
-            else Location(None, None, None)
-        )
+        location = locations[agent["location_id"]]
 
         return Agent(
             id=id,
@@ -211,6 +224,7 @@ class Agent(BaseModel):
                 "description": plan.description,
                 "max_duration_hrs": plan.max_duration_hrs,
                 "agent_id": str(self.id),
+                "location_id": str(plan.location.id),
                 "created_at": plan.created_at.isoformat(),
                 "stop_condition": plan.stop_condition,
             }
@@ -263,6 +277,8 @@ class Agent(BaseModel):
             "bio": self.bio,
             "directives": self.directives,
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
+            "world_id": self.world_id,
+            "location": self.location.id,
         }
 
     def add_observation_strings(self, memory_strings: list[str]):
@@ -474,9 +490,13 @@ class Agent(BaseModel):
 
         # Make the plan parser
         plan_parser = OutputFixingParser.from_llm(
-            parser=PydanticOutputParser(pydantic_object=LLMPlanResponse),
+            parser=PydanticOutputParser(
+                pydantic_object=LLMPlanResponse,
+            ),
             llm=low_temp_llm.defaultModel,
         )
+
+        print(plan_parser.get_format_instructions())
 
         # Get a summary of the recent activity
         recent_activity = self._summarize_activity()
@@ -489,7 +509,7 @@ class Agent(BaseModel):
             {
                 "time_window": PLAN_LENGTH,
                 "location_descriptions": [
-                    f"'{location.name}' - {location.description}\n"
+                    f"'id: {location.id}, name: {location.name}, description: {location.description}\n"
                     for location in self.allowed_locations
                 ],
                 "full_name": self.full_name,
@@ -504,9 +524,8 @@ class Agent(BaseModel):
             },
         )
 
-        # Set up a complex chat model
         chat_llm = ChatModel(
-            ChatModelName.GPT4, temperature=0.5, streaming=True, request_timeout=600
+            ChatModelName.TURBO, temperature=0.5, streaming=True, request_timeout=600
         )
 
         # Get the plans
@@ -517,6 +536,40 @@ class Agent(BaseModel):
 
         # Parse the response into an object
         parsed_plans_response: LLMPlanResponse = plan_parser.parse(response)
+
+        print(
+            "allowed_locations", self.allowed_locations, parsed_plans_response.plans[0]
+        )
+
+        invalid_locations = [
+            plan.location_id
+            for plan in parsed_plans_response.plans
+            if plan.location_id
+            not in [location.id for location in self.allowed_locations]
+        ]
+
+        if invalid_locations:
+            print_to_console(
+                "Invalid Locations",
+                Fore.RED,
+                f"The following locations are not in your allowed locations: {invalid_locations}",
+            )
+
+            # Get the plans
+            response = chat_llm.get_chat_completion(
+                plan_prompter.prompt
+                + [
+                    AIMessage(content=response),
+                    HumanMessage(
+                        content=f"Your response included the following invalid location_id: {invalid_locations}. Please try again."
+                    ),
+                ],
+                loading_text="🤔 Making plans...",
+            )
+
+            # Parse the response into an object
+            parsed_plans_response: LLMPlanResponse = plan_parser.parse(response)
+
         # Delete existing plans
         self.plans = []
 
@@ -524,20 +577,16 @@ class Agent(BaseModel):
         new_plans: list[SinglePlan] = []
 
         for plan in parsed_plans_response.plans:
-            try:
-                location = Location.from_name(plan.location_name)
-            except ValueError:
-                print_to_console(
-                    "Invalid Location",
-                    Fore.RED,
-                    f"Plan generated location '{plan.location_name}' which is not a valid location",
-                )
-                raise ValueError(
-                    f"Plan generated location '{plan.location_name}' which is not a valid location"
-                )
             new_plan = SinglePlan(
                 description=plan.description,
-                location=location,
+                location=next(
+                    (
+                        location
+                        for location in self.allowed_locations
+                        if location.id == plan.location_id
+                    ),
+                    None,
+                ),
                 max_duration_hrs=plan.max_duration_hrs,
                 agent_id=self.id,
                 stop_condition=plan.stop_condition,

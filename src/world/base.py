@@ -28,7 +28,7 @@ class World(BaseModel):
             id=id,
             name=name,
             current_step=current_step,
-            event_manager=EventManager(current_step),
+            event_manager=EventManager(starting_step=current_step),
         )
         self.load_agents()
 

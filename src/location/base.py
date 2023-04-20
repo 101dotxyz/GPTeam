@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
-
 # from ..agent.base import Agent
 from ..utils.database import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
@@ -73,10 +72,16 @@ class Location(BaseModel):
 
     @classmethod
     def from_id(cls, id: UUID):
-        data, count = (
+        (_, data), _ = (
             supabase.table("Locations").select("*").eq("id", str(id)).execute()
         )
-        return cls(**data[1][0])
+
+        if len(data) == 0:
+            raise ValueError(f"Location with id {id} not found")
+
+        print(data[0]["channel_id"])
+
+        return cls(**data[0])
 
     @classmethod
     def from_name(cls, name: str):

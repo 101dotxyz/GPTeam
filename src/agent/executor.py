@@ -1,18 +1,19 @@
 import os
 import re
-from enum import Enum
 import time
+from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
-from typing_extensions import override
 
 from dotenv import load_dotenv
 from langchain import LLMChain
 from langchain.agents import AgentExecutor, AgentOutputParser, LLMSingleActionAgent
+from langchain.input import get_color_mapping
+from langchain.output_parsers import OutputFixingParser
 from langchain.prompts import BaseChatPromptTemplate
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
 from langchain.tools import BaseTool
 from pydantic import BaseModel
-from langchain.input import get_color_mapping
+from typing_extensions import override
 
 from ..tools.base import all_tools
 from ..utils.models import ChatModel, ChatModelName
@@ -86,7 +87,9 @@ class ExecutorResponse(BaseModel):
 
 
 def run_executor(
-    input: str, timeout: int = int(os.getenv("STEP_DURATION")), intermediate_steps_old: List[Tuple[AgentAction, str]] = []
+    input: str,
+    timeout: int = int(os.getenv("STEP_DURATION")),
+    intermediate_steps_old: List[Tuple[AgentAction, str]] = [],
 ) -> ExecutorResponse:
     """Runs the executor for a max of 1 step"""
 
@@ -163,13 +166,13 @@ def run_executor(
         input_variables=["input", "intermediate_steps"],
     )
 
-    output_parser = CustomOutputParser()
-
     # set up a simple completion llm
     llm = ChatModel(model_name=ChatModelName.GPT4, temperature=0).defaultModel
 
     # LLM chain consisting of the LLM and a prompt
     llm_chain = LLMChain(llm=llm, prompt=prompt)
+
+    output_parser = CustomOutputParser()
 
     tool_names = [tool.name for tool in all_tools]
     agent = LLMSingleActionAgent(

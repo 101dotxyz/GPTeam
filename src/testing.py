@@ -15,4 +15,4 @@ load_dotenv()
 def main():
     world = World.from_name("AI Discord Server")
 
-    world.run_step()
+    world.run(steps=10)

@@ -82,7 +82,7 @@ class SinglePlan(BaseModel):
 class LLMSinglePlan(BaseModel):
     index: int = Field(description="The plan number")
     description: str = Field(description="A description of the plan")
-    location_name: str = Field(description="The name of the location")
+    location_id: UUID = Field(description="The id of the location")
     start_time: datetime = Field(
         description="The starting time, using this strftime format string: '%H:%M - %m/%d/%y'"
     )

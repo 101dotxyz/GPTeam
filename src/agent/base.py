@@ -508,7 +508,7 @@ class Agent(BaseModel):
             {
                 "time_window": PLAN_LENGTH,
                 "location_descriptions": [
-                    f"'{location.name}': {location.description}\n"
+                    f"'id: {location.id}, name: {location.name}, description: {location.description}\n"
                     for location in self.allowed_locations
                 ],
                 "full_name": self.full_name,
@@ -523,9 +523,8 @@ class Agent(BaseModel):
             },
         )
 
-        # Set up a complex chat model
         chat_llm = ChatModel(
-            ChatModelName.GPT4, temperature=0.5, streaming=True, request_timeout=600
+            ChatModelName.TURBO, temperature=0.5, streaming=True, request_timeout=600
         )
 
         # Get the plans
@@ -537,11 +536,15 @@ class Agent(BaseModel):
         # Parse the response into an object
         parsed_plans_response: LLMPlanResponse = plan_parser.parse(response)
 
+        print(
+            "allowed_locations", self.allowed_locations, parsed_plans_response.plans[0]
+        )
+
         invalid_locations = [
-            plan.location_name
+            plan.location_id
             for plan in parsed_plans_response.plans
-            if plan.location_name
-            not in [location.name for location in self.allowed_locations]
+            if plan.location_id
+            not in [location.id for location in self.allowed_locations]
         ]
 
         if invalid_locations:
@@ -557,7 +560,7 @@ class Agent(BaseModel):
                 + [
                     AIMessage(content=response),
                     HumanMessage(
-                        content=f"Your response included the following invalid locations: {invalid_locations}. Please try again."
+                        content=f"Your response included the following invalid location_id: {invalid_locations}. Please try again."
                     ),
                 ],
                 loading_text="🤔 Making plans...",
@@ -575,7 +578,14 @@ class Agent(BaseModel):
         for plan in parsed_plans_response.plans:
             new_plan = SinglePlan(
                 description=plan.description,
-                location=plan.location_name,
+                location=next(
+                    (
+                        location
+                        for location in self.allowed_locations
+                        if location.id == plan.location_id
+                    ),
+                    None,
+                ),
                 max_duration_hrs=plan.max_duration_hrs,
                 agent_id=self.id,
                 stop_condition=plan.stop_condition,

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from ..location.base import Location
 
 # from ..agent.base import Agent
-from ..utils.database import supabase
+from ..utils.database.database import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
 
 # class DiscordMessage(BaseModel):

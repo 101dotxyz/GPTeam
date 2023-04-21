@@ -4,7 +4,7 @@ import uuid
 from ..database.database import supabase
 
 DEFAULT_WORLD = {
-    "id": str(uuid.uuid4()),
+    "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
     "name": "AI Discord Server",
     "current_step": 0,
 }
@@ -13,18 +13,18 @@ worlds = [DEFAULT_WORLD]
 
 locations = [
     {
-        "id": str(uuid.uuid4()),
+        "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14",
         "world_id": DEFAULT_WORLD["id"],
-        "name": "Water Cooler",
-        "description": "A place where employees gather to chat and exchange gossip. Features a bulletin board for posting company announcements.",
+        "name": "Lobby",
+        "description": "The entrance to the company's office. Features a reception desk, a sign-in sheet for visitors, and brochures about the company.",
         "channel_id": 8395726143,
         "allowed_agent_ids": [],
     },
     {
         "id": str(uuid.uuid4()),
         "world_id": DEFAULT_WORLD["id"],
-        "name": "Lobby",
-        "description": "The entrance to the company's office. Features a reception desk, a sign-in sheet for visitors, and brochures about the company.",
+        "name": "Water Cooler",
+        "description": "A place where employees gather to chat and exchange gossip. Features a bulletin board for posting company announcements.",
         "channel_id": 8395726143,
         "allowed_agent_ids": [],
     },
@@ -115,7 +115,7 @@ agents = [
     },
     {
         "id": str(uuid.uuid4()),
-        "full_name": "Linda",
+        "full_name": "Linda Smith",
         "bio": "The enigmatic programmer with a mysterious past, she is convinced they're living in a simulation and leaves hidden messages in her code for users to find.",
         "directives": [],
         "ordered_plan_ids": [],
@@ -124,7 +124,7 @@ agents = [
     },
     {
         "id": str(uuid.uuid4()),
-        "full_name": "Karen",
+        "full_name": "Karen Jones",
         "bio": "Enthusiastic about cringeworthy team-building activities, she is always looking for ways to boost morale and foster a sense of camaraderie among the employees.",
         "directives": [],
         "ordered_plan_ids": [],
@@ -133,7 +133,7 @@ agents = [
     },
     {
         "id": str(uuid.uuid4()),
-        "full_name": "Peter",
+        "full_name": "Peter Williams",
         "bio": "A persuasive and persistent salesperson, Peter manages to close deals and maintain client relationships, even though he's not entirely sure what the company does.",
         "directives": [],
         "ordered_plan_ids": [],
@@ -142,7 +142,7 @@ agents = [
     },
     {
         "id": str(uuid.uuid4()),
-        "full_name": "Dave",
+        "full_name": "Dave Johnson",
         "bio": "While not particularly productive, he's a master of jokes and socializing, making him a beloved figure at the company. Marty can't bring himself to fire him because of his humor and charm.",
         "directives": [],
         "ordered_plan_ids": [],
@@ -151,7 +151,7 @@ agents = [
     },
     {
         "id": str(uuid.uuid4()),
-        "full_name": "Susan",
+        "full_name": "Susan Miller",
         "bio": "Diligent and detail-oriented, she's responsible for tracking the company's performance metrics, even if she doesn't fully understand the technical aspects of the business.",
         "directives": [],
         "ordered_plan_ids": [],
@@ -160,7 +160,7 @@ agents = [
     },
     {
         "id": str(uuid.uuid4()),
-        "full_name": "Emma",
+        "full_name": "Emma Davis",
         "bio": "Friendly and approachable, she welcomes visitors to the company with a warm smile and helps keep the office running smoothly, while secretly harboring a talent for hacking.",
         "directives": [],
         "ordered_plan_ids": [],
@@ -169,7 +169,7 @@ agents = [
     },
     {
         "id": str(uuid.uuid4()),
-        "full_name": "Eddie",
+        "full_name": "Eddie Brown",
         "bio": "The hardworking janitor, always ready to lend an ear and offer sage advice, often knows more about the inner workings of the company than anyone suspects.",
         "directives": [],
         "ordered_plan_ids": [],

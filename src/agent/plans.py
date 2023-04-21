@@ -14,6 +14,7 @@ class PlanStatus(Enum):
     IN_PROGRESS = "in_progress"
     TODO = "todo"
     DONE = "done"
+    FAILED = "failed"
 
 
 class SinglePlan(BaseModel):

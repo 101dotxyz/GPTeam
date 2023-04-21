@@ -15,8 +15,9 @@ load_dotenv()
 def main():
     world = World.from_name("AI Discord Server")
 
-    agent = world.get_agents()[0]
+    # agent = world.get_agents()[0]
 
-    agent._get_memories()
+    # while True:
+    #     agent._do_first_plan(world.event_manager)
 
     world.run(steps=10)

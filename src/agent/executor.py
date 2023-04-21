@@ -2,7 +2,7 @@ import os
 import re
 import time
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from dotenv import load_dotenv
 from langchain import LLMChain
@@ -21,6 +21,7 @@ from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
+from .plans import PlanStatus, SinglePlan
 
 load_dotenv()
 
@@ -78,136 +79,96 @@ class CustomOutputParser(AgentOutputParser):
         )
 
 
-class ExecutorStatus(Enum):
-    COMPLETED = "completed"
-    TIMED_OUT = "timed_out"
-    NEEDS_HELP = "needs_help"
-
-
-class ExecutorResponse(BaseModel):
-    status: ExecutorStatus
+class PlanExecutorResponse(BaseModel):
+    status: PlanStatus
     output: str
+    tool_name: Optional[str]
+    tool_input: Optional[str]
 
 
-def run_executor(
-    input: str,
-    add_memory,
-    timeout: int = int(os.getenv("STEP_DURATION")),
-    intermediate_steps_old: List[Tuple[AgentAction, str]] = [],
-) -> ExecutorResponse:
-    """Runs the executor for a max of 1 step"""
+class PlanExecutor(BaseModel):
+    """Executes plans for an agent."""
 
-    print("Runing agent executor")
+    executor: LLMSingleActionAgent
+    plan: Optional[SinglePlan] = None
+    intermediate_steps: List[Tuple[AgentAction, str]] = []
 
-    class PreemptableExecutor(AgentExecutor):
-        @override
-        def _call(self, inputs: Dict[str, str]) -> Dict[str, Any]:
-            """Run text through and get agent response."""
-            # Construct a mapping of tool name to tool for easy lookup
-            name_to_tool_map = {tool.name: tool for tool in self.tools}
-            # We construct a mapping from each tool to a color, used for logging.
-            color_mapping = get_color_mapping(
-                [tool.name for tool in self.tools], excluded_colors=["green"]
-            )
-            intermediate_steps: List[Tuple[AgentAction, str]] = intermediate_steps_old
-            # Let's start tracking the number of iterations and time elapsed
-            iterations = 0
-            time_elapsed = 0.0
-            start_time = time.time()
-            # We now enter the agent loop (until it returns something).
-            while self._should_continue(iterations, time_elapsed):
-                next_step_output = self._take_next_step(
-                    name_to_tool_map, color_mapping, inputs, intermediate_steps
-                )
+    def __init__(self) -> None:
+        prompt = CustomPromptTemplate(
+            template=PromptString.EXECUTE_PLAN.value,
+            tools=all_tools,
+            # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
+            # This includes the `intermediate_steps` variable because that is needed
+            input_variables=["input", "intermediate_steps"],
+        )
 
-                if isinstance(next_step_output, AgentFinish):
-                    return self._return(next_step_output, intermediate_steps)
+        # set up a simple completion llm
+        llm = ChatModel(model_name=DEFAULT_SMART_MODEL, temperature=0).defaultModel
 
-                (action, observation) = next_step_output[0]
+        # LLM chain consisting of the LLM and a prompt
+        llm_chain = LLMChain(llm=llm, prompt=prompt)
 
-                memory_description = f"When using {action.tool} to ask {action.tool_input}, I got the following result: {observation}"
+        output_parser = CustomOutputParser()
 
-                add_memory(memory_description, MemoryType.OBSERVATION)
+        tool_names = [tool.name for tool in all_tools]
 
-                intermediate_steps.extend(next_step_output)
-                if len(next_step_output) == 1:
-                    next_step_action = next_step_output[0]
-                    # See if tool should return directly
-                    tool_return = self._get_tool_return(next_step_action)
-                    if tool_return is not None:
-                        return self._return(tool_return, intermediate_steps)
-                iterations += 1
-                time_elapsed = time.time() - start_time
-            output = self.agent.return_stopped_response(
-                self.early_stopping_method, intermediate_steps, **inputs
-            )
-            return self._return(output, intermediate_steps)
+        executor = LLMSingleActionAgent(
+            llm_chain=llm_chain,
+            output_parser=output_parser,
+            stop=["\nObservation:"],
+            allowed_tools=tool_names,
+        )
 
-        @override
-        def run(self, *args: Any, **kwargs: Any) -> str:
-            """Run the chain as text in, text out or multiple variables, text out."""
-            if len(self.output_keys) != 1:
-                raise ValueError(
-                    f"`run` not supported when there is not exactly "
-                    f"one output key. Got {self.output_keys}."
-                )
+        super().__init__(executor=executor)
 
-            if args and not kwargs:
-                if len(args) != 1:
-                    raise ValueError("`run` supports only one positional argument.")
-                result = self(args[0])
-                print(result)
-                return result[self.output_keys[0]]
+    def set_plan(self, plan: SinglePlan) -> None:
+        self.plan = plan
+        self.intermediate_steps = []
 
-            if kwargs and not args:
-                result = self(kwargs)
-                print(result)
-                return result[self.output_keys[0]]
+    def start_or_continue_plan(self, plan: SinglePlan) -> PlanExecutorResponse:
+        if not self.plan or self.plan.description != plan.description:
+            self.set_plan(plan)
+            return self.execute()
+        else:
+            return self.execute()
 
-            raise ValueError(
-                f"`run` supported with either positional arguments or keyword arguments"
-                f" but not both. Got args: {args} and kwargs: {kwargs}."
-            )
+    def execute(self) -> str:
+        if self.plan is None:
+            raise ValueError("No plan set")
 
-    prompt = CustomPromptTemplate(
-        template=PromptString.EXECUTE_PLAN.value,
-        tools=all_tools,
-        # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
-        # This includes the `intermediate_steps` variable because that is needed
-        input_variables=["input", "intermediate_steps"],
-    )
+        response = self.executor.plan(
+            input=self.plan.description, intermediate_steps=self.intermediate_steps
+        )
 
-    # set up a simple completion llm
-    llm = ChatModel(model_name=DEFAULT_SMART_MODEL, temperature=0).defaultModel
+        if isinstance(response, AgentFinish):
+            self.plan = None
+            self.intermediate_steps = []
 
-    # LLM chain consisting of the LLM and a prompt
-    llm_chain = LLMChain(llm=llm, prompt=prompt)
+            output = response.return_values.get("output")
 
-    output_parser = CustomOutputParser()
+            if output is None:
+                raise ValueError(f"No output found in return values: {response}")
 
-    tool_names = [tool.name for tool in all_tools]
-    agent = LLMSingleActionAgent(
-        llm_chain=llm_chain,
-        output_parser=output_parser,
-        stop=["\nObservation:"],
-        allowed_tools=tool_names,
-    )
+            if "Need Help" in output:
+                return PlanExecutorResponse(status=PlanStatus.FAILED, output=output)
+            else:
+                return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
-    agent_executor = PreemptableExecutor.from_agent_and_tools(
-        agent=agent,
-        tools=all_tools,
-        verbose=True,
-        max_execution_time=timeout,
-    )
+        tool = next(
+            (tool for tool in all_tools if tool.name.lower() == response.tool.lower()),
+            None,
+        )
 
-    output = agent_executor.run(input)
-    print("output")
-    print(output)
-    if "Agent stopped" in output:
-        return ExecutorResponse(status=ExecutorStatus.TIMED_OUT, output=output)
+        if tool is None:
+            raise ValueError(f"Tool {response.tool} not found in tool list")
 
-    elif "Need Help" in output:
-        return ExecutorResponse(status=ExecutorStatus.NEEDS_HELP, output=output)
+        result = tool.run(response.tool_input)
 
-    else:
-        return ExecutorResponse(status=ExecutorStatus.COMPLETED, output=output)
+        self.intermediate_steps.append((response, result))
+
+        return PlanExecutorResponse(
+            status=PlanStatus.IN_PROGRESS,
+            output=result,
+            tool_name=tool.name,
+            tool_input=response.tool_input,
+        )

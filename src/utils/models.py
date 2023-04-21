@@ -45,9 +45,7 @@ class ChatModel:
         with Spinner(kwargs.get("loading_text", "🤔 Thinking... ")):
             try:
                 resp = self.defaultModel.generate([messages])
-            except Exception as e:
-                print(f"Error with defaultModel: {e}")
-                print("Trying with backupModel...")
+            except Exception:
                 resp = self.backupModel.generate([messages])
 
         return resp.generations[0][0].text

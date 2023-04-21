@@ -16,7 +16,9 @@ from pydantic import BaseModel
 from typing_extensions import override
 
 from ..tools.base import all_tools
-from ..utils.models import ChatModel, ChatModelName
+from ..utils.model_name import ChatModelName
+from ..utils.models import ChatModel
+from ..utils.parameters import DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
 
 load_dotenv()
@@ -167,7 +169,7 @@ def run_executor(
     )
 
     # set up a simple completion llm
-    llm = ChatModel(model_name=ChatModelName.GPT4, temperature=0).defaultModel
+    llm = ChatModel(model_name=DEFAULT_SMART_MODEL, temperature=0).defaultModel
 
     # LLM chain consisting of the LLM and a prompt
     llm_chain = LLMChain(llm=llm, prompt=prompt)

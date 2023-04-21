@@ -1,6 +1,8 @@
 # Environment
 import os
 
+from .model_name import ChatModelName
+
 TIME_SPEED_MULTIPLIER = 1000
 # Memory
 RECENCY_WEIGHT = 1
@@ -10,3 +12,6 @@ REFLECTION_MEMORY_COUNT = 100
 PLAN_LENGTH = "24 hours"
 DEFAULT_LOCATION_ID = os.getenv("DEFAULT_LOCATION_ID")
 DEFAULT_WORLD_ID = os.getenv("DEFAULT_WORLD_ID")
+
+DEFAULT_SMART_MODEL = ChatModelName.TURBO  # ChatModelName.GPT4
+DEFAULT_FAST_MODEL = ChatModelName.TURBO

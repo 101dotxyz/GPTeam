@@ -85,7 +85,9 @@ class SingleMemory(BaseModel):
             "embedding": str(self.embedding.tolist()),
             "importance": self.importance,
             "created_at": self.created_at.isoformat(),
-            "last_accessed": self.last_accessed.isoformat(),
+            "last_accessed": self.last_accessed.isoformat()
+            if self.last_accessed
+            else None,
             "related_memory_ids": [
                 str(related_memory_id) for related_memory_id in self.related_memory_ids
             ],

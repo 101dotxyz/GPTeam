@@ -7,15 +7,11 @@ from langchain.llms import OpenAI
 from langchain.schema import BaseMessage
 
 from .cache import chat_json_cache, json_cache
+from .model_name import ChatModelName
+from .parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 from .spinner import Spinner
 
 load_dotenv()
-
-
-class ChatModelName(Enum):
-    TURBO = "gpt-3.5-turbo"
-    GPT4 = "gpt-4"
-    CLAUDE = "claude-v1"
 
 
 def get_chat_model(name: ChatModelName, **kwargs):
@@ -30,13 +26,15 @@ def get_chat_model(name: ChatModelName, **kwargs):
         return ChatOpenAI(model_name=name.value, **kwargs)
     elif name == ChatModelName.CLAUDE:
         return ChatAnthropic(model=name.value, **kwargs)
+    else:
+        raise ValueError(f"Invalid model name: {name}")
 
 
 class ChatModel:
     def __init__(
         self,
-        default_model_name: ChatModelName = ChatModelName.GPT4,
-        backup_model_name: ChatModelName = ChatModelName.TURBO,
+        default_model_name: ChatModelName = DEFAULT_SMART_MODEL,
+        backup_model_name: ChatModelName = DEFAULT_FAST_MODEL,
         **kwargs,
     ):
         self.defaultModel = get_chat_model(default_model_name, **kwargs)

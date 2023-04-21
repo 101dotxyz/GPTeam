@@ -16,9 +16,12 @@ from ..location.base import Location
 from ..memory.base import MemoryType, SingleMemory
 from ..utils.database import supabase
 from ..utils.formatting import print_to_console
-from ..utils.models import ChatModel, ChatModelName
+from ..utils.model_name import ChatModelName
+from ..utils.models import ChatModel
 from ..utils.parameters import (
+    DEFAULT_FAST_MODEL,
     DEFAULT_LOCATION_ID,
+    DEFAULT_SMART_MODEL,
     DEFAULT_WORLD_ID,
     PLAN_LENGTH,
     REFLECTION_MEMORY_COUNT,
@@ -317,7 +320,7 @@ class Agent(BaseModel):
             },
         )
 
-        low_temp_llm = ChatModel(ChatModelName.GPT4, temperature=0)
+        low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
 
         response = low_temp_llm.get_chat_completion(
             summary_prompter.prompt,
@@ -328,7 +331,7 @@ class Agent(BaseModel):
 
     def _calculate_importance(self, memory_description: str) -> int:
         # Set up a complex chat model
-        complex_llm = ChatModel(ChatModelName.GPT4, temperature=0)
+        complex_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
 
         importance_parser = OutputFixingParser.from_llm(
             parser=PydanticOutputParser(pydantic_object=ImportanceRatingResponse),
@@ -397,7 +400,7 @@ class Agent(BaseModel):
         print_to_console("Starting Reflection", Fore.CYAN, "🤔")
 
         # Set up a complex chat model
-        chat_llm = ChatModel(ChatModelName.GPT4, temperature=0)
+        chat_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
 
         # Set up the parser
         question_parser = OutputFixingParser.from_llm(
@@ -484,7 +487,7 @@ class Agent(BaseModel):
     def _plan(self) -> list[SinglePlan]:
         print_to_console("Starting to Plan", Fore.YELLOW, "📝")
 
-        low_temp_llm = ChatModel(ChatModelName.GPT4, temperature=0, streaming=True)
+        low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0, streaming=True)
 
         # Make the plan parser
         plan_parser = OutputFixingParser.from_llm(
@@ -523,7 +526,7 @@ class Agent(BaseModel):
         )
 
         chat_llm = ChatModel(
-            ChatModelName.TURBO, temperature=0.5, streaming=True, request_timeout=600
+            DEFAULT_FAST_MODEL, temperature=0.5, streaming=True, request_timeout=600
         )
 
         # Get the plans
@@ -623,7 +626,7 @@ class Agent(BaseModel):
         # Make the reaction parser
         reaction_parser = OutputFixingParser.from_llm(
             parser=PydanticOutputParser(pydantic_object=LLMReactionResponse),
-            llm=ChatModel(ChatModelName.GPT4, temperature=0).defaultModel,
+            llm=ChatModel(temperature=0).defaultModel,
         )
 
         # Make the reaction prompter
@@ -647,7 +650,7 @@ class Agent(BaseModel):
         )
 
         # Get the reaction
-        llm = ChatModel(ChatModelName.GPT4, temperature=0.5)
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
         response = llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Deciding how to react...",

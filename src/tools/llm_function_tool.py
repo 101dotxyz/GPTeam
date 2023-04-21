@@ -3,7 +3,9 @@ from langchain.agents import Tool
 from langchain.schema import HumanMessage, SystemMessage
 
 from ..utils.formatting import print_to_console
-from ..utils.models import ChatModelName, ChatModel
+from ..utils.model_name import ChatModelName
+from ..utils.models import ChatModel
+from ..utils.parameters import DEFAULT_SMART_MODEL
 
 
 class LLMFunctionTool(Tool):
@@ -12,7 +14,7 @@ class LLMFunctionTool(Tool):
     function_definition: str
     function_description: str
 
-    def __init__(self, name, definition, description, model_name=ChatModelName.GPT4):
+    def __init__(self, name, definition, description, model_name=DEFAULT_SMART_MODEL):
         super().__init__(name=name, func=self.get_llm_response, description=description)
 
         self.model_name = model_name

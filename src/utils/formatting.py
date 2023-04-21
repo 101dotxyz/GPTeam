@@ -1,6 +1,8 @@
 import random
+import re
 import time
 
+import numpy as np
 from colorama import Fore, Style
 
 from .colors import LogColor
@@ -28,3 +30,13 @@ def print_to_console(
             min_typing_speed = min_typing_speed * 0.97
             max_typing_speed = max_typing_speed * 0.97
     print()
+
+
+def parse_array(s: str) -> np.ndarray:
+    # Split the string by comma
+    elements = s.strip()[1:-1].split(",")
+
+    # Convert each element to a float and create a NumPy array
+    arr = np.array([float(e) for e in elements])
+
+    return arr

@@ -179,13 +179,14 @@ class Agent(BaseModel):
         )
 
     def _get_memories(self):
-        data, count = (
+        (_, data), count = (
             supabase.table("Memories")
             .select("*")
             .eq("agent_id", str(self.id))
             .execute()
         )
-        memories = [SingleMemory(**memory) for memory in data[1]]
+
+        memories = [SingleMemory(**memory) for memory in data]
         return memories
 
     def _add_memory(
@@ -396,7 +397,9 @@ class Agent(BaseModel):
 
     def _reflect(self):
         recent_memories = sorted(
-            self.memories, key=lambda memory: memory.last_accessed, reverse=True
+            self.memories,
+            key=lambda memory: memory.last_accessed or memory.created_at,
+            reverse=True,
         )[:REFLECTION_MEMORY_COUNT]
 
         self._log("Reflection", LogColor.REFLECT, "Beginning reflection... 🤔")
@@ -665,6 +668,63 @@ class Agent(BaseModel):
 
         return parsed_reaction_response
 
+    def _act(self, plan: SinglePlan, event_manager: EventManager) -> None:
+        """Act on a plan"""
+
+        # If we are not in the right location, move to the new location
+        if self.location.id != plan.location.id:
+            self._move_to_location(plan.location, event_manager)
+            return
+
+        # Execute the plan
+
+        self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
+
+        event = Event(
+            timestamp=datetime.now(pytz.utc),
+            type=EventType.NON_MESSAGE,
+            description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location}",
+            location_id=self.location.id,
+        )
+
+        event_manager.add_event(event)
+
+        # If we are not in the right location, move to the new location
+        if self.location.id != plan.location.id:
+            self._move_to_location(plan.location, event_manager)
+            return
+
+        # Execute the plan
+
+        # TODO: Tools are dependent on the location
+        timeout = int(os.getenv("STEP_DURATION"))
+        resp = run_executor(
+            input=plan.description, add_memory=self._add_memory, timeout=timeout
+        )
+
+        if resp.status == ExecutorStatus.NEEDS_HELP:
+            self._log(
+                "Action Failed: Need help",
+                LogColor.ACT,
+                f"{plan.description} Error: {resp.output}",
+            )
+            # TODO: handle plan failure with a human
+            return
+
+        elif resp.status == ExecutorStatus.TIMED_OUT:
+            self._log(
+                "Action Failed: Timeout",
+                LogColor.ACT,
+                f"{plan.description} Error: {resp.output}",
+            )
+            return
+
+        # If the plan is done, remove it from the list of plans
+        elif resp.status == ExecutorStatus.COMPLETED:
+            # TODO: make sure current_plan is indeed a plan from the list, and not a reconstruction of one.
+            self.plans.remove(plan)
+            self._log("Action Completed", LogColor.ACT, f"{plan.description}")
+
     def _do_first_plan(self, event_manager: EventManager) -> None:
         """Do the first plan in the list"""
 
@@ -680,43 +740,7 @@ class Agent(BaseModel):
 
         current_plan = plans[0]
 
-        self._log("Acting on Plan", LogColor.ACT, f"{current_plan.description}")
-
-        # If we are not in the right location, move to the new location
-        if self.location.id != current_plan.location.id:
-            self._move_to_location(current_plan.location, event_manager)
-            return
-
-        # Execute the plan
-
-        # TODO: Tools are dependent on the location
-        timeout = int(os.getenv("STEP_DURATION"))
-        resp = run_executor(
-            input=current_plan.description, add_memory=self._add_memory, timeout=timeout
-        )
-
-        if resp.status == ExecutorStatus.NEEDS_HELP:
-            self._log(
-                "Action Failed: Need help",
-                LogColor.ACT,
-                f"{current_plan.description} Error: {resp.output}",
-            )
-            # TODO: handle plan failure with a human
-            return
-
-        elif resp.status == ExecutorStatus.TIMED_OUT:
-            self._log(
-                "Action Failed: Timeout",
-                LogColor.ACT,
-                f"{current_plan.description} Error: {resp.output}",
-            )
-            return
-
-        # If the plan is done, remove it from the list of plans
-        elif resp.status == ExecutorStatus.COMPLETED:
-            # TODO: make sure current_plan is indeed a plan from the list, and not a reconstruction of one.
-            self.plans.remove(current_plan)
-            self._log("Action Completed", LogColor.ACT, f"{current_plan.description}")
+        self._act(current_plan, event_manager)
 
     def run_for_one_step(self, events_manager: EventManager):
         # First we decide if we need to reflect

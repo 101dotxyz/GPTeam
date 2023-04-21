@@ -9,6 +9,7 @@ import pytz
 from pydantic import BaseModel
 
 from ..utils.embeddings import cosine_similarity, get_embedding
+from ..utils.formatting import parse_array
 from ..utils.parameters import (
     IMPORTANCE_WEIGHT,
     RECENCY_WEIGHT,
@@ -30,7 +31,7 @@ class SingleMemory(BaseModel):
     embedding: np.ndarray
     importance: int
     created_at: datetime
-    last_accessed: Optional[datetime] = None
+    last_accessed: datetime
     related_memory_ids: list[UUID]
 
     @property
@@ -62,8 +63,13 @@ class SingleMemory(BaseModel):
 
         if embedding is None:
             embedding = get_embedding(description)
+        elif isinstance(embedding, str):
+            embedding = parse_array(embedding)
         else:
             embedding = np.array(embedding)
+
+        if not isinstance(embedding, np.ndarray):
+            raise ValueError("Embedding must be a numpy array")
 
         super().__init__(
             id=id,
@@ -73,7 +79,7 @@ class SingleMemory(BaseModel):
             embedding=embedding,
             importance=importance,
             created_at=created_at,
-            last_accessed=last_accessed,
+            last_accessed=last_accessed or created_at,
             related_memory_ids=related_memory_ids,
         )
 

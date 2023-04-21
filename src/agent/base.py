@@ -665,8 +665,7 @@ class Agent(BaseModel):
         self._log(
             "Reaction",
             LogColor.REACT,
-            f"Decided to {parsed_reaction_response.reaction.value} given the recent events:\n"
-            + "\n".join([event.description for event in new_events]),
+            f"Decided to {parsed_reaction_response.reaction.value} given the recent events at the {self.location.name}",
         )
 
         return parsed_reaction_response

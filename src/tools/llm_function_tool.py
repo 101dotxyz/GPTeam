@@ -2,7 +2,6 @@ from colorama import Fore
 from langchain.agents import Tool
 from langchain.schema import HumanMessage, SystemMessage
 
-from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_SMART_MODEL

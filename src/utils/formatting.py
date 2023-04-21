@@ -3,15 +3,17 @@ import time
 
 from colorama import Fore, Style
 
-
-def colored_text(text: str, color: str) -> str:
-    return color + text + Style.RESET_ALL
+from .colors import LogColor
 
 
 def print_to_console(
-    title, title_color, content, min_typing_speed=0.06, max_typing_speed=0.04
+    title: str,
+    title_color: LogColor,
+    content,
+    min_typing_speed=0.06,
+    max_typing_speed=0.04,
 ):
-    print(title_color + title + " " + Style.RESET_ALL, end="")
+    print(title_color.value + title + " " + Style.RESET_ALL, end="")
     if content:
         if isinstance(content, list):
             content = " ".join(content)

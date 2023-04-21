@@ -2,8 +2,6 @@ from colorama import Fore
 from langchain.agents import Tool
 from langchain.utilities import SerpAPIWrapper
 
-from ..utils.formatting import print_to_console
-
 
 class SearchTool(Tool):
     def __init__(self):

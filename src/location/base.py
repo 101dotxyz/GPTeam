@@ -79,8 +79,6 @@ class Location(BaseModel):
         if len(data) == 0:
             raise ValueError(f"Location with id {id} not found")
 
-        print(data[0]["channel_id"])
-
         return cls(**data[0])
 
     @classmethod

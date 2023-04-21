@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from ..event.base import Event, EventManager, EventType
 from ..location.base import Location
 from ..memory.base import MemoryType, SingleMemory
+from ..utils.colors import LogColor
 from ..utils.database import supabase
 from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
@@ -85,7 +86,7 @@ class Agent(BaseModel):
         if memories is None or len(memories) == 0:
             self.memories = self._get_memories()
 
-        print_to_console("Agent: ", Fore.GREEN, self.full_name)
+        print_to_console("Initialized Agent", LogColor.GENERAL, self.full_name)
 
     @property
     def allowed_locations(self) -> list[Location]:
@@ -200,14 +201,13 @@ class Agent(BaseModel):
             importance=self._calculate_importance(description),
             related_memory_ids=related_memory_ids,
         )
-        print("made new memory ", memory.id)
 
         self.memories.append(memory)
 
         # add to database
         supabase.table("Memories").insert(memory.db_dict()).execute()
 
-        print_to_console("New Memory: ", Fore.BLUE, f"{memory}")
+        self._log("New Memory", LogColor.MEMORY, f"{memory}")
 
         return memory
 
@@ -300,9 +300,6 @@ class Agent(BaseModel):
         return sorted_memories[:k]
 
     def _summarize_activity(self, k: int = 20) -> str:
-        # Get the k most recent memories
-        print("memory descriptions:", [memory.description for memory in self.memories])
-
         recent_memories = sorted(
             self.memories, key=lambda memory: memory.created_at, reverse=True
         )[:k]
@@ -325,6 +322,11 @@ class Agent(BaseModel):
         )
 
         return response
+
+    def _log(
+        self, title: str, color: LogColor = LogColor.GENERAL, description: str = ""
+    ):
+        print_to_console(f"{self.full_name}: {title}", color, description)
 
     def _calculate_importance(self, memory_description: str) -> int:
         # Set up a complex chat model
@@ -360,22 +362,22 @@ class Agent(BaseModel):
     def _move_to_location(self, location: Location, event_manager: EventManager):
         """Move the agents, send event to Events table"""
 
+        self._log(
+            "Moved Location", LogColor.MOVE, f"{self.location.name} -> {location.name}"
+        )
+
         # first emit the depature event to the db
         event = Event(
             timestamp=datetime.now(pytz.utc),
             type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} left location: {location.name}",
+            description=f"{self.full_name} left location: {self.location.name}",
             location_id=self.location.id,
         )
-
-        print("event: ", event)
 
         event_manager.add_event(event)
 
         # Update the agents to the new location
         self.location = location
-
-        print_to_console("Moved to ", Fore.BLUE, f"{location.name}")
 
         # emit the arrival to the db
         event = Event(
@@ -394,7 +396,7 @@ class Agent(BaseModel):
             self.memories, key=lambda memory: memory.last_accessed, reverse=True
         )[:REFLECTION_MEMORY_COUNT]
 
-        print_to_console("Starting Reflection", Fore.CYAN, "🤔")
+        self._log("Reflection", LogColor.REFLECT, "Beginning reflection... 🤔")
 
         # Set up a complex chat model
         chat_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
@@ -443,7 +445,7 @@ class Agent(BaseModel):
                 llm=chat_llm.defaultModel,
             )
 
-            print_to_console("Reflecting on Question", Fore.GREEN, f"{question}")
+            self._log("Reflecting on Question", LogColor.REFLECT, f"{question}")
 
             # Make the reflection prompter
             reflection_prompter = Prompter(
@@ -482,7 +484,7 @@ class Agent(BaseModel):
                 )
 
     def _plan(self) -> list[SinglePlan]:
-        print_to_console("Starting to Plan", Fore.YELLOW, "📝")
+        self._log("Starting to Plan", LogColor.PLAN, "📝")
 
         low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0, streaming=True)
 
@@ -499,7 +501,7 @@ class Agent(BaseModel):
         # Get a summary of the recent activity
         recent_activity = self._summarize_activity()
 
-        print_to_console("Summarized Recent Activity", Fore.YELLOW, recent_activity)
+        self._log("Recent Activity Summary", LogColor.PLAN, recent_activity)
 
         # Make the Plan prompter
         plan_prompter = Prompter(
@@ -547,9 +549,9 @@ class Agent(BaseModel):
         ]
 
         if invalid_locations:
-            print_to_console(
-                "Invalid Locations",
-                Fore.RED,
+            self._log(
+                "Invalid Locations in Plan",
+                LogColor.PLAN,
                 f"The following locations are not in your allowed locations: {invalid_locations}",
             )
 
@@ -562,7 +564,7 @@ class Agent(BaseModel):
                         content=f"Your response included the following invalid location_id: {invalid_locations}. Please try again."
                     ),
                 ],
-                loading_text="🤔 Making plans...",
+                loading_text="🤔 Correcting plans...",
             )
 
             # Parse the response into an object
@@ -602,9 +604,9 @@ class Agent(BaseModel):
 
         # Loop through each plan and print it to the console
         for index, plan in enumerate(new_plans):
-            print_to_console(
-                "Plan ",
-                Fore.YELLOW,
+            self._log(
+                "New Plan",
+                LogColor.PLAN,
                 f"#{index}: {plan.description} @ {plan.location.name} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]",
             )
 
@@ -657,6 +659,13 @@ class Agent(BaseModel):
         # parse the reaction response
         parsed_reaction_response: LLMReactionResponse = reaction_parser.parse(response)
 
+        self._log(
+            "Reaction",
+            LogColor.REACT,
+            f"Decided to {parsed_reaction_response.reaction.value} given the recent events:\n"
+            + "\n".join([event.description for event in new_events]),
+        )
+
         return parsed_reaction_response
 
     def _do_first_plan(self, event_manager: EventManager) -> None:
@@ -674,7 +683,7 @@ class Agent(BaseModel):
 
         current_plan = plans[0]
 
-        print_to_console("Acting on Plan", Fore.YELLOW, f"{current_plan.description}")
+        self._log("Acting on Plan", LogColor.ACT, f"{current_plan.description}")
 
         # If we are not in the right location, move to the new location
         if self.location.id != current_plan.location.id:
@@ -688,18 +697,18 @@ class Agent(BaseModel):
         resp = run_executor(current_plan.description, timeout=timeout)
 
         if resp.status == ExecutorStatus.NEEDS_HELP:
-            print_to_console(
-                "Plan Failed: Needs Help",
-                Fore.RED,
+            self._log(
+                "Action Failed: Need help",
+                LogColor.ACT,
                 f"{current_plan.description} Error: {resp.output}",
             )
             # TODO: handle plan failure with a human
             return
 
         elif resp.status == ExecutorStatus.TIMED_OUT:
-            print_to_console(
-                "Plan Timed Out",
-                Fore.RED,
+            self._log(
+                "Action Failed: Timeout",
+                LogColor.ACT,
                 f"{current_plan.description} Error: {resp.output}",
             )
             return
@@ -708,9 +717,7 @@ class Agent(BaseModel):
         elif resp.status == ExecutorStatus.COMPLETED:
             # TODO: make sure current_plan is indeed a plan from the list, and not a reconstruction of one.
             self.plans.remove(current_plan)
-            print_to_console(
-                "Plan Completed: ", Fore.GREEN, f"{current_plan.description}"
-            )
+            self._log("Action Completed", LogColor.ACT, f"{current_plan.description}")
 
     def run_for_one_step(self, events_manager: EventManager):
         # First we decide if we need to reflect

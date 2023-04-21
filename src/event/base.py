@@ -99,7 +99,6 @@ class EventManager(BaseModel):
                 .gte("step", starting_step)
                 .execute()
             )
-            print(data)
             events = [Event(**event) for event in data]
 
         super().__init__(events=events, starting_step=starting_step)

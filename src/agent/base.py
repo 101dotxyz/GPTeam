@@ -29,9 +29,9 @@ from ..utils.parameters import (
     REFLECTION_MEMORY_COUNT,
 )
 from ..utils.prompt import Prompter, PromptString
-from .executor import ExecutorStatus, run_executor
+from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
-from .plans import LLMPlanResponse, LLMSinglePlan, SinglePlan
+from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
 
@@ -53,6 +53,8 @@ class Agent(BaseModel):
     plans: list[SinglePlan]
     world_id: UUID
     location: Optional[Location]
+    notes: list[str] = []
+    plan_executor: PlanExecutor
 
     def __init__(
         self,
@@ -80,6 +82,7 @@ class Agent(BaseModel):
             plans=plans,
             world_id=world_id,
             location=location,
+            plan_executor=PlanExecutor(),
         )
 
         # if the memories are None, retrieve them
@@ -219,7 +222,7 @@ class Agent(BaseModel):
             "directives": self.directives,
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
         }
-        print("Updated ", self.full_name, " in db.")
+
         return supabase.table("Agents").update(row).eq("id", str(self.id)).execute()
 
     def _add_plan_rows(self, plans: list[SinglePlan]):
@@ -233,7 +236,7 @@ class Agent(BaseModel):
                 "created_at": plan.created_at.isoformat(),
                 "stop_condition": plan.stop_condition,
             }
-            print("Added plan to db.")
+
             return supabase.table("Plans").upsert(row).execute()
 
     def _get_memories_since(self, date: datetime):
@@ -466,7 +469,7 @@ class Agent(BaseModel):
             # Get the reflection insights
             response = chat_llm.get_chat_completion(
                 reflection_prompter.prompt,
-                loading_text=f"🤔 Reflecting on the following question: {question}",
+                loading_text="🤔 Reflecting",
             )
 
             # Parse the response into an object
@@ -662,11 +665,49 @@ class Agent(BaseModel):
         self._log(
             "Reaction",
             LogColor.REACT,
-            f"Decided to {parsed_reaction_response.reaction.value} given the recent events:\n"
-            + "\n".join([event.description for event in new_events]),
+            f"Decided to {parsed_reaction_response.reaction.value} given the recent events at the {self.location.name}",
         )
 
         return parsed_reaction_response
+
+    def _gossip(
+        self,
+        plan: SinglePlan,
+        result: PlanExecutorResponse,
+        event_manager: EventManager,
+    ) -> None:
+        # Make the reaction prompter
+        reaction_prompter = Prompter(
+            PromptString.GOSSIP,
+            {
+                "plan_description": plan.description,
+                "tool_name": result.tool_name,
+                "tool_input": result.tool_input,
+                "tool_result": result.output,
+            },
+        )
+
+        # Get the reaction
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+        response = llm.get_chat_completion(
+            reaction_prompter.prompt,
+            loading_text="🤔 Creating gossip...",
+        )
+
+        self._log(
+            "Gossip",
+            LogColor.ACT,
+            f"{response}",
+        )
+
+        event = Event(
+            timestamp=datetime.now(pytz.utc),
+            type=EventType.NON_MESSAGE,
+            description=f"{self.full_name} said the following: {response}",
+            location_id=self.location.id,
+        )
+
+        event_manager.add_event(event)
 
     def _act(self, plan: SinglePlan, event_manager: EventManager) -> None:
         """Act on a plan"""
@@ -674,20 +715,11 @@ class Agent(BaseModel):
         # If we are not in the right location, move to the new location
         if self.location.id != plan.location.id:
             self._move_to_location(plan.location, event_manager)
-            return
+            # return
 
         # Execute the plan
 
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
-
-        event = Event(
-            timestamp=datetime.now(pytz.utc),
-            type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location}",
-            location_id=self.location.id,
-        )
-
-        event_manager.add_event(event)
 
         # If we are not in the right location, move to the new location
         if self.location.id != plan.location.id:
@@ -698,31 +730,54 @@ class Agent(BaseModel):
 
         # TODO: Tools are dependent on the location
         timeout = int(os.getenv("STEP_DURATION"))
-        resp = run_executor(
-            input=plan.description, add_memory=self._add_memory, timeout=timeout
-        )
 
-        if resp.status == ExecutorStatus.NEEDS_HELP:
+        resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(plan)
+
+        if resp.status == PlanStatus.FAILED:
+            event = Event(
+                timestamp=datetime.now(pytz.utc),
+                type=EventType.NON_MESSAGE,
+                description=f"{self.full_name} has failed to complete the following: {plan.description} at the location: {plan.location.name}. {self.full_name} had the following problem: {resp.output}.",
+                location_id=self.location.id,
+            )
+
+            event_manager.add_event(event)
+
             self._log(
                 "Action Failed: Need help",
                 LogColor.ACT,
                 f"{plan.description} Error: {resp.output}",
             )
             # TODO: handle plan failure with a human
-            return
 
-        elif resp.status == ExecutorStatus.TIMED_OUT:
-            self._log(
-                "Action Failed: Timeout",
-                LogColor.ACT,
-                f"{plan.description} Error: {resp.output}",
+        elif resp.status == PlanStatus.IN_PROGRESS:
+            event = Event(
+                timestamp=datetime.now(pytz.utc),
+                type=EventType.NON_MESSAGE,
+                description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}.",
+                location_id=self.location.id,
             )
-            return
+
+            event_manager.add_event(event)
+
+            self._log("Action In Progress", LogColor.ACT, f"{plan.description}")
+
+            self._gossip(plan, resp, event_manager)
 
         # If the plan is done, remove it from the list of plans
-        elif resp.status == ExecutorStatus.COMPLETED:
-            # TODO: make sure current_plan is indeed a plan from the list, and not a reconstruction of one.
-            self.plans.remove(plan)
+        elif resp.status == PlanStatus.DONE:
+            # remove all plans with the same description
+            self.plans = [p for p in self.plans if p.description != plan.description]
+
+            event = Event(
+                timestamp=datetime.now(pytz.utc),
+                type=EventType.NON_MESSAGE,
+                description=f"{self.full_name} has just completed the following: {plan.description} at the location: {plan.location.name}. The result was: {resp.output}.",
+                location_id=self.location.id,
+            )
+
+            event_manager.add_event(event)
+
             self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
     def _do_first_plan(self, event_manager: EventManager) -> None:

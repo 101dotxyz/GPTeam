@@ -20,6 +20,8 @@ class PromptString(Enum):
 
     REACT = 'You are a reaction AI. Given the character\'s personal info and current plans, decide whether they should continue with their current plans ("maintain_plans"), or if they should make new plans based on the new events ("replan"). If the events have a material impact on the character\'s goals or existing plans, they should replan.\n\n{format_instructions}\n\nLet\'s Being!\n\nName: {full_name}\nBio: {bio}\nGoals: {directives}\nRecent Activity: {recent_activity}\nCurrent Plans: {current_plans}\n\nNew Events: {event_descriptions}.'
 
+    GOSSIP = "You are currently working on the following plan: {plan_description}. You have just used the tool {tool_name} with the following input {tool_input} and got the following result {tool_result}. Write a single sentence of useful gossip to share with others in your location about what you have just found out."
+
 
 class Prompter(BaseModel):
     template: str

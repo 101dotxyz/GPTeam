@@ -205,7 +205,7 @@ class Agent(BaseModel):
         self.memories.append(memory)
 
         # add to database
-        data, count = supabase.table("Memories").insert(memory.db_dict()).execute()
+        supabase.table("Memories").insert(memory.db_dict()).execute()
 
         print_to_console("New Memory: ", Fore.BLUE, f"{memory}")
 
@@ -284,10 +284,6 @@ class Agent(BaseModel):
             "world_id": self.world_id,
             "location": self.location.id,
         }
-
-    def add_observation_strings(self, memory_strings: list[str]):
-        for memory_string in memory_strings:
-            self._add_memory(memory_string, MemoryType.OBSERVATION)
 
     def _related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
         # Calculate relevance for each memory and store it in a list of dictionaries
@@ -621,7 +617,8 @@ class Agent(BaseModel):
         new_events = event_manager.get_events_by_location(self.location)
 
         # Store them as observations for this agent
-        self.add_observation_strings([event.description for event in new_events])
+        for event in new_events:
+            self._add_memory(event.description, MemoryType.OBSERVATION)
 
         # LLM call to decide how to react to new events
         # Make the reaction parser

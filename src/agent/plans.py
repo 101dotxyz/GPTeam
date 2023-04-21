@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Generic, List, Literal, Optional, TypeVar
 from uuid import UUID, uuid4
 
+import pytz
 from pydantic import BaseModel, Field, validator
 
 from ..location.base import Location
@@ -44,7 +45,7 @@ class SinglePlan(BaseModel):
             id = uuid4()
 
         if created_at is None:
-            created_at = datetime.now()
+            created_at = datetime.now(tz=pytz.utc)
 
         super().__init__(
             id=id,

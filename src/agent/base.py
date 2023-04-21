@@ -6,6 +6,7 @@ from typing import Literal, Optional, Type, cast
 from uu import Error
 from uuid import UUID, uuid4
 
+import pytz
 from colorama import Fore
 from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from langchain.schema import AIMessage, HumanMessage
@@ -365,7 +366,7 @@ class Agent(BaseModel):
 
         # first emit the depature event to the db
         event = Event(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(pytz.utc),
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {location.name}",
             location_id=self.location.id,
@@ -382,7 +383,7 @@ class Agent(BaseModel):
 
         # emit the arrival to the db
         event = Event(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=pytz.utc),
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {location.name}",
             location_id=self.location.id,

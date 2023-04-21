@@ -1,10 +1,11 @@
 import math
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 from enum import Enum
 from typing import Optional
 from uuid import UUID, uuid4
 
 import numpy as np
+import pytz
 from pydantic import BaseModel
 
 from ..utils.embeddings import cosine_similarity, get_embedding
@@ -34,9 +35,9 @@ class SingleMemory(BaseModel):
 
     @property
     def recency(self) -> float:
-        last_retrieved_hours_ago = (datetime.now() - self.last_accessed) / timedelta(
-            hours=1 / TIME_SPEED_MULTIPLIER
-        )
+        last_retrieved_hours_ago = (
+            datetime.now(tz=pytz.utc) - self.last_accessed
+        ) / timedelta(hours=1 / TIME_SPEED_MULTIPLIER)
 
         decay_factor = 0.99
         return math.pow(decay_factor, last_retrieved_hours_ago)
@@ -52,7 +53,7 @@ class SingleMemory(BaseModel):
         importance: int,
         related_memory_ids: Optional[list[UUID]] = [],
         id: Optional[UUID] = None,
-        created_at: Optional[datetime] = datetime.now(),
+        created_at: Optional[datetime] = datetime.now(tz=pytz.utc),
         embedding: Optional[np.ndarray] = None,
         last_accessed: Optional[datetime] = None,
     ):
@@ -98,7 +99,7 @@ class SingleMemory(BaseModel):
         return f"[{self.type.name}] - {self.description} ({round(self.importance, 1)})"
 
     def update_last_accessed(self):
-        self.last_accessed = datetime.now()
+        self.last_accessed = datetime.now(tz=pytz.utc)
 
     def similarity(self, query: str) -> float:
         query_embedding = get_embedding(query)

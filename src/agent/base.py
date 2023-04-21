@@ -715,18 +715,11 @@ class Agent(BaseModel):
         # If we are not in the right location, move to the new location
         if self.location.id != plan.location.id:
             self._move_to_location(plan.location, event_manager)
-            # return
+            return
 
         # Execute the plan
 
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
-
-        # If we are not in the right location, move to the new location
-        if self.location.id != plan.location.id:
-            self._move_to_location(plan.location, event_manager)
-            return
-
-        # Execute the plan
 
         # TODO: Tools are dependent on the location
         timeout = int(os.getenv("STEP_DURATION"))

@@ -25,6 +25,7 @@ supabase = "^1.0.3"
 wolframalpha = "^5.0.0"
 langchain = "^0.0.144"
 pytz = "^2023.3"
+google-api-python-client = "^2.86.0"
 
 [tool.black]
 line-length = 88

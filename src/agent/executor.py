@@ -125,7 +125,7 @@ def run_executor(
 
                 (action, observation) = next_step_output[0]
 
-                memory_description = f"When using {action.tool} to ask {action.tool_input}, I got the following {observation}"
+                memory_description = f"When using {action.tool} to ask {action.tool_input}, I got the following result: {observation}"
 
                 add_memory(memory_description, MemoryType.OBSERVATION)
 

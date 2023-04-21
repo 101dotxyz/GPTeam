@@ -304,6 +304,9 @@ class Agent(BaseModel):
             self.memories, key=lambda memory: memory.created_at, reverse=True
         )[:k]
 
+        if len(recent_memories) == 0:
+            return "I haven't done anything recently."
+
         summary_prompter = Prompter(
             PromptString.RECENT_ACTIIVITY,
             {

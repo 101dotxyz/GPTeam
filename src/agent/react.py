@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field
 from enum import Enum
+
+from pydantic import BaseModel, Field
 
 
 class Reaction(Enum):
@@ -9,5 +10,5 @@ class Reaction(Enum):
 
 class LLMReactionResponse(BaseModel):
     reaction: Reaction = Field(
-        description="The reaction to the message. Must be either 'replan' or 'maintain_plans'."
+        description="The reaction to the message. Must be either 'replan' or 'maintain_plans'. Do not provide anything else."
     )

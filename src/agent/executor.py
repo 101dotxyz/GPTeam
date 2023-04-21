@@ -15,6 +15,7 @@ from langchain.tools import BaseTool
 from pydantic import BaseModel
 from typing_extensions import override
 
+from ..memory.base import MemoryType
 from ..tools.base import all_tools
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
@@ -90,6 +91,7 @@ class ExecutorResponse(BaseModel):
 
 def run_executor(
     input: str,
+    add_memory,
     timeout: int = int(os.getenv("STEP_DURATION")),
     intermediate_steps_old: List[Tuple[AgentAction, str]] = [],
 ) -> ExecutorResponse:
@@ -117,8 +119,13 @@ def run_executor(
                 next_step_output = self._take_next_step(
                     name_to_tool_map, color_mapping, inputs, intermediate_steps
                 )
+
                 if isinstance(next_step_output, AgentFinish):
                     return self._return(next_step_output, intermediate_steps)
+
+                (action, observation) = next_step_output[0]
+
+                add_memory(observation, MemoryType.OBSERVATION)
 
                 intermediate_steps.extend(next_step_output)
                 if len(next_step_output) == 1:

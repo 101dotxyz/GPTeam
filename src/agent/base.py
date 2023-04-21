@@ -496,8 +496,6 @@ class Agent(BaseModel):
             llm=low_temp_llm.defaultModel,
         )
 
-        print(plan_parser.get_format_instructions())
-
         # Get a summary of the recent activity
         recent_activity = self._summarize_activity()
 
@@ -536,10 +534,6 @@ class Agent(BaseModel):
 
         # Parse the response into an object
         parsed_plans_response: LLMPlanResponse = plan_parser.parse(response)
-
-        print(
-            "allowed_locations", self.allowed_locations, parsed_plans_response.plans[0]
-        )
 
         invalid_locations = [
             plan.location_id
@@ -694,7 +688,9 @@ class Agent(BaseModel):
 
         # TODO: Tools are dependent on the location
         timeout = int(os.getenv("STEP_DURATION"))
-        resp = run_executor(current_plan.description, timeout=timeout)
+        resp = run_executor(
+            input=current_plan.description, add_memory=self._add_memory, timeout=timeout
+        )
 
         if resp.status == ExecutorStatus.NEEDS_HELP:
             self._log(

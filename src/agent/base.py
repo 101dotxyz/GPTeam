@@ -469,7 +469,7 @@ class Agent(BaseModel):
             # Get the reflection insights
             response = chat_llm.get_chat_completion(
                 reflection_prompter.prompt,
-                loading_text=f"🤔 Reflecting on the following question: {question}",
+                loading_text="🤔 Reflecting",
             )
 
             # Parse the response into an object

@@ -7,7 +7,7 @@ import pytz
 from pydantic import BaseModel, Field, validator
 
 from ..location.base import Location
-from ..utils.database import supabase
+from ..utils.database.database import supabase
 
 
 class PlanStatus(Enum):

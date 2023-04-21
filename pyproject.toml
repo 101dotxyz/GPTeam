@@ -10,6 +10,7 @@ packages = [{include = "src"}]
 start = "src:run"
 cli = "src.cli:main"
 test = "src.testing:main"
+db-seed = "src.utils.database.seed:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"

@@ -16,7 +16,7 @@ from ..event.base import Event, EventManager, EventType
 from ..location.base import Location
 from ..memory.base import MemoryType, SingleMemory
 from ..utils.colors import LogColor
-from ..utils.database import supabase
+from ..utils.database.database import supabase
 from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel

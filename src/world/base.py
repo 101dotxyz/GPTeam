@@ -9,7 +9,7 @@ from src.event.base import Event, EventManager
 
 from ..agent.base import Agent
 from ..location.base import Location
-from ..utils.database import supabase
+from ..utils.database.database import supabase
 
 
 class World(BaseModel):

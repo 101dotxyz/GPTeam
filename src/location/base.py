@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel
 
 # from ..agent.base import Agent
-from ..utils.database import supabase
+from ..utils.database.database import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
 
 

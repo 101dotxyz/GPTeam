@@ -65,39 +65,11 @@ class World(BaseModel):
     def load_agents(self):
         self.agents = self.get_agents()
 
-    # def get_agent_actions(self) -> list[AgentAction]:
-    #     # will need to parse some args
-    #     return [agent.act() for agent in self.agents]
-
     def get_witnesses(self, location: Location) -> list[UUID]:
         return [agent for agent in self.agents if agent.location.id == location.id]
 
-    def update(self) -> None:
-        # very rough draft of how this might work
-
-        discord_messages = self.get_discord_messages()
-
-        for message in discord_messages:
-            witnesses = self.get_witnesses(message.location)
-            event = Event.from_discord_message(message, witnesses)
-            self.events.append(event)
-
-        agent_actions = self.get_agent_actions()
-
-        for action in agent_actions:
-            witnesses = self.get_witnesses(action.location)
-            event = Event.from_agent_action(action, witnesses)
-            self.events.append(event)
-
-        new_state = self.state.copy()
-
-        for action in agent_actions:
-            new_state.positions[action.agent] = action.location
-
-        self.history.append(new_state)
-
     def run_step(self):
-        self.event_manager.refresh_events()
+        self.event_manager.refresh_events(self.current_step)
         for agent in self.agents:
             agent.run_for_one_step(self.event_manager)
         self.current_step += 1

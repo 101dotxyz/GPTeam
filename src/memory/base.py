@@ -83,6 +83,9 @@ class SingleMemory(BaseModel):
             related_memory_ids=related_memory_ids,
         )
 
+    def __str__(self):
+        return f"[{self.type.name}] - {self.description} ({self.importance})"
+
     def db_dict(self):
         return {
             "id": str(self.id),

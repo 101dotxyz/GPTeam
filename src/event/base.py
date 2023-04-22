@@ -89,28 +89,29 @@ class Event(BaseModel):
 
 class EventManager(BaseModel):
     events: list[Event] = []
-    starting_step: int = 0
+    current_step: int = 0
 
-    def __init__(self, events: list[Event] = None, starting_step: int = 0):
+    def __init__(self, events: list[Event] = None, current_step: int = 0):
         if not events:
             (_, data), count = (
                 supabase.table("Events")
                 .select("*")
-                .gte("step", starting_step)
+                .gte("step", current_step)
                 .execute()
             )
             events = [Event(**event) for event in data]
 
-        super().__init__(events=events, starting_step=starting_step)
+        super().__init__(events=events, current_step=current_step)
 
-    def refresh_events(self, starting_step: int = None):
-        if starting_step:
-            self.starting_step = starting_step
+    # get the next steps events
+    def refresh_events(self, current_step: int = None):
+        if current_step:
+            self.current_step = current_step
 
         data, count = (
             supabase.table("Events")
             .select("*")
-            .gte("step", self.starting_step)
+            .gte("step", self.current_step)
             .execute()
         )
 
@@ -137,6 +138,14 @@ class EventManager(BaseModel):
 
     def get_events(self):
         return self.events
+
+    def get_current_step_events(self, location_id: UUID = None):
+        step_events = [event for event in self.events if event.step == self.current_step]
+        
+        if location_id:
+            step_events = [event for event in step_events if event.location_id == location_id]
+
+        return step_events
 
     def get_events_by_location(self, location: Location):
         return [event for event in self.events if event.location_id == location.id]

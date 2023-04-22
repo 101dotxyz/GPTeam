@@ -98,7 +98,7 @@ agents = [
     {
         "id": str(uuid.uuid4()),
         "full_name": "Marty Silverberg",
-        "bio": "Lovable, naive, and energetic, he unknowingly leads the company to success with his early adoption of internet advertising.",
+        "private_bio": "Lovable, naive, and energetic, he unknowingly leads the company to success with his early adoption of internet advertising.",
         "directives": [],
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
@@ -107,7 +107,7 @@ agents = [
     {
         "id": str(uuid.uuid4()),
         "full_name": "Rebecca Thompson",
-        "bio": "Power-hungry and maniacal, she patiently plots her rise to power while maintaining her excellent performance at work.",
+        "private_bio": "Power-hungry and maniacal, she patiently plots her rise to power while maintaining her excellent performance at work.",
         "directives": [],
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
@@ -116,7 +116,7 @@ agents = [
     {
         "id": str(uuid.uuid4()),
         "full_name": "Linda Smith",
-        "bio": "The enigmatic programmer with a mysterious past, she is convinced they're living in a simulation and leaves hidden messages in her code for users to find.",
+        "private_bio": "The enigmatic programmer with a mysterious past, she is convinced they're living in a simulation and leaves hidden messages in her code for users to find.",
         "directives": [],
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
@@ -125,7 +125,7 @@ agents = [
     {
         "id": str(uuid.uuid4()),
         "full_name": "Karen Jones",
-        "bio": "Enthusiastic about cringeworthy team-building activities, she is always looking for ways to boost morale and foster a sense of camaraderie among the employees.",
+        "private_bio": "Enthusiastic about cringeworthy team-building activities, she is always looking for ways to boost morale and foster a sense of camaraderie among the employees.",
         "directives": [],
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
@@ -134,7 +134,7 @@ agents = [
     {
         "id": str(uuid.uuid4()),
         "full_name": "Peter Williams",
-        "bio": "A persuasive and persistent salesperson, Peter manages to close deals and maintain client relationships, even though he's not entirely sure what the company does.",
+        "private_bio": "A persuasive and persistent salesperson, Peter manages to close deals and maintain client relationships, even though he's not entirely sure what the company does.",
         "directives": [],
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
@@ -143,7 +143,7 @@ agents = [
     {
         "id": str(uuid.uuid4()),
         "full_name": "Dave Johnson",
-        "bio": "While not particularly productive, he's a master of jokes and socializing, making him a beloved figure at the company. Marty can't bring himself to fire him because of his humor and charm.",
+        "private_bio": "While not particularly productive, he's a master of jokes and socializing, making him a beloved figure at the company. Marty can't bring himself to fire him because of his humor and charm.",
         "directives": [],
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
@@ -152,7 +152,7 @@ agents = [
     {
         "id": str(uuid.uuid4()),
         "full_name": "Susan Miller",
-        "bio": "Diligent and detail-oriented, she's responsible for tracking the company's performance metrics, even if she doesn't fully understand the technical aspects of the business.",
+        "private_bio": "Diligent and detail-oriented, she's responsible for tracking the company's performance metrics, even if she doesn't fully understand the technical aspects of the business.",
         "directives": [],
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
@@ -161,7 +161,7 @@ agents = [
     {
         "id": str(uuid.uuid4()),
         "full_name": "Emma Davis",
-        "bio": "Friendly and approachable, she welcomes visitors to the company with a warm smile and helps keep the office running smoothly, while secretly harboring a talent for hacking.",
+        "private_bio": "Friendly and approachable, she welcomes visitors to the company with a warm smile and helps keep the office running smoothly, while secretly harboring a talent for hacking.",
         "directives": [],
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
@@ -170,7 +170,7 @@ agents = [
     {
         "id": str(uuid.uuid4()),
         "full_name": "Eddie Brown",
-        "bio": "The hardworking janitor, always ready to lend an ear and offer sage advice, often knows more about the inner workings of the company than anyone suspects.",
+        "private_bio": "The hardworking janitor, always ready to lend an ear and offer sage advice, often knows more about the inner workings of the company than anyone suspects.",
         "directives": [],
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
@@ -250,7 +250,7 @@ plans = [
     {
         "id": str(uuid.uuid4()),
         "agent_id": agents[8]["id"],
-        "description": "Clean the office in the janitor closet",
+        "description": "Clean the conference room",
         "max_duration_hrs": 5,
         "stop_condition": "The office is spotless",
         "location_id": locations[9]["id"],

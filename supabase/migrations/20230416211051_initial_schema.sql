@@ -8,11 +8,11 @@ create type "public"."plan_status" as enum ('in_progress', 'todo', 'done');
 CREATE TABLE "public"."Agents" (
     "id" uuid DEFAULT uuid_generate_v4() NOT NULL,
     "full_name" text,
-    "bio" text,
+    "private_bio" text,
+    "public_bio" text,
     "directives" text[],
     "world_id" uuid,
     "ordered_plan_ids" uuid[],
-    "state" jsonb,
     "location_id" uuid,
     PRIMARY KEY ("id")
 );

@@ -2,15 +2,16 @@
 name = "101-ai"
 version = "0.1.0"
 description = ""
-authors = ["Alex Velikanov <alex25368@gmail.com>"]
+authors = [""]
 readme = "README.md"
 packages = [{include = "src"}]
 
 [tool.poetry.scripts]
 start = "src:run"
 cli = "src.cli:main"
-test = "src.testing:main"
+test = "src.main:main"
 db-seed = "src.utils.database.seed:main"
+db-seed-small = "src.utils.database.seed_small:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"

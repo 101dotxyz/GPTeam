@@ -2,7 +2,7 @@ import os
 import re
 import time
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 from dotenv import load_dotenv
 from langchain import LLMChain
@@ -15,6 +15,7 @@ from langchain.tools import BaseTool
 from pydantic import BaseModel
 from typing_extensions import override
 
+from ..event.base import Event, EventManager
 from ..memory.base import MemoryType
 from ..tools.base import all_tools
 from ..utils.model_name import ChatModelName
@@ -22,8 +23,16 @@ from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
 from .plans import PlanStatus, SinglePlan
+from ..utils.formatting import print_to_console
+from ..utils.colors import LogColor
 
 load_dotenv()
+
+class ExecutorContext(BaseModel):
+    full_name: str
+    private_bio: str
+    directives: list[str]
+    location_description: str
 
 
 # Set up a prompt template
@@ -87,13 +96,14 @@ class PlanExecutorResponse(BaseModel):
 
 
 class PlanExecutor(BaseModel):
-    """Executes plans for an agent."""
+    """Executes plans for an agent.""" 
 
     executor: LLMSingleActionAgent
+    context: ExecutorContext
     plan: Optional[SinglePlan] = None
     intermediate_steps: List[Tuple[AgentAction, str]] = []
 
-    def __init__(self) -> None:
+    def __init__(self, context: ExecutorContext) -> None:
         prompt = CustomPromptTemplate(
             template=PromptString.EXECUTE_PLAN.value,
             tools=all_tools,
@@ -119,27 +129,33 @@ class PlanExecutor(BaseModel):
             allowed_tools=tool_names,
         )
 
-        super().__init__(executor=executor)
+        super().__init__(executor=executor, context=context)
 
     def set_plan(self, plan: SinglePlan) -> None:
         self.plan = plan
         self.intermediate_steps = []
 
-    def start_or_continue_plan(self, plan: SinglePlan) -> PlanExecutorResponse:
+    def start_or_continue_plan(self, plan: SinglePlan, event_manager: EventManager) -> PlanExecutorResponse:
         if not self.plan or self.plan.description != plan.description:
             self.set_plan(plan)
-            return self.execute()
+            return self.execute(event_manager)
         else:
-            return self.execute()
+            return self.execute(event_manager)
 
-    def execute(self) -> str:
+    def execute(self, event_manager: EventManager) -> str:
         if self.plan is None:
             raise ValueError("No plan set")
 
         response = self.executor.plan(
-            input=self.plan.description, intermediate_steps=self.intermediate_steps
+            input=self.plan.description, 
+            intermediate_steps=self.intermediate_steps
         )
 
+        for log in response.log.split("\n"):
+            suffix = log.split(":")[0] if ":" in log else "Thought"
+            print_to_console(f"{self.context.full_name}: {suffix}: ", LogColor.THOUGHT , log)
+
+        # If the agent is finished, return the output
         if isinstance(response, AgentFinish):
             self.plan = None
             self.intermediate_steps = []
@@ -160,9 +176,11 @@ class PlanExecutor(BaseModel):
         )
 
         if tool is None:
-            raise ValueError(f"Tool {response.tool} not found in tool list")
+            raise ValueError(f"Tool: '{response.tool}' is not found in tool list")      
 
-        result = tool.run(response.tool_input)
+        result = tool.run(response.tool_input, {"event_manager": event_manager})
+
+        print_to_console(f"{self.context.full_name} Action Response: ", LogColor.THOUGHT , result)
 
         self.intermediate_steps.append((response, result))
 

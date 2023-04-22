@@ -61,6 +61,9 @@ class SinglePlan(BaseModel):
             scratchpad=scratchpad,
         )
 
+    def __str__(self):
+        return f"[PLAN] - {self.description} at {self.location.name}"
+
     @classmethod
     def from_id(cls, id: UUID):
         (_, data), (_, count) = (

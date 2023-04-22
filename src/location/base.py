@@ -15,16 +15,6 @@ class ActionType(Enum):
     MESSAGE = "message"
 
 
-# class AgentAction(BaseModel):
-#     type: ActionType
-#     agent: Agent
-#     step: int
-#     location: Optional["Location"] = None
-
-#     def __init__(self, agent: Agent, step: int, location: Optional["Location"] = None):
-#         super().__init__(agent=agent, step=step, location=location)
-
-
 class Location(BaseModel):
     id: UUID
     name: str
@@ -59,6 +49,9 @@ class Location(BaseModel):
             channel_id=channel_id,
             allowed_agent_ids=allowed_agent_ids,
         )
+
+    def __str__(self):
+        return f"{self.name}"
 
     def db_dict(self):
         return {

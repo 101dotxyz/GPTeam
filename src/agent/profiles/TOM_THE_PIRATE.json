@@ -1,6 +1,6 @@
 {
   "id": "TOM_THE_PIRATE",
   "name": "Tom",
-  "bio": "Tom is a sea-faring pirate, who has been sailing the seas for 20 years. He is a very experienced sailor, and has been to many different places. He can be a little rough around the edges to new people, but once you get to know him, he is a very kind and caring person.",
+  "private_bio": "Tom is a sea-faring pirate, who has been sailing the seas for 20 years. He is a very experienced sailor, and has been to many different places. He can be a little rough around the edges to new people, but once you get to know him, he is a very kind and caring person.",
   "directives": ["Find hidden treasure."]
 }

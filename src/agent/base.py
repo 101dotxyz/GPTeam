@@ -47,7 +47,8 @@ class RelatedMemory(BaseModel):
 class Agent(BaseModel):
     id: UUID
     full_name: str
-    bio: str
+    private_bio: str
+    public_bio: str
     directives: Optional[list[str]]
     memories: list[SingleMemory]
     plans: list[SinglePlan]
@@ -59,7 +60,8 @@ class Agent(BaseModel):
     def __init__(
         self,
         full_name: str,
-        bio: str,
+        private_bio: str,
+        public_bio: str,
         directives: list[str] = None,
         memories: list[SingleMemory] = [],
         plans: list[SinglePlan] = [],
@@ -76,20 +78,34 @@ class Agent(BaseModel):
         super().__init__(
             id=id,
             full_name=full_name,
-            bio=bio,
+            private_bio=private_bio,
+            public_bio=public_bio,
             directives=directives,
             memories=memories,
             plans=plans,
             world_id=world_id,
             location=location,
-            plan_executor=PlanExecutor(),
+            plan_executor=PlanExecutor({
+                "full_name": full_name,
+                "private_bio": private_bio,
+                "directives": directives,
+                "location_description": f"{location.name}: {location.description}"
+            }),
         )
 
         # if the memories are None, retrieve them
         if memories is None or len(memories) == 0:
             self.memories = self._get_memories()
 
-        print_to_console("Initialized Agent", LogColor.GENERAL, self.full_name)
+        print("\n\nAGENT INITIALIZED --------------------------\n")
+        print(self)
+
+    def __str__(self) -> str:
+        private_bio = self.private_bio[:100] + "..." if len(self.private_bio) > 100 else self.private_bio
+        memories = " " + "\n ".join([str(memory)[:100] + "..." if len(str(memory)) > 100 else str(memory) for memory in self.memories])
+        plans = " " + "\n ".join([str(plan) for plan in self.plans])
+
+        return f"{self.full_name} - {self.location}\nprivate_bio: {private_bio}\nDirectives: {self.directives}\n\nMemories: \n{memories}\n\nPlans: \n{plans}\n"
 
     @property
     def allowed_locations(self) -> list[Location]:
@@ -173,7 +189,8 @@ class Agent(BaseModel):
         return Agent(
             id=id,
             full_name=agent.get("full_name"),
-            bio=agent.get("bio"),
+            private_bio=agent.get("private_bio"),
+            public_bio=agent.get("public_bio"),
             directives=agent.get("directives"),
             memories=[SingleMemory(**memory) for memory in memories_data[1]],
             plans=plans,
@@ -218,7 +235,7 @@ class Agent(BaseModel):
     def _update_agent_row(self):
         row = {
             "full_name": self.full_name,
-            "bio": self.bio,
+            "private_bio": self.private_bio,
             "directives": self.directives,
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
         }
@@ -282,7 +299,7 @@ class Agent(BaseModel):
         return {
             "id": str(self.id),
             "full_name": self.full_name,
-            "bio": self.bio,
+            "private_bio": self.private_bio,
             "directives": self.directives,
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
             "world_id": self.world_id,
@@ -349,7 +366,7 @@ class Agent(BaseModel):
             PromptString.IMPORTANCE,
             {
                 "full_name": self.full_name,
-                "bio": self.bio,
+                "private_bio": self.private_bio,
                 "memory_description": memory_description,
                 "format_instructions": importance_parser.get_format_instructions(),
             },
@@ -520,7 +537,7 @@ class Agent(BaseModel):
                     for location in self.allowed_locations
                 ],
                 "full_name": self.full_name,
-                "bio": self.bio,
+                "private_bio": self.private_bio,
                 "directives": str(self.directives),
                 "recent_activity": recent_activity,
                 "current_plans": [
@@ -619,7 +636,7 @@ class Agent(BaseModel):
         """Get the recent activity and decide whether to replan to carry on"""
 
         # Pull in latest events
-        new_events = event_manager.get_events_by_location(self.location)
+        new_events = event_manager.get_current_step_events(location_id=self.location.id)
 
         # Store them as observations for this agent
         for event in new_events:
@@ -638,7 +655,7 @@ class Agent(BaseModel):
             {
                 "format_instructions": reaction_parser.get_format_instructions(),
                 "full_name": self.full_name,
-                "bio": self.bio,
+                "private_bio": self.private_bio,
                 "directives": str(self.directives),
                 "recent_activity": self._summarize_activity(),
                 "current_plans": [
@@ -668,7 +685,7 @@ class Agent(BaseModel):
             f"Decided to {parsed_reaction_response.reaction.value} given the recent events at the {self.location.name}",
         )
 
-        return parsed_reaction_response
+        return parsed_reaction_response.reaction
 
     def _gossip(
         self,
@@ -724,7 +741,7 @@ class Agent(BaseModel):
         # TODO: Tools are dependent on the location
         timeout = int(os.getenv("STEP_DURATION"))
 
-        resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(plan)
+        resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(plan, event_manager)
 
         if resp.status == PlanStatus.FAILED:
             event = Event(
@@ -781,6 +798,7 @@ class Agent(BaseModel):
         # If we do not have a plan state, consult the plans or plan something new
         # If we have no plans, make some
         if len(self.plans) == 0:
+            print(f"{self.full_name} has no plans, making some...")
             plans = self._plan()
         # Otherwise, just use the existing plans
         else:

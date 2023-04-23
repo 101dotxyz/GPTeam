@@ -15,7 +15,7 @@ from langchain.tools import BaseTool
 from pydantic import BaseModel
 from typing_extensions import override
 
-from ..event.base import Event, EventManager
+from ..event.base import Event, EventsManager
 from ..memory.base import MemoryType
 from ..tools.base import all_tools
 from ..utils.model_name import ChatModelName
@@ -32,9 +32,7 @@ class ExecutorContext(BaseModel):
     full_name: str
     private_bio: str
     directives: list[str]
-    location_name_and_description: str
-    people_in_room: list[str] # list of people in the room along with their descriptions
-
+    location_context: str
 
 # Set up a prompt template
 class CustomPromptTemplate(BaseChatPromptTemplate):
@@ -110,7 +108,7 @@ class PlanExecutor(BaseModel):
             tools=all_tools,
             # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
             # This includes the `intermediate_steps` variable because that is needed
-            input_variables=["input", "intermediate_steps", "location_name_and_description"],
+            input_variables=["input", "intermediate_steps", "location_context"],
         )
 
         # set up a simple completion llm
@@ -132,25 +130,28 @@ class PlanExecutor(BaseModel):
 
         super().__init__(executor=executor, context=context)
 
+    def update_location_context(self, location_context: str) -> None:
+        self.context.location_context = location_context
+
     def set_plan(self, plan: SinglePlan) -> None:
         self.plan = plan
         self.intermediate_steps = []
 
-    def start_or_continue_plan(self, plan: SinglePlan, event_manager: EventManager) -> PlanExecutorResponse:
+    def start_or_continue_plan(self, plan: SinglePlan, events_manager: EventsManager) -> PlanExecutorResponse:
         if not self.plan or self.plan.description != plan.description:
             self.set_plan(plan)
-            return self.execute(event_manager)
+            return self.execute(events_manager)
         else:
-            return self.execute(event_manager)
+            return self.execute(events_manager)
 
-    def execute(self, event_manager: EventManager) -> str:
+    def execute(self, events_manager: EventsManager) -> str:
         if self.plan is None:
             raise ValueError("No plan set")
 
         response = self.executor.plan(
             input=self.plan.description, 
             intermediate_steps=self.intermediate_steps,
-            location_name_and_description=self.context.location_name_and_description,
+            location_context= self.context.location_context
         )
 
         for log in response.log.split("\n"):
@@ -180,7 +181,7 @@ class PlanExecutor(BaseModel):
         if tool is None:
             raise ValueError(f"Tool: '{response.tool}' is not found in tool list")      
 
-        result = tool.run(response.tool_input, {"event_manager": event_manager})
+        result = tool.run(response.tool_input, {"events_manager": events_manager})
 
         print_to_console(f"{self.context.full_name}: Action Response: ", LogColor.THOUGHT , result)
 

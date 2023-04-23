@@ -87,7 +87,7 @@ class Event(BaseModel):
     #     pass
 
 
-class EventManager(BaseModel):
+class EventsManager(BaseModel):
     events: list[Event] = []
     current_step: int = 0
 

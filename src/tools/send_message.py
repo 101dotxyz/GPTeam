@@ -2,10 +2,10 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 import pytz
 
-from ..event.base import EventManager, Event, EventType
+from ..event.base import EventsManager, Event, EventType
 from ..utils.parameters import DEFAULT_LOCATION_ID
 
-def send_message(agent_input, event_manager: EventManager):
+def send_message(agent_input, events_manager: EventsManager):
     """Emits a message event to the Events table"""
 
     message = agent_input
@@ -23,7 +23,7 @@ def send_message(agent_input, event_manager: EventManager):
     )
 
     # now add it to the events manager
-    event_manager.add_event(event)
+    events_manager.add_event(event)
 
     print("Message added to event manager.")
 

@@ -59,7 +59,7 @@ custom_tools: List[CustomTool] = [
         name="speak",
         func=send_message,
         description="useful for when you need to speak to someone. the input to this should be a single message.",
-        requires_context=True # this tool requires event_manager as context
+        requires_context=True # this tool requires events_manager as context
     )
 ]
 

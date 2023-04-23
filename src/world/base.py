@@ -5,8 +5,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
-from src.event.base import EventManager
-from ..agent.base import AgentManager
+from src.event.base import EventsManager
+from ..agent.base import AgentsManager
 from ..location.base import Location
 from ..utils.database.database import supabase
 
@@ -16,8 +16,8 @@ class World(BaseModel):
     name: str
     current_step: int
     _locations: list[Location]
-    agent_manager: AgentManager
-    event_manager: EventManager
+    agents_manager: AgentsManager
+    events_manager: EventsManager
 
     def __init__(self, name: str, current_step: int = 0, id: Optional[UUID] = None):
         if id is None:
@@ -27,8 +27,8 @@ class World(BaseModel):
             id=id,
             name=name,
             current_step=current_step,
-            agent_manager=AgentManager(world_id=id),
-            event_manager=EventManager(starting_step=current_step),
+            agents_manager=AgentsManager(world_id=id),
+            events_manager=EventsManager(current_step=current_step),
         )
 
     @property
@@ -57,10 +57,10 @@ class World(BaseModel):
     def run_step(self):
 
         # Refresh events
-        self.event_manager.refresh_events(self.current_step)
+        self.events_manager.refresh_events(self.current_step)
 
         # Run agents
-        self.agent_manager.run_for_one_step(self.event_manager)
+        self.agents_manager.run_for_one_step(self.events_manager)
 
         # Increment step
         self.current_step += 1

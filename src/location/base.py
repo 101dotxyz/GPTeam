@@ -81,3 +81,5 @@ class Location(BaseModel):
             raise ValueError(f"Location with name {name} not found")
         return cls(**data[1][0])
 
+    def context_string(self):
+        return f"- {self.name}: {self.description}\n"

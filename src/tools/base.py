@@ -24,7 +24,6 @@ class CustomTool(Tool):
 
     @override
     def run(self, agent_input: str | dict, system_context: dict = {}) -> List[BaseTool]:
-        print("system_context: ", system_context)
 
         # if the tool requires context, but none is provided, raise an error
         if self.requires_context and not bool(system_context):

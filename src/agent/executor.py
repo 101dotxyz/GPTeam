@@ -32,7 +32,8 @@ class ExecutorContext(BaseModel):
     full_name: str
     private_bio: str
     directives: list[str]
-    location_description: str
+    location_name_and_description: str
+    people_in_room: list[str] # list of people in the room along with their descriptions
 
 
 # Set up a prompt template
@@ -109,7 +110,7 @@ class PlanExecutor(BaseModel):
             tools=all_tools,
             # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
             # This includes the `intermediate_steps` variable because that is needed
-            input_variables=["input", "intermediate_steps"],
+            input_variables=["input", "intermediate_steps", "location_name_and_description"],
         )
 
         # set up a simple completion llm
@@ -148,7 +149,8 @@ class PlanExecutor(BaseModel):
 
         response = self.executor.plan(
             input=self.plan.description, 
-            intermediate_steps=self.intermediate_steps
+            intermediate_steps=self.intermediate_steps,
+            location_name_and_description=self.context.location_name_and_description,
         )
 
         for log in response.log.split("\n"):
@@ -180,7 +182,7 @@ class PlanExecutor(BaseModel):
 
         result = tool.run(response.tool_input, {"event_manager": event_manager})
 
-        print_to_console(f"{self.context.full_name} Action Response: ", LogColor.THOUGHT , result)
+        print_to_console(f"{self.context.full_name}: Action Response: ", LogColor.THOUGHT , result)
 
         self.intermediate_steps.append((response, result))
 

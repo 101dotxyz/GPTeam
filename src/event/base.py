@@ -6,8 +6,8 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel
 
 from ..location.base import Location
-
-# from ..agent.base import Agent
+from ..utils.formatting import print_to_console
+from ..utils.colors import LogColor
 from ..utils.database.database import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
 
@@ -105,6 +105,8 @@ class EventManager(BaseModel):
 
     # get the next steps events
     def refresh_events(self, current_step: int = None):
+        print_to_console("Refreshing events...", LogColor.GENERAL, f"step = {current_step}")
+
         if current_step:
             self.current_step = current_step
 

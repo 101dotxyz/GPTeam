@@ -5,9 +5,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
-from src.event.base import Event, EventManager
-
-from ..agent.base import Agent
+from src.event.base import EventManager
+from ..agent.base import AgentManager
 from ..location.base import Location
 from ..utils.database.database import supabase
 
@@ -17,7 +16,7 @@ class World(BaseModel):
     name: str
     current_step: int
     _locations: list[Location]
-    agents: list[Agent] = []
+    agent_manager: AgentManager
     event_manager: EventManager
 
     def __init__(self, name: str, current_step: int = 0, id: Optional[UUID] = None):
@@ -28,9 +27,9 @@ class World(BaseModel):
             id=id,
             name=name,
             current_step=current_step,
+            agent_manager=AgentManager(world_id=id),
             event_manager=EventManager(starting_step=current_step),
         )
-        self.load_agents()
 
     @property
     def locations(self) -> list[Location]:
@@ -55,23 +54,15 @@ class World(BaseModel):
         data, count = supabase.table("Worlds").select("*").eq("name", name).execute()
         return cls(**data[1][0])
 
-    def get_agents(self) -> list[Agent]:
-        data, count = (
-            supabase.table("Agents").select("*").eq("world_id", str(self.id)).execute()
-        )
-        agents = [Agent.from_id(agent["id"]) for agent in data[1]]
-        return agents
-
-    def load_agents(self):
-        self.agents = self.get_agents()
-
-    def get_witnesses(self, location: Location) -> list[UUID]:
-        return [agent for agent in self.agents if agent.location.id == location.id]
-
     def run_step(self):
+
+        # Refresh events
         self.event_manager.refresh_events(self.current_step)
-        for agent in self.agents:
-            agent.run_for_one_step(self.event_manager)
+
+        # Run agents
+        self.agent_manager.run_for_one_step(self.event_manager)
+
+        # Increment step
         self.current_step += 1
         supabase.table("Worlds").update({"current_step": self.current_step}).eq(
             "id", str(self.id)

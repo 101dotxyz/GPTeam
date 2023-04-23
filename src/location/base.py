@@ -80,3 +80,4 @@ class Location(BaseModel):
         if count == 0:
             raise ValueError(f"Location with name {name} not found")
         return cls(**data[1][0])
+

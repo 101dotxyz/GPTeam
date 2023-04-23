@@ -55,7 +55,7 @@ class Agent(BaseModel):
     world_id: UUID
     location: Optional[Location]
     notes: list[str] = []
-    plan_executor: PlanExecutor
+    plan_executor: PlanExecutor = None
 
     def __init__(
         self,
@@ -84,13 +84,7 @@ class Agent(BaseModel):
             memories=memories,
             plans=plans,
             world_id=world_id,
-            location=location,
-            plan_executor=PlanExecutor({
-                "full_name": full_name,
-                "private_bio": private_bio,
-                "directives": directives,
-                "location_description": f"{location.name}: {location.description}"
-            }),
+            location=location
         )
 
         # if the memories are None, retrieve them
@@ -124,6 +118,17 @@ class Agent(BaseModel):
             .execute()
         )
         return [Location(**location) for location in data[1] + other_data[1]]
+
+    @property
+    def plan_executor(self) -> PlanExecutor:
+        """Get the plan executor for this agent."""
+        return PlanExecutor({
+                "full_name": self.full_name,
+                "private_bio": self.private_bio,
+                "directives": self.directives,
+                "location_name_and_description": f"{self.location.name} - {self.location.description}",
+                "people_in_room": [agent.full_name for agent in self.location.agents],
+            }),
 
     @classmethod
     def from_json_profile(cls, id: str):
@@ -822,3 +827,60 @@ class Agent(BaseModel):
 
         # Work through the plans
         self._do_first_plan(event_manager=events_manager)
+
+
+class AgentManager(BaseModel):
+    """A manager for agents"""
+    agents: list[Agent] = []
+
+    def __init__(self, world_id: int = DEFAULT_WORLD_ID):
+
+        (_, data), count = (
+            supabase.table("Agents")
+            .select("*")
+            .eq("world_id", world_id)
+            .execute()
+        )
+        agents = [Agent(**agent) for agent in data]
+        
+        return super().__init__(
+            agents=agents
+        )
+        
+    def add_agent(self, agent: Agent) -> None:
+        """Add an agent to the manager"""
+        self.agents.append(agent)
+
+    def get_agent_by_name(self, name: str) -> Agent:
+        """Get an agent by name"""
+        for agent in self.agents:
+            if agent.full_name == name:
+                return agent
+
+        raise ValueError(f"Agent {name} not found")
+
+    def get_agent_by_id(self, id: int) -> Agent:
+        """Get an agent by id"""
+        for agent in self.agents:
+            if agent.id == id:
+                return agent
+
+        raise ValueError(f"Agent {id} not found")
+
+    def get_agents(self) -> list[Agent]:
+        """Get all agents"""
+        return self.agents
+
+    def get_agents_by_location_id(self, location_id: int) -> list[Agent]:
+        """Get all agents at a location"""
+        agents = []
+        for agent in self.agents:
+            if agent.location.id == location_id:
+                agents.append(agent)
+
+        return agents
+
+    def run_for_one_step(self, event_manager: EventManager) -> None:
+        """Run all the agents for one step"""
+        for agent in self.agents:
+            agent.run_for_one_step(event_manager)

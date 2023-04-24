@@ -2,7 +2,7 @@
 name = "101-ai"
 version = "0.1.0"
 description = ""
-authors = [""]
+authors = []
 readme = "README.md"
 packages = [{include = "src"}]
 

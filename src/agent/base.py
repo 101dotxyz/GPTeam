@@ -387,6 +387,7 @@ class Agent(BaseModel):
         # first emit the depature event to the db
         event = Event(
             timestamp=datetime.now(pytz.utc),
+            step=events_manager.current_step,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {self.location.name}",
             location_id=self.location.id,
@@ -399,7 +400,8 @@ class Agent(BaseModel):
 
         # emit the arrival to the db
         event = Event(
-            timestamp=datetime.now(tz=pytz.utc),
+            timestamp=events_manager.current_step,
+            step=events_manager.current_step,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {location.name}",
             location_id=self.location.id,
@@ -642,8 +644,8 @@ class Agent(BaseModel):
         
         """
 
-        # Pull in latest events
-        new_events = events_manager.get_current_step_events(location_id=self.location.id)
+        # Pull in the events from last step
+        new_events = events_manager.last_step_events
 
         # Store them as observations for this agent
         for event in new_events:
@@ -727,6 +729,7 @@ class Agent(BaseModel):
 
         event = Event(
             timestamp=datetime.now(pytz.utc),
+            step=events_manager.current_step,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} said the following: {response}",
             location_id=self.location.id,
@@ -768,6 +771,7 @@ class Agent(BaseModel):
         if resp.status == PlanStatus.FAILED:
             event = Event(
                 timestamp=datetime.now(pytz.utc),
+                step=events_manager.current_step,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} has failed to complete the following: {plan.description} at the location: {plan.location.name}. {self.full_name} had the following problem: {resp.output}.",
                 location_id=self.location.id,
@@ -785,6 +789,7 @@ class Agent(BaseModel):
         elif resp.status == PlanStatus.IN_PROGRESS:
             event = Event(
                 timestamp=datetime.now(pytz.utc),
+                step=events_manager.current_step,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}.",
                 location_id=self.location.id,
@@ -803,6 +808,7 @@ class Agent(BaseModel):
 
             event = Event(
                 timestamp=datetime.now(pytz.utc),
+                step=events_manager.current_step,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} has just completed the following: {plan.description} at the location: {plan.location.name}. The result was: {resp.output}.",
                 location_id=self.location.id,

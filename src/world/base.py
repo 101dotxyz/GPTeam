@@ -56,11 +56,14 @@ class World(BaseModel):
 
     def run_step(self):
 
-        # Refresh events
+        # Refresh events for this step
         self.events_manager.refresh_events(self.current_step)
 
         # Run agents
         self.agents_manager.run_for_one_step(self.events_manager)
+
+        # Add new events to agent memories
+        # ....
 
         # Increment step
         self.current_step += 1

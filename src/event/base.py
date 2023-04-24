@@ -24,8 +24,8 @@ class EventType(Enum):
 
 class Event(BaseModel):
     id: UUID
-    timestamp: Optional[datetime] = None
-    step: Optional[int] = None
+    timestamp: datetime
+    step: int
     type: EventType
     description: str
     location_id: UUID
@@ -36,9 +36,9 @@ class Event(BaseModel):
         type: EventType,
         description: str,
         location_id: UUID,
+        timestamp: datetime,
+        step: int,
         witness_ids: list[UUID] = [],
-        timestamp: Optional[datetime] = None,
-        step: Optional[int] = None,
         id: Optional[UUID] = None,
     ):
         if id is None:
@@ -46,13 +46,6 @@ class Event(BaseModel):
 
         if witness_ids is None:
             witness_ids = []
-
-        if timestamp is None and step is None:
-            raise ValueError("Either timestamp or step must be provided")
-
-        if timestamp:
-            # calculate step from timestamp
-            pass
 
         super().__init__(
             id=id,
@@ -88,7 +81,10 @@ class Event(BaseModel):
 
 
 class EventsManager(BaseModel):
-    events: list[Event] = []
+    """Saves events from the current step and the last step"""
+
+    current_step_events: list[Event] = []
+    last_step_events: list[Event] = []
     current_step: int = 0
 
     def __init__(self, events: list[Event] = None, current_step: int = 0):
@@ -99,17 +95,19 @@ class EventsManager(BaseModel):
                 .gte("step", current_step)
                 .execute()
             )
-            events = [Event(**event) for event in data]
+            current_step_events = [Event(**event) for event in data]
 
-        super().__init__(events=events, current_step=current_step)
+        super().__init__(current_step_events=current_step_events, current_step=current_step)
 
-    # get the next steps events
+    # get the next steps events, save last step
     def refresh_events(self, current_step: int = None):
-        print_to_console("Refreshing events...", LogColor.GENERAL, f"step = {current_step}")
+        print_to_console("Refreshing events...", LogColor.GENERAL, f"new step = {current_step}")
 
         if current_step:
             self.current_step = current_step
 
+        self.last_step_events = self.current_step_events
+        
         data, count = (
             supabase.table("Events")
             .select("*")
@@ -117,12 +115,13 @@ class EventsManager(BaseModel):
             .execute()
         )
 
-        self.events = [Event(**event) for event in list(data[1])]
-        return self.events
+        self.current_step_events = [Event(**event) for event in list(data[1])]
+        return self.current_step_events
 
     def add_event(self, event: Event):
-        # add event to database
+        """Adds an event in the current step to the DB and local object"""
 
+        # get the witnesses
         (_, witness_data), count = (
             supabase.table("Agents")
             .select("id")
@@ -135,29 +134,22 @@ class EventsManager(BaseModel):
         supabase.table("Events").insert(event.db_dict()).execute()
 
         # add event to local events list
-        self.events.append(event)
-        return self.events
+        self.current_step_events.append(event)
+        
+        return self.current_step_events
 
     def get_events(self):
-        return self.events
-
-    def get_current_step_events(self, location_id: UUID = None):
-        step_events = [event for event in self.events if event.step == self.current_step]
-        
-        if location_id:
-            step_events = [event for event in step_events if event.location_id == location_id]
-
-        return step_events
+        return self.current_step_events
 
     def get_events_by_location(self, location: Location):
-        return [event for event in self.events if event.location_id == location.id]
+        return [event for event in self.current_step_events if event.location_id == location.id]
 
     def get_events_by_location_id(self, location_id: UUID):
-        return [event for event in self.events if event.location_id == location_id]
+        return [event for event in self.current_step_events if event.location_id == location_id]
 
     def get_events_by_step(self, step: int):
-        return [event for event in self.events if event.step == step]
+        return [event for event in self.current_step_events if event.step == step]
 
     def remove_event(self, event_id: UUID):
-        self.events = [event for event in self.events if event.id != event_id]
-        return self.events
+        self.current_step_events = [event for event in self.current_step_events if event.id != event_id]
+        return self.current_step_events

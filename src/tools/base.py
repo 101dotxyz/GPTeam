@@ -58,7 +58,7 @@ custom_tools: List[CustomTool] = [
     CustomTool(
         name="speak",
         func=send_message,
-        description="useful for when you need to speak to someone. the input to this should be a single message.",
+        description="useful for when you need to speak to someone at your location. the input to this should be a single message, including the name of the person you want to speak to. e.g. David Summers: Do you know the printing code?",
         requires_context=True # this tool requires events_manager as context
     )
 ]

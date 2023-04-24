@@ -403,8 +403,6 @@ class Agent(BaseModel):
             if (tool.name in self.authorized_tools or not tool.requires_authorization)
         ]
 
-        print("authorized tools: ", authorized_tools)
-
         return authorized_tools
 
     def _move_to_location(self, location: Location, events_manager: EventsManager):

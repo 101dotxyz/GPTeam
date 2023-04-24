@@ -14,6 +14,7 @@ CREATE TABLE "public"."Agents" (
     "world_id" uuid,
     "ordered_plan_ids" uuid[],
     "location_id" uuid,
+    "discord_bot_token" text,
     PRIMARY KEY ("id")
 );
 

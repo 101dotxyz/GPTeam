@@ -14,7 +14,7 @@ db-seed = "src.utils.database.seed:main"
 db-seed-small = "src.utils.database.seed_small:main"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.12"
 quart = {extras = ["dotenv"], version = "^0.18.3"}
 colorama = "^0.4.6"
 python-dotenv = "^1.0.0"
@@ -27,6 +27,7 @@ wolframalpha = "^5.0.0"
 langchain = "^0.0.144"
 pytz = "^2023.3"
 google-api-python-client = "^2.86.0"
+hikari = "^2.0.0.dev118"
 
 [tool.black]
 line-length = 88

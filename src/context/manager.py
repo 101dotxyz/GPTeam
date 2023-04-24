@@ -6,89 +6,29 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel
 
 from ..location.base import Location
-from ..utils.formatting import print_to_console
 from ..utils.colors import LogColor
 from ..utils.database.database import supabase
-from ..utils.parameters import DEFAULT_WORLD_ID
-
-# class DiscordMessage(BaseModel):
-#     content: str
-#     location: Location
-#     timestamp: datetime.datetime
+from ..utils.formatting import print_to_console
+from ..utils.parameters import DEFAULT_WORLD_ID, WORLD_ID
+from .base import Event, EventType
 
 
-class EventType(Enum):
-    NON_MESSAGE = "non_message"
-    MESSAGE = "message"
+class ContextManager(BaseModel):
+    """Manages context within a world"""
 
-
-class Event(BaseModel):
-    id: UUID
-    timestamp: datetime
-    step: int
-    type: EventType
-    description: str
-    location_id: UUID
-    witness_ids: list[UUID] = []
-
-    def __init__(
-        self,
-        type: EventType,
-        description: str,
-        location_id: UUID,
-        timestamp: datetime,
-        step: int,
-        witness_ids: list[UUID] = [],
-        id: Optional[UUID] = None,
-    ):
-        if id is None:
-            id = uuid4()
-
-        if witness_ids is None:
-            witness_ids = []
-
-        super().__init__(
-            id=id,
-            type=type,
-            description=description,
-            timestamp=timestamp,
-            step=step,
-            location_id=location_id,
-            witness_ids=witness_ids,
-        )
-
-    def db_dict(self):
-        return {
-            "id": str(self.id),
-            "timestamp": str(self.timestamp),
-            "step": self.step,
-            "type": self.type.value,
-            "description": self.description,
-            "location_id": str(self.location_id),
-            "witness_ids": [str(witness_id) for witness_id in self.witness_ids],
-        }
-
-    # @staticmethod
-    # def from_discord_message(message: DiscordMessage, witnesses: list[UUID]) -> "Event":
-    #     # parse user provided message into an event
-    #     # witnesses are all agents who were in the same location as the message
-    #     pass
-
-    # @staticmethod
-    # def from_agent_action(action: AgentAction, witnesses: list[UUID]) -> "Event":
-    #     # parse agent action into an event
-    #     pass
-
-
-class EventsManager(BaseModel):
-    """Saves events from the current step and the last step"""
-
+    world_id: str
     current_step_events: list[Event] = []
     last_step_events: list[Event] = []
     current_step: int = 0
 
-    def __init__(self, events: list[Event] = None, current_step: int = 0):
+    def __init__(
+        self,
+        world_id: str = WORLD_ID,
+        events: list[Event] = None,
+        current_step: int = 0,
+    ):
         if not events:
+            # TODO: Query should only get events for this world
             (_, data), count = (
                 supabase.table("Events").select("*").gte("step", current_step).execute()
             )
@@ -154,6 +94,13 @@ class EventsManager(BaseModel):
             event
             for event in self.current_step_events
             if event.location_id == location_id
+        ]
+
+    def get_world_state(self):
+        return [
+            event
+            for event in self.current_step_events
+            if event.location_id == DEFAULT_WORLD_ID
         ]
 
     def get_events_by_step(self, step: int):

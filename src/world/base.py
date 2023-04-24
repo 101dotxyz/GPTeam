@@ -6,7 +6,9 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel
 
 from src.event.base import EventsManager
+
 from ..agent.base import AgentsManager
+from ..context.base import ContextManager
 from ..location.base import Location
 from ..utils.database.database import supabase
 
@@ -28,7 +30,7 @@ class World(BaseModel):
             name=name,
             current_step=current_step,
             agents_manager=AgentsManager(world_id=id),
-            events_manager=EventsManager(current_step=current_step),
+            events_manager=EventsManager(current_step=current_step, world_id=id),
         )
 
     @property
@@ -45,17 +47,16 @@ class World(BaseModel):
         return self._locations
 
     @classmethod
-    def from_id(cls, id: UUID):
+    def from_id(cls, id: UUID, context: ContextManager):
         data, count = supabase.table("Worlds").select("*").eq("id", str(id)).execute()
         return cls(**data[1][0])
 
     @classmethod
-    def from_name(cls, name: str):
+    def from_name(cls, name: str, context: ContextManager):
         data, count = supabase.table("Worlds").select("*").eq("name", name).execute()
         return cls(**data[1][0])
 
     def run_step(self):
-
         # Refresh events for this step
         self.events_manager.refresh_events(self.current_step)
 

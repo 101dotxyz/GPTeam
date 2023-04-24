@@ -78,14 +78,11 @@ class Location(BaseModel):
         if len(data) == 0:
             raise ValueError(f"Location with id {id} not found")
 
-        return cls(**data[0])
+        available_tools = list(
+            map(lambda name: ToolName(name), data[0].get("authorized_tools"))
+        )
 
-    @classmethod
-    def from_name(cls, name: str):
-        data, count = supabase.table("Locations").select("*").eq("name", name).execute()
-        if count == 0:
-            raise ValueError(f"Location with name {name} not found")
-        return cls(**data[1][0])
+        return cls(**data[0], available_tools=available_tools)
 
     def context_string(self):
         return f"- {self.name}: {self.description}\n"

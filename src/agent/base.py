@@ -54,7 +54,7 @@ class Agent(BaseModel):
     directives: Optional[list[str]]
     memories: list[SingleMemory]
     plans: list[SinglePlan]
-    authorized_tools: list[CustomTool]
+    authorized_tools: list[ToolName]
     world_id: UUID
     location: Optional[Location]
     notes: list[str] = []
@@ -174,6 +174,9 @@ class Agent(BaseModel):
                 name=location["name"],
                 description=location["description"],
                 channel_id=location["channel_id"],
+                available_tools=list(
+                    map(lambda name: ToolName(name), location.get("authorized_tools"))
+                ),
                 world_id=location["world_id"],
                 allowed_agent_ids=location["allowed_agent_ids"],
             )
@@ -194,13 +197,17 @@ class Agent(BaseModel):
 
         location = locations[agent["location_id"]]
 
+        authorized_tools = list(
+            map(lambda name: ToolName(name), agent.get("authorized_tools"))
+        )
+
         return Agent(
             id=id,
             full_name=agent.get("full_name"),
             private_bio=agent.get("private_bio"),
             public_bio=agent.get("public_bio"),
             directives=agent.get("directives"),
-            authorized_tools=cast(list[ToolName], agent.get("authorized_tools")),
+            authorized_tools=authorized_tools,
             memories=[SingleMemory(**memory) for memory in memories_data[1]],
             plans=plans,
             world_id=agent.get("world_id"),

@@ -78,8 +78,8 @@ TOOLS: dict[ToolName, CustomTool] = {
         func=GoogleSearchAPIWrapper().run,
         description="useful for when you need to search for information you do not know. the input to this should be a single search term.",
         requires_context=False,
-        requires_authorization=False,
-        worldwide=True,
+        requires_authorization=True,
+        worldwide=False,
     ),
     ToolName.SPEAK: CustomTool(
         name="speak",
@@ -102,7 +102,4 @@ def get_tools(tools: List[ToolName], include_worldwide=False) -> List[CustomTool
     if not include_worldwide:
         return [TOOLS[tool] for tool in tools]
 
-    def filter(tool: CustomTool) -> bool:
-        return tool.name in tools or tool.worldwide
-
-    return [tool for tool in TOOLS.values() if filter(tool)]
+    return [tool for tool in TOOLS.values() if (tool.name in tools or tool.worldwide)]

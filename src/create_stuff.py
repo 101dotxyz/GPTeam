@@ -28,7 +28,9 @@ def create_location(
     return location
 
 
-def create_agent(full_name: str, private_bio: str, public_bio: str, directives: list[str]):
+def create_agent(
+    full_name: str, private_bio: str, public_bio: str, directives: list[str]
+):
     # agent = Agent(full_name=full_name, private_bio=private_bio, directives=directives)
 
     # ## add to db

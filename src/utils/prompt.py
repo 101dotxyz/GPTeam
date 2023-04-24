@@ -4,6 +4,7 @@ from enum import Enum
 from langchain.schema import BaseMessage, SystemMessage
 from pydantic import BaseModel
 
+
 class PromptString(Enum):
     REFLECTION_QUESTIONS = "Here are a list of statements:\n{memory_descriptions}\n\nGiven only the information above, what are 3 most salient high-level questions we can answer about the subjects in the statements?\n\n{format_instructions}"
 
@@ -20,7 +21,6 @@ class PromptString(Enum):
     REACT = 'You are a reaction AI. Given the character\'s personal info, current plans, and location context, decide whether they should continue with their current plans ("maintain_plans"), or if they should make new plans based on the new events ("replan"). If the events have a material impact on the character\'s goals or existing plans, they should replan.\n\n{format_instructions}\n\nLet\'s Being!\n\nName: {full_name}\nBio: {private_bio}\nGoals: {directives}\nRecent Activity: {recent_activity}\nCurrent Plans: {current_plans}\nLocation Context: {location_context}\n\nNew Events: {event_descriptions}.'
 
     GOSSIP = "You are currently working on the following plan: {plan_description}. You have just used the tool {tool_name} with the following input {tool_input} and got the following result {tool_result}. Write a single sentence of useful information to share with others in your location about what you have just found out."
-
 
 
 class Prompter(BaseModel):

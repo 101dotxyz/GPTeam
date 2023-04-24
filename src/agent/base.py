@@ -84,7 +84,7 @@ class Agent(BaseModel):
             memories=memories,
             plans=plans,
             world_id=world_id,
-            location=location
+            location=location,
         )
 
         # if the memories are None, retrieve them
@@ -95,8 +95,17 @@ class Agent(BaseModel):
         print(self)
 
     def __str__(self) -> str:
-        private_bio = self.private_bio[:100] + "..." if len(self.private_bio) > 100 else self.private_bio
-        memories = " " + "\n ".join([str(memory)[:100] + "..." if len(str(memory)) > 100 else str(memory) for memory in self.memories])
+        private_bio = (
+            self.private_bio[:100] + "..."
+            if len(self.private_bio) > 100
+            else self.private_bio
+        )
+        memories = " " + "\n ".join(
+            [
+                str(memory)[:100] + "..." if len(str(memory)) > 100 else str(memory)
+                for memory in self.memories
+            ]
+        )
         plans = " " + "\n ".join([str(plan) for plan in self.plans])
 
         return f"{self.full_name} - {self.location}\nprivate_bio: {private_bio}\nDirectives: {self.directives}\n\nMemories: \n{memories}\n\nPlans: \n{plans}\n"
@@ -507,9 +516,9 @@ class Agent(BaseModel):
 
     def _plan(self, location_context: str) -> list[SinglePlan]:
         """Trigger the agent's planning process
-        
-            Args:
-                location_context (str): A description of the current location and list of the other agents in this location
+
+        Args:
+            location_context (str): A description of the current location and list of the other agents in this location
         """
 
         self._log("Starting to Plan", LogColor.PLAN, "📝")
@@ -637,11 +646,11 @@ class Agent(BaseModel):
 
     def _react(self, events_manager: EventsManager, location_context: str) -> Reaction:
         """Get the recent activity and decide whether to replan to carry on
-        
+
         Arguments:
             events_manager {EventsManager} -- The event manager to get events from
             location_context {str} -- Current description and the nearby agents
-        
+
         """
 
         # Pull in the events from last step
@@ -737,7 +746,9 @@ class Agent(BaseModel):
 
         events_manager.add_event(event)
 
-    def _act(self, plan: SinglePlan, events_manager: EventsManager, location_context: str) -> None:
+    def _act(
+        self, plan: SinglePlan, events_manager: EventsManager, location_context: str
+    ) -> None:
         """Act on a plan"""
 
         # If we are not in the right location, move to the new location
@@ -766,7 +777,9 @@ class Agent(BaseModel):
         else:
             self.plan_executor.update_location_context(location_context)
 
-        resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(plan, events_manager)
+        resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(
+            plan, events_manager
+        )
 
         if resp.status == PlanStatus.FAILED:
             event = Event(
@@ -818,7 +831,9 @@ class Agent(BaseModel):
 
             self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
-    def _do_first_plan(self, events_manager: EventsManager, location_context: str) -> None:
+    def _do_first_plan(
+        self, events_manager: EventsManager, location_context: str
+    ) -> None:
         """Do the first plan in the list"""
 
         current_plan = None
@@ -855,22 +870,18 @@ class Agent(BaseModel):
 
 class AgentsManager(BaseModel):
     """A manager for agents"""
+
     agents: list[Agent] = []
 
     def __init__(self, world_id: int = DEFAULT_WORLD_ID):
 
         (_, data), count = (
-            supabase.table("Agents")
-            .select("*")
-            .eq("world_id", world_id)
-            .execute()
+            supabase.table("Agents").select("*").eq("world_id", world_id).execute()
         )
         agents = [Agent.from_id(agent["id"]) for agent in data]
-        
-        return super().__init__(
-            agents=agents
-        )
-        
+
+        return super().__init__(agents=agents)
+
     def add_agent(self, agent: Agent) -> None:
         """Add an agent to the manager"""
         self.agents.append(agent)
@@ -909,21 +920,21 @@ class AgentsManager(BaseModel):
         other_agents = [a for a in other_agents if a.id != agent.id]
 
         return (
-            "Current Location: \n" 
-            + f"{agent.location.context_string}" 
-            + "\n\nAgents in this location, with whom you can speak: \n- " 
-            + '- '.join([f"{agent.full_name}: {agent.public_bio}\n" 
-            for agent in other_agents])
+            "Current Location: \n"
+            + f"{agent.location.context_string}"
+            + "\n\nAgents in this location, with whom you can speak: \n- "
+            + "- ".join(
+                [f"{agent.full_name}: {agent.public_bio}\n" for agent in other_agents]
+            )
         )
 
     def run_for_one_step(self, events_manager: EventsManager) -> None:
         """Run all the agents for one step"""
         for agent in self.agents:
-            
+
             # Get the location context string
             location_context = self.make_location_context(
-                agent, 
-                self.get_agents_by_location(agent.location)
+                agent, self.get_agents_by_location(agent.location)
             )
 
             agent.run_for_one_step(events_manager, location_context)

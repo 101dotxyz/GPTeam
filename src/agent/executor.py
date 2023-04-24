@@ -28,11 +28,13 @@ from ..utils.colors import LogColor
 
 load_dotenv()
 
+
 class ExecutorContext(BaseModel):
     full_name: str
     private_bio: str
     directives: list[str]
     location_context: str
+
 
 # Set up a prompt template
 class CustomPromptTemplate(BaseChatPromptTemplate):
@@ -95,7 +97,7 @@ class PlanExecutorResponse(BaseModel):
 
 
 class PlanExecutor(BaseModel):
-    """Executes plans for an agent.""" 
+    """Executes plans for an agent."""
 
     executor: LLMSingleActionAgent
     context: ExecutorContext
@@ -137,7 +139,9 @@ class PlanExecutor(BaseModel):
         self.plan = plan
         self.intermediate_steps = []
 
-    def start_or_continue_plan(self, plan: SinglePlan, events_manager: EventsManager) -> PlanExecutorResponse:
+    def start_or_continue_plan(
+        self, plan: SinglePlan, events_manager: EventsManager
+    ) -> PlanExecutorResponse:
         if not self.plan or self.plan.description != plan.description:
             self.set_plan(plan)
             return self.execute(events_manager)
@@ -149,14 +153,16 @@ class PlanExecutor(BaseModel):
             raise ValueError("No plan set")
 
         response = self.executor.plan(
-            input=self.plan.description, 
+            input=self.plan.description,
             intermediate_steps=self.intermediate_steps,
-            location_context= self.context.location_context
+            location_context=self.context.location_context,
         )
 
         for log in response.log.split("\n"):
             suffix = log.split(":")[0] if ":" in log else "Thought"
-            print_to_console(f"{self.context.full_name}: {suffix}: ", LogColor.THOUGHT , log)
+            print_to_console(
+                f"{self.context.full_name}: {suffix}: ", LogColor.THOUGHT, log
+            )
 
         # If the agent is finished, return the output
         if isinstance(response, AgentFinish):
@@ -179,11 +185,13 @@ class PlanExecutor(BaseModel):
         )
 
         if tool is None:
-            raise ValueError(f"Tool: '{response.tool}' is not found in tool list")      
+            raise ValueError(f"Tool: '{response.tool}' is not found in tool list")
 
         result = tool.run(response.tool_input, {"events_manager": events_manager})
 
-        print_to_console(f"{self.context.full_name}: Action Response: ", LogColor.THOUGHT , result)
+        print_to_console(
+            f"{self.context.full_name}: Action Response: ", LogColor.THOUGHT, result
+        )
 
         self.intermediate_steps.append((response, result))
 

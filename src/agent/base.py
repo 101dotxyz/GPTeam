@@ -29,7 +29,7 @@ from ..utils.parameters import (
     REFLECTION_MEMORY_COUNT,
 )
 from ..utils.prompt import Prompter, PromptString
-from .executor import PlanExecutor, PlanExecutorResponse, ExecutorContext
+from .executor import ExecutorContext, PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
@@ -852,7 +852,6 @@ class Agent(BaseModel):
         self._act(current_plan, events_manager, location_context)
 
     def run_for_one_step(self, events_manager: EventsManager, location_context: str):
-
         # First we decide if we need to reflect
         if self._should_reflect():
             self._reflect()
@@ -862,7 +861,7 @@ class Agent(BaseModel):
 
         # If the reaction calls for a new plan, make one
         if reaction == Reaction.REPLAN:
-            self._plan()
+            self._plan(location_context)
 
         # Work through the plans
         self._do_first_plan(events_manager, location_context)
@@ -874,7 +873,6 @@ class AgentsManager(BaseModel):
     agents: list[Agent] = []
 
     def __init__(self, world_id: int = DEFAULT_WORLD_ID):
-
         (_, data), count = (
             supabase.table("Agents").select("*").eq("world_id", world_id).execute()
         )
@@ -931,7 +929,6 @@ class AgentsManager(BaseModel):
     def run_for_one_step(self, events_manager: EventsManager) -> None:
         """Run all the agents for one step"""
         for agent in self.agents:
-
             # Get the location context string
             location_context = self.make_location_context(
                 agent, self.get_agents_by_location(agent.location)

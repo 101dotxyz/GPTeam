@@ -175,10 +175,12 @@ class Agent(BaseModel):
                 description=location["description"],
                 channel_id=location["channel_id"],
                 available_tools=list(
-                    map(lambda name: ToolName(name), location.get("authorized_tools"))
+                    map(lambda name: ToolName(name), location.get("available_tools"))
                 ),
                 world_id=location["world_id"],
-                allowed_agent_ids=location["allowed_agent_ids"],
+                allowed_agent_ids=list(
+                    map(lambda id: UUID(id), location.get("allowed_agent_ids"))
+                ),
             )
             for location in locations_data
         }
@@ -743,7 +745,7 @@ class Agent(BaseModel):
             PromptString.GOSSIP,
             {
                 "plan_description": plan.description,
-                "tool_name": result.tool_name,
+                "tool_name": result.tool.name,
                 "tool_input": result.tool_input,
                 "tool_result": result.output,
             },

@@ -17,6 +17,7 @@ from typing_extensions import override
 
 from ..event.base import Event, EventsManager
 from ..tools.base import TOOLS, CustomTool, get_tools
+from ..tools.name import ToolName
 from ..utils.colors import LogColor
 from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
@@ -91,7 +92,7 @@ class CustomOutputParser(AgentOutputParser):
 class PlanExecutorResponse(BaseModel):
     status: PlanStatus
     output: str
-    tool_name: Optional[str]
+    tool: CustomTool
     tool_input: Optional[str]
 
 
@@ -106,8 +107,6 @@ class PlanExecutor(BaseModel):
         super().__init__(context=context)
 
     def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
-        tools = get_tools(location=self.plan.location)
-
         prompt = CustomPromptTemplate(
             template=PromptString.EXECUTE_PLAN.value,
             tools=tools,
@@ -178,7 +177,7 @@ class PlanExecutor(BaseModel):
             else:
                 return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
-        tool = TOOLS.get(response.tool.lower())
+        tool = TOOLS[ToolName(response.tool.lower())]
 
         if tool is None:
             raise ValueError(f"Tool: '{response.tool}' is not found in tool list")
@@ -194,6 +193,6 @@ class PlanExecutor(BaseModel):
         return PlanExecutorResponse(
             status=PlanStatus.IN_PROGRESS,
             output=result,
-            tool_name=tool.name,
+            tool=tool,
             tool_input=response.tool_input,
         )

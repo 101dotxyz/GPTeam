@@ -78,11 +78,23 @@ class Location(BaseModel):
         if len(data) == 0:
             raise ValueError(f"Location with id {id} not found")
 
+        location = data[0]
+
         available_tools = list(
-            map(lambda name: ToolName(name), data[0].get("authorized_tools"))
+            map(lambda name: ToolName(name), location.get("available_tools"))
         )
 
-        return cls(**data[0], available_tools=available_tools)
+        return cls(
+            id=location["id"],
+            name=location["name"],
+            description=location["description"],
+            available_tools=available_tools,
+            channel_id=location["channel_id"],
+            allowed_agent_ids=list(
+                map(lambda id: UUID(id), location.get("allowed_agent_ids"))
+            ),
+            world_id=location["world_id"],
+        )
 
     def context_string(self):
         return f"- {self.name}: {self.description}\n"

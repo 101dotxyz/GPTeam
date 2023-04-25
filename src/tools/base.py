@@ -78,8 +78,8 @@ TOOLS: dict[ToolName, CustomTool] = {
         func=GoogleSearchAPIWrapper().run,
         description="useful for when you need to search for information you do not know. the input to this should be a single search term.",
         requires_context=False,
-        requires_authorization=True,
-        worldwide=False,
+        requires_authorization=False,
+        worldwide=True,
     ),
     ToolName.SPEAK: CustomTool(
         name="speak",

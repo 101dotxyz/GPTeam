@@ -92,7 +92,7 @@ class CustomOutputParser(AgentOutputParser):
 class PlanExecutorResponse(BaseModel):
     status: PlanStatus
     output: str
-    tool: CustomTool
+    tool: Optional[CustomTool]
     tool_input: Optional[str]
 
 

@@ -5,6 +5,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
+from ..tools.name import ToolName
+
 # from ..agent.base import Agent
 from ..utils.database.database import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
@@ -19,6 +21,7 @@ class Location(BaseModel):
     id: UUID
     name: str
     description: str
+    available_tools: list[ToolName]
     channel_id: str
     allowed_agent_ids: list[UUID] = []
     world_id: UUID = None
@@ -28,6 +31,7 @@ class Location(BaseModel):
         name: str,
         description: str,
         channel_id: int,
+        available_tools: list[ToolName] = [],
         allowed_agent_ids: list[UUID] = None,
         id: Optional[UUID] = None,
         world_id: UUID = None,
@@ -47,6 +51,7 @@ class Location(BaseModel):
             name=name,
             description=description,
             channel_id=channel_id,
+            available_tools=available_tools,
             allowed_agent_ids=allowed_agent_ids,
         )
 
@@ -59,6 +64,7 @@ class Location(BaseModel):
             "name": self.name,
             "description": self.description,
             "channel_id": self.channel_id,
+            "available_tools": [tool.name for tool in self.available_tools],
             "allowed_agent_ids": [str(agent_id) for agent_id in self.allowed_agent_ids],
             "world_id": str(self.world_id),
         }
@@ -72,14 +78,23 @@ class Location(BaseModel):
         if len(data) == 0:
             raise ValueError(f"Location with id {id} not found")
 
-        return cls(**data[0])
+        location = data[0]
 
-    @classmethod
-    def from_name(cls, name: str):
-        data, count = supabase.table("Locations").select("*").eq("name", name).execute()
-        if count == 0:
-            raise ValueError(f"Location with name {name} not found")
-        return cls(**data[1][0])
+        available_tools = list(
+            map(lambda name: ToolName(name), location.get("available_tools"))
+        )
+
+        return cls(
+            id=location["id"],
+            name=location["name"],
+            description=location["description"],
+            available_tools=available_tools,
+            channel_id=location["channel_id"],
+            allowed_agent_ids=list(
+                map(lambda id: UUID(id), location.get("allowed_agent_ids"))
+            ),
+            world_id=location["world_id"],
+        )
 
     def context_string(self):
         return f"- {self.name}: {self.description}\n"

@@ -15,6 +15,8 @@ from pydantic import BaseModel
 from ..event.base import Event, EventsManager, EventType
 from ..location.base import Location
 from ..memory.base import MemoryType, SingleMemory
+from ..tools.base import CustomTool, get_tools
+from ..tools.name import ToolName
 from ..utils.colors import LogColor
 from ..utils.database.database import supabase
 from ..utils.formatting import print_to_console
@@ -52,6 +54,7 @@ class Agent(BaseModel):
     directives: Optional[list[str]]
     memories: list[SingleMemory]
     plans: list[SinglePlan]
+    authorized_tools: list[ToolName]
     world_id: UUID
     location: Optional[Location]
     notes: list[str] = []
@@ -65,6 +68,7 @@ class Agent(BaseModel):
         directives: list[str] = None,
         memories: list[SingleMemory] = [],
         plans: list[SinglePlan] = [],
+        authorized_tools: list[ToolName] = [],
         id: Optional[str | UUID] = None,
         world_id: Optional[UUID] = DEFAULT_WORLD_ID,
         location: Optional[Location] = Location.from_id(DEFAULT_LOCATION_ID),
@@ -81,6 +85,7 @@ class Agent(BaseModel):
             private_bio=private_bio,
             public_bio=public_bio,
             directives=directives,
+            authorized_tools=authorized_tools,
             memories=memories,
             plans=plans,
             world_id=world_id,
@@ -169,8 +174,13 @@ class Agent(BaseModel):
                 name=location["name"],
                 description=location["description"],
                 channel_id=location["channel_id"],
+                available_tools=list(
+                    map(lambda name: ToolName(name), location.get("available_tools"))
+                ),
                 world_id=location["world_id"],
-                allowed_agent_ids=location["allowed_agent_ids"],
+                allowed_agent_ids=list(
+                    map(lambda id: UUID(id), location.get("allowed_agent_ids"))
+                ),
             )
             for location in locations_data
         }
@@ -189,12 +199,17 @@ class Agent(BaseModel):
 
         location = locations[agent["location_id"]]
 
+        authorized_tools = list(
+            map(lambda name: ToolName(name), agent.get("authorized_tools"))
+        )
+
         return Agent(
             id=id,
             full_name=agent.get("full_name"),
             private_bio=agent.get("private_bio"),
             public_bio=agent.get("public_bio"),
             directives=agent.get("directives"),
+            authorized_tools=authorized_tools,
             memories=[SingleMemory(**memory) for memory in memories_data[1]],
             plans=plans,
             world_id=agent.get("world_id"),
@@ -385,6 +400,19 @@ class Agent(BaseModel):
         rating = parsed_response.rating
 
         return rating
+
+    def _get_current_tools(self) -> list[CustomTool]:
+        location_tools = self.location.available_tools
+
+        all_tools = get_tools(location_tools, include_worldwide=True)
+
+        authorized_tools = [
+            tool
+            for tool in all_tools
+            if (tool.name in self.authorized_tools or not tool.requires_authorization)
+        ]
+
+        return authorized_tools
 
     def _move_to_location(self, location: Location, events_manager: EventsManager):
         """Move the agents, send event to Events table"""
@@ -717,7 +745,7 @@ class Agent(BaseModel):
             PromptString.GOSSIP,
             {
                 "plan_description": plan.description,
-                "tool_name": result.tool_name,
+                "tool_name": result.tool.name,
                 "tool_input": result.tool_input,
                 "tool_result": result.output,
             },
@@ -778,7 +806,7 @@ class Agent(BaseModel):
             self.plan_executor.update_location_context(location_context)
 
         resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(
-            plan, events_manager
+            plan, events_manager, tools=self._get_current_tools()
         )
 
         if resp.status == PlanStatus.FAILED:

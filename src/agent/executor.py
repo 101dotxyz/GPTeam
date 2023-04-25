@@ -2,7 +2,7 @@ import os
 import re
 import time
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from dotenv import load_dotenv
 from langchain import LLMChain
@@ -16,15 +16,15 @@ from pydantic import BaseModel
 from typing_extensions import override
 
 from ..event.base import Event, EventsManager
-from ..memory.base import MemoryType
-from ..tools.base import all_tools
+from ..tools.base import TOOLS, CustomTool, get_tools
+from ..tools.name import ToolName
+from ..utils.colors import LogColor
+from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
 from .plans import PlanStatus, SinglePlan
-from ..utils.formatting import print_to_console
-from ..utils.colors import LogColor
 
 load_dotenv()
 
@@ -92,22 +92,24 @@ class CustomOutputParser(AgentOutputParser):
 class PlanExecutorResponse(BaseModel):
     status: PlanStatus
     output: str
-    tool_name: Optional[str]
+    tool: Optional[CustomTool]
     tool_input: Optional[str]
 
 
 class PlanExecutor(BaseModel):
     """Executes plans for an agent."""
 
-    executor: LLMSingleActionAgent
     context: ExecutorContext
     plan: Optional[SinglePlan] = None
     intermediate_steps: List[Tuple[AgentAction, str]] = []
 
     def __init__(self, context: ExecutorContext) -> None:
+        super().__init__(context=context)
+
+    def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
         prompt = CustomPromptTemplate(
             template=PromptString.EXECUTE_PLAN.value,
-            tools=all_tools,
+            tools=tools,
             # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
             # This includes the `intermediate_steps` variable because that is needed
             input_variables=["input", "intermediate_steps", "location_context"],
@@ -121,16 +123,12 @@ class PlanExecutor(BaseModel):
 
         output_parser = CustomOutputParser()
 
-        tool_names = [tool.name for tool in all_tools]
-
         executor = LLMSingleActionAgent(
             llm_chain=llm_chain,
             output_parser=output_parser,
             stop=["\nObservation:"],
-            allowed_tools=tool_names,
         )
-
-        super().__init__(executor=executor, context=context)
+        return executor
 
     def update_location_context(self, location_context: str) -> None:
         self.context.location_context = location_context
@@ -140,19 +138,19 @@ class PlanExecutor(BaseModel):
         self.intermediate_steps = []
 
     def start_or_continue_plan(
-        self, plan: SinglePlan, events_manager: EventsManager
+        self, plan: SinglePlan, events_manager: EventsManager, tools: list[CustomTool]
     ) -> PlanExecutorResponse:
         if not self.plan or self.plan.description != plan.description:
             self.set_plan(plan)
-            return self.execute(events_manager)
-        else:
-            return self.execute(events_manager)
+        return self.execute(events_manager, tools)
 
-    def execute(self, events_manager: EventsManager) -> str:
+    def execute(self, events_manager: EventsManager, tools: list[CustomTool]) -> str:
         if self.plan is None:
             raise ValueError("No plan set")
 
-        response = self.executor.plan(
+        executor = self.get_executor(tools=tools)
+
+        response = executor.plan(
             input=self.plan.description,
             intermediate_steps=self.intermediate_steps,
             location_context=self.context.location_context,
@@ -179,10 +177,7 @@ class PlanExecutor(BaseModel):
             else:
                 return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
-        tool = next(
-            (tool for tool in all_tools if tool.name.lower() == response.tool.lower()),
-            None,
-        )
+        tool = TOOLS[ToolName(response.tool.lower())]
 
         if tool is None:
             raise ValueError(f"Tool: '{response.tool}' is not found in tool list")
@@ -198,6 +193,6 @@ class PlanExecutor(BaseModel):
         return PlanExecutorResponse(
             status=PlanStatus.IN_PROGRESS,
             output=result,
-            tool_name=tool.name,
+            tool=tool,
             tool_input=response.tool_input,
         )

@@ -7,6 +7,8 @@ from langchain.llms import OpenAI
 from langchain.tools import BaseTool
 from typing_extensions import override
 
+from src.tools.company_directory import look_up_company_directory
+
 from .name import ToolName
 from .send_message import send_message
 
@@ -85,7 +87,7 @@ TOOLS: dict[ToolName, CustomTool] = {
         name="speak",
         func=send_message,
         description="useful for when you need to speak to someone at your location. the input to this should be a single message, including the name of the person you want to speak to. e.g. David Summers: Do you know the printing code?",
-        requires_context=True,  # this tool requires events_manager as context
+        requires_context=True,
         requires_authorization=False,
         worldwide=True,
     ),
@@ -94,6 +96,14 @@ TOOLS: dict[ToolName, CustomTool] = {
     ),
     ToolName.HUMAN: load_built_in_tool(
         "human", requires_authorization=False, worldwide=True
+    ),
+    ToolName.COMPANY_DIRECTORY: CustomTool(
+        name="company-directory",
+        func=look_up_company_directory,
+        description="useful for when you need to get information on your colleagues, their skills and roles in the company. regardless of the input, it will always return the list of all your colleagues with the descriptions of their roles and skills",
+        requires_context=False,
+        requires_authorization=False,
+        worldwide=True,
     ),
 }
 

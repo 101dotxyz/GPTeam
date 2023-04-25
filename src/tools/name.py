@@ -6,3 +6,4 @@ class ToolName(Enum):
     SPEAK = "speak"
     WOLFRAM_APLHA = "wolfram-alpha"
     HUMAN = "human"
+    COMPANY_DIRECTORY = "company-directory"

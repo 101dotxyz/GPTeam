@@ -1,12 +1,14 @@
 from typing import Any, List, Optional
-
 from langchain import GoogleSearchAPIWrapper
 from langchain.agents import Tool, load_tools
 from langchain.llms import OpenAI
 from langchain.tools import BaseTool
 from typing_extensions import override
 
+
 from .send_message import send_message
+from .directory import consult_directory
+from src.tools.context import ToolContext
 
 
 class CustomTool(Tool):
@@ -24,24 +26,18 @@ class CustomTool(Tool):
         self.requires_context = requires_context
 
     @override
-    def run(self, agent_input: str | dict, system_context: dict = {}) -> List[BaseTool]:
-        # if the tool requires context, but none is provided, raise an error
-        if self.requires_context and not bool(system_context):
-            raise Exception(
-                f"tool {self.name} requires system_context, but none was provided"
-            )
+    def run(self, agent_input: str | dict, tool_context: ToolContext) -> List[BaseTool]:
 
         # if the tool requires context
         if self.requires_context:
-            # Combine the agent input and context into a dict
-            if isinstance(agent_input, str):
-                agent_input = {"agent_input": agent_input}
-            input = {**agent_input, **system_context}
+            input = {
+                "agent_input": str(agent_input),
+                "tool_context": tool_context
+            }
 
         else:
             input = str(agent_input)
 
-        # Run the Tool with the combined input
         return super().run(input)
 
 
@@ -55,9 +51,15 @@ custom_tools: List[CustomTool] = [
     CustomTool(
         name="speak",
         func=send_message,
-        description="useful for when you need to speak to someone at your location. the input to this should be a single message, including the name of the person you want to speak to. e.g. David Summers: Do you know the printing code?",
+        description="Useful for when you need to speak to someone at your location. The input to this should be a single message, always starting by addressing the person you are speaking to. Ex: 'Hey Jim, can you get me last month's sales report?'",
         requires_context=True,  # this tool requires events_manager as context
     ),
+    CustomTool(
+        name="directory",
+        func=consult_directory,
+        description="A directory of all the people you can speak with, detailing their full names, roles, and current locations. Useful for when you need help from another person.",
+        requires_context=True,  # this tool requires location_id as context
+    )
 ]
 
 built_in_tools: List[BaseTool] = load_tools(

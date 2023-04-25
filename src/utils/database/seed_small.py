@@ -2,6 +2,8 @@ import random
 import uuid
 
 from .database import supabase
+from ..parameters import DiscordChannelId
+
 
 DEFAULT_WORLD = {
     "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
@@ -17,7 +19,7 @@ locations = [
         "world_id": DEFAULT_WORLD["id"],
         "name": "Lobby",
         "description": "The entrance to the company's office. Features a reception desk, a sign-in sheet for visitors, and brochures about the company.",
-        "channel_id": 8395726143,
+        "channel_id": DiscordChannelId.LOBBY.value,
         "allowed_agent_ids": [],
     },
     {
@@ -25,7 +27,7 @@ locations = [
         "world_id": DEFAULT_WORLD["id"],
         "name": "Water Cooler",
         "description": "A place where employees gather to chat and exchange gossip. Features a bulletin board for posting company announcements.",
-        "channel_id": 8395726143,
+        "channel_id": DiscordChannelId.WATER_COOLER.value,
         "allowed_agent_ids": [],
     },
     {
@@ -33,7 +35,7 @@ locations = [
         "world_id": DEFAULT_WORLD["id"],
         "name": "Conference Room",
         "description": "A room for holding meetings and presentations. Features video conference equipment, a whiteboard, and a projector.",
-        "channel_id": 8395726143,
+        "channel_id": DiscordChannelId.CONFERENCE_ROOM.value,
         "allowed_agent_ids": [],
     },
     {
@@ -41,7 +43,7 @@ locations = [
         "world_id": DEFAULT_WORLD["id"],
         "name": "Break Room",
         "description": "A place for employees to take a break and grab a snack. Features a fridge, a microwave, a coffee maker, and a snack vending machine.",
-        "channel_id": 8395726143,
+        "channel_id": DiscordChannelId.BREAK_ROOM.value,
         "allowed_agent_ids": [],
     },
     {
@@ -49,7 +51,7 @@ locations = [
         "world_id": DEFAULT_WORLD["id"],
         "name": "Copy Room",
         "description": "A room for making copies and other document-related tasks. Features a copy machine, a scanner, a fax machine, and a paper shredder.",
-        "channel_id": 8395726143,
+        "channel_id": DiscordChannelId.COPY_ROOM.value,
         "allowed_agent_ids": [],
     },
     {
@@ -57,31 +59,7 @@ locations = [
         "world_id": DEFAULT_WORLD["id"],
         "name": "Executive Suite",
         "description": "An exclusive area for the company's executives. Features a PA system, a personal secretary, a mini-fridge, and executive lounge chairs.",
-        "channel_id": 8395726143,
-        "allowed_agent_ids": [],
-    },
-    {
-        "id": str(uuid.uuid4()),
-        "world_id": DEFAULT_WORLD["id"],
-        "name": "Developer Den",
-        "description": "A space for the company's programmers to work. Features multiple computers, a printer, ergonomic chairs, and extra monitors.",
-        "channel_id": 8395726143,
-        "allowed_agent_ids": [],
-    },
-    {
-        "id": str(uuid.uuid4()),
-        "world_id": DEFAULT_WORLD["id"],
-        "name": "Sales Pit",
-        "description": "The area where the company's sales team works. Features phones with headsets, a leaderboard, and motivational posters.",
-        "channel_id": 8395726143,
-        "allowed_agent_ids": [],
-    },
-    {
-        "id": str(uuid.uuid4()),
-        "world_id": DEFAULT_WORLD["id"],
-        "name": "Human Resources",
-        "description": "The department responsible for managing the company's employees. Features file cabinets, employee handbooks, team-building supplies, and a complaint box.",
-        "channel_id": 8395726143,
+        "channel_id": DiscordChannelId.EXECUTIVE_SUITE.value,
         "allowed_agent_ids": [],
     },
     {
@@ -89,7 +67,15 @@ locations = [
         "world_id": DEFAULT_WORLD["id"],
         "name": "Janitor Closet",
         "description": "A small storage space for cleaning supplies and equipment. Features a mop, a vacuum cleaner, and extra light bulbs.",
-        "channel_id": 8395726143,
+        "channel_id": DiscordChannelId.JANITORS_CLOSET.value,
+        "allowed_agent_ids": [],
+    },
+    {
+        "id": str(uuid.uuid4()),
+        "world_id": DEFAULT_WORLD["id"],
+        "name": "Work Zone",
+        "description": "An open area for employees to work. Features cubicles, desks, and a printer.",
+        "channel_id": DiscordChannelId.WORK_ZONE.value,
         "allowed_agent_ids": [],
     },
 ]

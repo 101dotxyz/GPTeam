@@ -3,7 +3,7 @@ import re
 import time
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
-
+from uuid import UUID
 from dotenv import load_dotenv
 from langchain import LLMChain
 from langchain.agents import AgentExecutor, AgentOutputParser, LLMSingleActionAgent
@@ -15,9 +15,12 @@ from langchain.tools import BaseTool
 from pydantic import BaseModel
 from typing_extensions import override
 
+from src.world.context import WorldContext
+
 from ..event.base import Event, EventsManager
 from ..memory.base import MemoryType
 from ..tools.base import all_tools
+from ..tools.context import ToolContext
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_SMART_MODEL
@@ -25,15 +28,9 @@ from ..utils.prompt import PromptString
 from .plans import PlanStatus, SinglePlan
 from ..utils.formatting import print_to_console
 from ..utils.colors import LogColor
+from ..world.context import WorldContext
 
 load_dotenv()
-
-
-class ExecutorContext(BaseModel):
-    full_name: str
-    private_bio: str
-    directives: list[str]
-    location_context: str
 
 
 # Set up a prompt template
@@ -99,12 +96,13 @@ class PlanExecutorResponse(BaseModel):
 class PlanExecutor(BaseModel):
     """Executes plans for an agent."""
 
+    agent_id: UUID
     executor: LLMSingleActionAgent
-    context: ExecutorContext
+    world_context: WorldContext
     plan: Optional[SinglePlan] = None
     intermediate_steps: List[Tuple[AgentAction, str]] = []
 
-    def __init__(self, context: ExecutorContext) -> None:
+    def __init__(self, agent_id: UUID, world_context: WorldContext) -> None:
         prompt = CustomPromptTemplate(
             template=PromptString.EXECUTE_PLAN.value,
             tools=all_tools,
@@ -130,10 +128,7 @@ class PlanExecutor(BaseModel):
             allowed_tools=tool_names,
         )
 
-        super().__init__(executor=executor, context=context)
-
-    def update_location_context(self, location_context: str) -> None:
-        self.context.location_context = location_context
+        super().__init__(agent_id=agent_id, executor=executor, world_context=world_context)
 
     def set_plan(self, plan: SinglePlan) -> None:
         self.plan = plan
@@ -155,13 +150,15 @@ class PlanExecutor(BaseModel):
         response = self.executor.plan(
             input=self.plan.description,
             intermediate_steps=self.intermediate_steps,
-            location_context=self.context.location_context,
+            location_context=self.world_context.location_context_string(self.agent_id),
         )
+
+        agent_name = self.world_context.get_agent_full_name(self.agent_id)
 
         for log in response.log.split("\n"):
             suffix = log.split(":")[0] if ":" in log else "Thought"
             print_to_console(
-                f"{self.context.full_name}: {suffix}: ", LogColor.THOUGHT, log
+                f"{agent_name}: {suffix}: ", LogColor.THOUGHT, log
             )
 
         # If the agent is finished, return the output
@@ -186,11 +183,17 @@ class PlanExecutor(BaseModel):
 
         if tool is None:
             raise ValueError(f"Tool: '{response.tool}' is not found in tool list")
+        
+        tool_context = ToolContext(
+            agent_id=self.agent_id,
+            world_context=self.world_context,
+            events_manager=events_manager,
+        )
 
-        result = tool.run(response.tool_input, {"events_manager": events_manager})
+        result = tool.run(response.tool_input, tool_context)
 
         print_to_console(
-            f"{self.context.full_name}: Action Response: ", LogColor.THOUGHT, result
+            f"{agent_name}: Action Response: ", LogColor.THOUGHT, result
         )
 
         self.intermediate_steps.append((response, result))

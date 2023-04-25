@@ -53,7 +53,7 @@ class Location(BaseModel):
     def __str__(self):
         return f"{self.name}"
 
-    def db_dict(self):
+    def _db_dict(self):
         return {
             "id": str(self.id),
             "name": self.name,

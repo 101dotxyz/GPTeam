@@ -23,7 +23,7 @@ def create_location(
     )
 
     ## add to db
-    data, count = supabase.table("Locations").insert(location.db_dict()).execute()
+    data, count = supabase.table("Locations").insert(location._db_dict()).execute()
 
     return location
 

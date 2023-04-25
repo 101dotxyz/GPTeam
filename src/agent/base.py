@@ -15,6 +15,8 @@ from pydantic import BaseModel
 from ..event.base import Event, EventsManager, EventType
 from ..location.base import Location
 from ..memory.base import MemoryType, SingleMemory
+from ..tools.base import CustomTool, get_tools
+from ..tools.name import ToolName
 from ..utils.colors import LogColor
 from ..utils.database.database import supabase
 from ..utils.formatting import print_to_console
@@ -29,12 +31,12 @@ from ..utils.parameters import (
     REFLECTION_MEMORY_COUNT,
 )
 from ..utils.prompt import Prompter, PromptString
+from ..world.context import WorldContext
 from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
-from ..world.context import WorldContext
 
 
 class RelatedMemory(BaseModel):
@@ -53,6 +55,7 @@ class Agent(BaseModel):
     directives: Optional[list[str]]
     memories: list[SingleMemory]
     plans: list[SinglePlan]
+    authorized_tools: list[ToolName]
     world_id: UUID
     location: Optional[Location]
     notes: list[str] = []
@@ -66,6 +69,7 @@ class Agent(BaseModel):
         directives: list[str] = None,
         memories: list[SingleMemory] = [],
         plans: list[SinglePlan] = [],
+        authorized_tools: list[ToolName] = [],
         id: Optional[str | UUID] = None,
         world_id: Optional[UUID] = DEFAULT_WORLD_ID,
         location: Optional[Location] = Location.from_id(DEFAULT_LOCATION_ID),
@@ -82,6 +86,7 @@ class Agent(BaseModel):
             private_bio=private_bio,
             public_bio=public_bio,
             directives=directives,
+            authorized_tools=authorized_tools,
             memories=memories,
             plans=plans,
             world_id=world_id,
@@ -154,12 +159,20 @@ class Agent(BaseModel):
         plans = [
             SinglePlan(
                 **{key: value for key, value in plan.items() if key != "location_id"},
-                location=[location for location in locations if str(location.id) == plan["location_id"]][0],
+                location=[
+                    location
+                    for location in locations
+                    if str(location.id) == plan["location_id"]
+                ][0],
             )
             for plan in ordered_plans
         ]
 
-        agent_location = [location for location in locations if str(location.id) == agent_dict["location_id"]][0]
+        agent_location = [
+            location
+            for location in locations
+            if str(location.id) == agent_dict["location_id"]
+        ][0]
 
         return cls(
             id=agent_dict["id"],
@@ -205,8 +218,13 @@ class Agent(BaseModel):
                 name=location["name"],
                 description=location["description"],
                 channel_id=location["channel_id"],
+                available_tools=list(
+                    map(lambda name: ToolName(name), location.get("available_tools"))
+                ),
                 world_id=location["world_id"],
-                allowed_agent_ids=location["allowed_agent_ids"],
+                allowed_agent_ids=list(
+                    map(lambda id: UUID(id), location.get("allowed_agent_ids"))
+                ),
             )
             for location in locations_data
         }
@@ -225,12 +243,17 @@ class Agent(BaseModel):
 
         location = locations[agent["location_id"]]
 
+        authorized_tools = list(
+            map(lambda name: ToolName(name), agent.get("authorized_tools"))
+        )
+
         return Agent(
             id=id,
             full_name=agent.get("full_name"),
             private_bio=agent.get("private_bio"),
             public_bio=agent.get("public_bio"),
             directives=agent.get("directives"),
+            authorized_tools=authorized_tools,
             memories=[SingleMemory(**memory) for memory in memories_data[1]],
             plans=plans,
             world_id=agent.get("world_id"),
@@ -423,7 +446,25 @@ class Agent(BaseModel):
 
         return rating
 
-    def _move_to_location(self, location: Location, events_manager: EventsManager, world_context: WorldContext):
+    def _get_current_tools(self) -> list[CustomTool]:
+        location_tools = self.location.available_tools
+
+        all_tools = get_tools(location_tools, include_worldwide=True)
+
+        authorized_tools = [
+            tool
+            for tool in all_tools
+            if (tool.name in self.authorized_tools or not tool.requires_authorization)
+        ]
+
+        return authorized_tools
+
+    def _move_to_location(
+        self,
+        location: Location,
+        events_manager: EventsManager,
+        world_context: WorldContext,
+    ):
         """Move the agents, send event to Events table"""
 
         self._log(
@@ -554,7 +595,9 @@ class Agent(BaseModel):
                     related_memory_ids=related_memory_ids,
                 )
 
-    def _plan(self, thought_process: str, world_context: WorldContext) -> list[SinglePlan]:
+    def _plan(
+        self, thought_process: str, world_context: WorldContext
+    ) -> list[SinglePlan]:
         """Trigger the agent's planning process
 
         Args:
@@ -685,7 +728,9 @@ class Agent(BaseModel):
 
         return new_plans
 
-    def _react(self, events_manager: EventsManager, world_context: WorldContext) -> LLMReactionResponse:
+    def _react(
+        self, events_manager: EventsManager, world_context: WorldContext
+    ) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on
 
         Arguments:
@@ -695,7 +740,7 @@ class Agent(BaseModel):
         """
 
         # Pull in the events from the last step at this location
-        new_events = events_manager.get_events_by_location(self.location, step='last')
+        new_events = events_manager.get_events_by_location(self.location, step="last")
 
         # Store them as observations for this agent
         for event in new_events:
@@ -761,7 +806,7 @@ class Agent(BaseModel):
             PromptString.GOSSIP,
             {
                 "plan_description": plan.description,
-                "tool_name": result.tool_name,
+                "tool_name": result.tool.name,
                 "tool_input": result.tool_input,
                 "tool_result": result.output,
             },
@@ -791,10 +836,10 @@ class Agent(BaseModel):
         events_manager.add_event(event)
 
     def _act(
-        self, 
-        plan: SinglePlan, 
+        self,
+        plan: SinglePlan,
         events_manager: EventsManager,
-        world_context: WorldContext
+        world_context: WorldContext,
     ) -> None:
         """Act on a plan"""
 
@@ -817,7 +862,7 @@ class Agent(BaseModel):
             self.plan_executor.world_context = world_context
 
         resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(
-            plan, events_manager
+            plan, events_manager, tools=self._get_current_tools()
         )
 
         if resp.status == PlanStatus.FAILED:
@@ -871,9 +916,7 @@ class Agent(BaseModel):
             self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
     def _do_first_plan(
-        self, 
-        events_manager: EventsManager,
-        world_context: WorldContext
+        self, events_manager: EventsManager, world_context: WorldContext
     ) -> None:
         """Do the first plan in the list"""
 
@@ -890,17 +933,11 @@ class Agent(BaseModel):
 
         current_plan = plans[0]
 
-        self._act(
-            current_plan,
-            events_manager,
-            world_context
-            )
+        self._act(current_plan, events_manager, world_context)
 
     def run_for_one_step(
-            self, 
-            events_manager: EventsManager,
-            world_context: WorldContext
-        ):
+        self, events_manager: EventsManager, world_context: WorldContext
+    ):
         # First we decide if we need to reflect
         if self._should_reflect():
             self._reflect()
@@ -914,4 +951,3 @@ class Agent(BaseModel):
 
         # Work through the plans
         self._do_first_plan(events_manager, world_context)
-

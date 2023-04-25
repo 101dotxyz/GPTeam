@@ -1,9 +1,8 @@
 import random
 import uuid
 
-from .database import supabase
 from ..parameters import DiscordChannelId
-
+from .database import supabase
 
 DEFAULT_WORLD = {
     "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
@@ -21,6 +20,7 @@ locations = [
         "description": "The entrance to the company's office. Features a reception desk, a sign-in sheet for visitors, and brochures about the company.",
         "channel_id": DiscordChannelId.LOBBY.value,
         "allowed_agent_ids": [],
+        "available_tools": [],
     },
     {
         "id": str(uuid.uuid4()),
@@ -29,6 +29,7 @@ locations = [
         "description": "A place where employees gather to chat and exchange gossip. Features a bulletin board for posting company announcements.",
         "channel_id": DiscordChannelId.WATER_COOLER.value,
         "allowed_agent_ids": [],
+        "available_tools": [],
     },
     {
         "id": str(uuid.uuid4()),
@@ -37,6 +38,7 @@ locations = [
         "description": "A room for holding meetings and presentations. Features video conference equipment, a whiteboard, and a projector.",
         "channel_id": DiscordChannelId.CONFERENCE_ROOM.value,
         "allowed_agent_ids": [],
+        "available_tools": [],
     },
     {
         "id": str(uuid.uuid4()),
@@ -45,6 +47,7 @@ locations = [
         "description": "A place for employees to take a break and grab a snack. Features a fridge, a microwave, a coffee maker, and a snack vending machine.",
         "channel_id": DiscordChannelId.BREAK_ROOM.value,
         "allowed_agent_ids": [],
+        "available_tools": [],
     },
     {
         "id": str(uuid.uuid4()),
@@ -53,6 +56,7 @@ locations = [
         "description": "A room for making copies and other document-related tasks. Features a copy machine, a scanner, a fax machine, and a paper shredder.",
         "channel_id": DiscordChannelId.COPY_ROOM.value,
         "allowed_agent_ids": [],
+        "available_tools": [],
     },
     {
         "id": str(uuid.uuid4()),
@@ -61,6 +65,7 @@ locations = [
         "description": "An exclusive area for the company's executives. Features a PA system, a personal secretary, a mini-fridge, and executive lounge chairs.",
         "channel_id": DiscordChannelId.EXECUTIVE_SUITE.value,
         "allowed_agent_ids": [],
+        "available_tools": [],
     },
     {
         "id": str(uuid.uuid4()),
@@ -69,6 +74,7 @@ locations = [
         "description": "A small storage space for cleaning supplies and equipment. Features a mop, a vacuum cleaner, and extra light bulbs.",
         "channel_id": DiscordChannelId.JANITORS_CLOSET.value,
         "allowed_agent_ids": [],
+        "available_tools": [],
     },
     {
         "id": str(uuid.uuid4()),
@@ -77,6 +83,7 @@ locations = [
         "description": "An open area for employees to work. Features cubicles, desks, and a printer.",
         "channel_id": DiscordChannelId.WORK_ZONE.value,
         "allowed_agent_ids": [],
+        "available_tools": [],
     },
 ]
 
@@ -91,6 +98,7 @@ agents = [
             "Make sure your employees are happy",
             "Maintain your physical fitness.",
         ],
+        "authorized_tools": [],
         "ordered_plan_ids": ["06d08245-81a4-4236-ad98-e128ed01167b"],
         "world_id": DEFAULT_WORLD["id"],
         "location_id": random.choice(locations)["id"],
@@ -105,6 +113,7 @@ agents = [
             "Make sure Marty is happy",
             "Make sure the company is profitable.",
         ],
+        "authorized_tools": [],
         "ordered_plan_ids": ["2bedb32a-e1e8-46b3-a0c9-e98dfaabc391"],
         "world_id": DEFAULT_WORLD["id"],
         "location_id": random.choice(locations)["id"],

@@ -2,8 +2,9 @@ import os
 import re
 import time
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 from uuid import UUID
+
 from dotenv import load_dotenv
 from langchain import LLMChain
 from langchain.agents import AgentExecutor, AgentOutputParser, LLMSingleActionAgent
@@ -19,16 +20,17 @@ from src.world.context import WorldContext
 
 from ..event.base import Event, EventsManager
 from ..memory.base import MemoryType
-from ..tools.base import all_tools
+from ..tools.base import TOOLS, CustomTool, all_tools, get_tools
 from ..tools.context import ToolContext
+from ..tools.name import ToolName
+from ..utils.colors import LogColor
+from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
-from .plans import PlanStatus, SinglePlan
-from ..utils.formatting import print_to_console
-from ..utils.colors import LogColor
 from ..world.context import WorldContext
+from .plans import PlanStatus, SinglePlan
 
 load_dotenv()
 
@@ -89,7 +91,7 @@ class CustomOutputParser(AgentOutputParser):
 class PlanExecutorResponse(BaseModel):
     status: PlanStatus
     output: str
-    tool_name: Optional[str]
+    tool: Optional[CustomTool]
     tool_input: Optional[str]
 
 
@@ -97,15 +99,17 @@ class PlanExecutor(BaseModel):
     """Executes plans for an agent."""
 
     agent_id: UUID
-    executor: LLMSingleActionAgent
     world_context: WorldContext
     plan: Optional[SinglePlan] = None
     intermediate_steps: List[Tuple[AgentAction, str]] = []
 
     def __init__(self, agent_id: UUID, world_context: WorldContext) -> None:
+        super().__init__(agent_id=agent_id, world_context=world_context)
+
+    def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
         prompt = CustomPromptTemplate(
             template=PromptString.EXECUTE_PLAN.value,
-            tools=all_tools,
+            tools=tools,
             # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
             # This includes the `intermediate_steps` variable because that is needed
             input_variables=["input", "intermediate_steps", "location_context"],
@@ -119,35 +123,34 @@ class PlanExecutor(BaseModel):
 
         output_parser = CustomOutputParser()
 
-        tool_names = [tool.name for tool in all_tools]
-
         executor = LLMSingleActionAgent(
             llm_chain=llm_chain,
             output_parser=output_parser,
             stop=["\nObservation:"],
-            allowed_tools=tool_names,
         )
+        return executor
 
-        super().__init__(agent_id=agent_id, executor=executor, world_context=world_context)
+    def update_location_context(self, location_context: str) -> None:
+        self.context.location_context = location_context
 
     def set_plan(self, plan: SinglePlan) -> None:
         self.plan = plan
         self.intermediate_steps = []
 
     def start_or_continue_plan(
-        self, plan: SinglePlan, events_manager: EventsManager
+        self, plan: SinglePlan, events_manager: EventsManager, tools: list[CustomTool]
     ) -> PlanExecutorResponse:
         if not self.plan or self.plan.description != plan.description:
             self.set_plan(plan)
-            return self.execute(events_manager)
-        else:
-            return self.execute(events_manager)
+        return self.execute(events_manager, tools)
 
-    def execute(self, events_manager: EventsManager) -> str:
+    def execute(self, events_manager: EventsManager, tools: list[CustomTool]) -> str:
         if self.plan is None:
             raise ValueError("No plan set")
 
-        response = self.executor.plan(
+        executor = self.get_executor(tools=tools)
+
+        response = executor.plan(
             input=self.plan.description,
             intermediate_steps=self.intermediate_steps,
             location_context=self.world_context.location_context_string(self.agent_id),
@@ -157,9 +160,7 @@ class PlanExecutor(BaseModel):
 
         for log in response.log.split("\n"):
             suffix = log.split(":")[0] if ":" in log else "Thought"
-            print_to_console(
-                f"{agent_name}: {suffix}: ", LogColor.THOUGHT, log
-            )
+            print_to_console(f"{agent_name}: {suffix}: ", LogColor.THOUGHT, log)
 
         # If the agent is finished, return the output
         if isinstance(response, AgentFinish):
@@ -176,14 +177,11 @@ class PlanExecutor(BaseModel):
             else:
                 return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
-        tool = next(
-            (tool for tool in all_tools if tool.name.lower() == response.tool.lower()),
-            None,
-        )
+        tool = TOOLS[ToolName(response.tool.lower())]
 
         if tool is None:
             raise ValueError(f"Tool: '{response.tool}' is not found in tool list")
-        
+
         tool_context = ToolContext(
             agent_id=self.agent_id,
             world_context=self.world_context,
@@ -192,15 +190,13 @@ class PlanExecutor(BaseModel):
 
         result = tool.run(response.tool_input, tool_context)
 
-        print_to_console(
-            f"{agent_name}: Action Response: ", LogColor.THOUGHT, result
-        )
+        print_to_console(f"{agent_name}: Action Response: ", LogColor.THOUGHT, result)
 
         self.intermediate_steps.append((response, result))
 
         return PlanExecutorResponse(
             status=PlanStatus.IN_PROGRESS,
             output=result,
-            tool_name=tool.name,
+            tool=tool,
             tool_input=response.tool_input,
         )

@@ -90,7 +90,7 @@ TOOLS: dict[ToolName, CustomTool] = {
         "human", requires_authorization=False, worldwide=True
     ),
     ToolName.COMPANY_DIRECTORY: CustomTool(
-        name="directory",
+        name=ToolName.COMPANY_DIRECTORY.value,
         func=consult_directory,
         description="A directory of all the people you can speak with, detailing their full names, roles, and current locations. Useful for when you need help from another person.",
         requires_context=True,  # this tool requires location_id as context

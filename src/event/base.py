@@ -142,19 +142,13 @@ class EventsManager(BaseModel):
             for event in data
         ]
 
-        print(f"Retrieved {len(data)} events from DB")
-
         self.last_step_events = [
             event for event in events if event.step == self.current_step - 1
         ]
 
-        print(f"Last step events: {len(self.last_step_events)}")
-
         self.current_step_events = [
             event for event in events if event.step == self.current_step
         ]
-
-        print(f"Current step events: {len(self.current_step_events)}")
 
         return self.current_step_events
 

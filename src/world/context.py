@@ -117,4 +117,4 @@ class WorldContext(BaseModel):
         self.agents = new_agents
 
     def update_step(self, step: int):
-        self.world["current_step"] = step
+        self.world.current_step = step

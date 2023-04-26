@@ -83,3 +83,7 @@ alter table "public"."Agents" validate constraint "Agents_location_fkey";
 alter table "public"."Agents" add constraint "Agents_world_id_fkey" FOREIGN KEY (world_id) REFERENCES "Worlds"(id) ON DELETE CASCADE not valid;
 
 alter table "public"."Agents" validate constraint "Agents_world_id_fkey";
+
+alter table "public"."Events" add constraint "Events_location_id_fkey" FOREIGN KEY (location_id) REFERENCES "Locations"(id) ON DELETE CASCADE not valid;
+
+alter table "public"."Events" validate constraint "Events_location_id_fkey";

@@ -3,7 +3,9 @@ from enum import Enum
 from typing import Optional
 from uuid import UUID, uuid4
 
+import pytz
 from pydantic import BaseModel
+from sqlalchemy import desc
 
 from ..utils.colors import LogColor
 from ..utils.database.database import supabase
@@ -39,14 +41,17 @@ class Event(BaseModel):
         self,
         type: EventType,
         description: str,
-        location_id: UUID,
-        timestamp: datetime,
+        location_id: UUID | str,
         step: int,
+        timestamp: datetime = datetime.now(pytz.utc),
         witness_ids: list[UUID] = [],
         id: Optional[UUID] = None,
     ):
         if id is None:
             id = uuid4()
+
+        if isinstance(location_id, str):
+            location_id = UUID(location_id)
 
         if witness_ids is None:
             witness_ids = []
@@ -90,8 +95,11 @@ class EventsManager(BaseModel):
     current_step_events: list[Event] = []
     last_step_events: list[Event] = []
     current_step: int = 0
+    world_id: str
 
-    def __init__(self, events: list[Event] = None, current_step: int = 0):
+    def __init__(
+        self, world_id: str, events: list[Event] = None, current_step: int = 0
+    ):
         if not events:
             (_, data), count = (
                 supabase.table("Events").select("*").gte("step", current_step).execute()
@@ -99,7 +107,9 @@ class EventsManager(BaseModel):
             current_step_events = [Event(**event) for event in data]
 
         super().__init__(
-            current_step_events=current_step_events, current_step=current_step
+            current_step_events=current_step_events,
+            current_step=current_step,
+            world_id=world_id,
         )
 
     # get the next steps events, save last step
@@ -111,16 +121,41 @@ class EventsManager(BaseModel):
         if current_step:
             self.current_step = current_step
 
-        self.last_step_events = self.current_step_events
-
-        data, count = (
+        (_, data), _ = (
             supabase.table("Events")
-            .select("*")
-            .gte("step", self.current_step)
+            .select("*, location_id(*)")
+            .eq("location_id.world_id", self.world_id)
+            .gte("step", self.current_step - 1)
             .execute()
         )
 
-        self.current_step_events = [Event(**event) for event in list(data[1])]
+        events = [
+            Event(
+                id=event["id"],
+                type=event["type"],
+                description=event["description"],
+                location_id=event["location_id"]["id"],
+                step=event["step"],
+                timestamp=event["timestamp"],
+                witness_ids=event["witness_ids"],
+            )
+            for event in data
+        ]
+
+        print(f"Retrieved {len(data)} events from DB")
+
+        self.last_step_events = [
+            event for event in events if event.step == self.current_step - 1
+        ]
+
+        print(f"Last step events: {len(self.last_step_events)}")
+
+        self.current_step_events = [
+            event for event in events if event.step == self.current_step
+        ]
+
+        print(f"Current step events: {len(self.current_step_events)}")
+
         return self.current_step_events
 
     def add_event(self, event: Event):

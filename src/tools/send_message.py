@@ -32,8 +32,7 @@ def send_message(agent_input, tool_context: ToolContext):
 
     # first, craft the event object
     event = Event(
-        step=tool_context.context.events_manager.current_step,
-        timestamp=datetime.now(pytz.utc),
+        step=tool_context.context.world.current_step,
         type=EventType.MESSAGE,
         description=event_message,
         location_id=agent_location_id,
@@ -51,7 +50,7 @@ def send_message(agent_input, tool_context: ToolContext):
 
     print(
         "Message added to event manager at step "
-        + str(tool_context.context.events_manager.current_step)
+        + str(tool_context.context.world.current_step)
         + "."
     )
 

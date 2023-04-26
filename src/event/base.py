@@ -89,11 +89,13 @@ class Event(BaseModel):
     #     pass
 
 
+RECENT_EVENTS_STEPS = 250
+
+
 class EventsManager(BaseModel):
     """Saves events from the current step and the last step"""
 
-    current_step_events: list[Event] = []
-    last_step_events: list[Event] = []
+    recent_events: list[Event] = []
     current_step: int = 0
     world_id: str
 
@@ -102,17 +104,19 @@ class EventsManager(BaseModel):
     ):
         if not events:
             (_, data), count = (
-                supabase.table("Events").select("*").gte("step", current_step).execute()
+                supabase.table("Events")
+                .select("*")
+                .gte("step", current_step - RECENT_EVENTS_STEPS)
+                .execute()
             )
-            current_step_events = [Event(**event) for event in data]
+            recent_events = [Event(**event) for event in data]
 
         super().__init__(
-            current_step_events=current_step_events,
+            recent_events=recent_events,
             current_step=current_step,
             world_id=world_id,
         )
 
-    # get the next steps events, save last step
     def refresh_events(self, current_step: int = None):
         print_to_console(
             "Refreshing events...", LogColor.GENERAL, f"new step = {current_step}"
@@ -125,7 +129,7 @@ class EventsManager(BaseModel):
             supabase.table("Events")
             .select("*, location_id(*)")
             .eq("location_id.world_id", self.world_id)
-            .gte("step", self.current_step - 1)
+            .gte("step", self.current_step - RECENT_EVENTS_STEPS)
             .execute()
         )
 
@@ -142,17 +146,11 @@ class EventsManager(BaseModel):
             for event in data
         ]
 
-        self.last_step_events = [
-            event for event in events if event.step == self.current_step - 1
-        ]
+        self.recent_events = events
 
-        self.current_step_events = [
-            event for event in events if event.step == self.current_step
-        ]
+        return self.recent_events
 
-        return self.current_step_events
-
-    def add_event(self, event: Event):
+    def add_event(self, event: Event) -> None:
         """Adds an event in the current step to the DB and local object"""
 
         # get the witnesses
@@ -168,32 +166,55 @@ class EventsManager(BaseModel):
         supabase.table("Events").insert(event.db_dict()).execute()
 
         # add event to local events list
-        self.current_step_events.append(event)
+        self.recent_events.append(event)
 
-        return self.current_step_events
+    def get_events(
+        self,
+        location_id: Optional[UUID] = None,
+        step: Optional[int] = None,
+        event_type: Optional[EventType] = None,
+        description: Optional[str] = None,
+        witness_ids: Optional[list[UUID]] = None,
+        refresh: Optional[bool] = False,
+    ) -> list["Event"]:
+        if refresh:
+            self.refresh_events()
 
-    def get_events(self):
-        return self.current_step_events
+        filtered_events = self.recent_events
 
-    def get_events_by_location_id(self, location_id: UUID, step: StepToUse):
-        if step == "last":
-            return [
+        if location_id is not None:
+            filtered_events = [
                 event
-                for event in self.last_step_events
-                if event.location_id == location_id
-            ]
-        else:
-            return [
-                event
-                for event in self.current_step_events
-                if event.location_id == location_id
+                for event in filtered_events
+                if str(event.location_id) == str(location_id)
             ]
 
-    def get_events_by_step(self, step: int):
-        return [event for event in self.current_step_events if event.step == step]
+        if step is not None:
+            filtered_events = [event for event in filtered_events if event.step == step]
+
+        if event_type is not None:
+            filtered_events = [
+                event for event in filtered_events if event.type == event_type
+            ]
+
+        if description is not None:
+            filtered_events = [
+                event for event in filtered_events if event.description == description
+            ]
+
+        if witness_ids is not None:
+            filtered_events = [
+                event
+                for event in filtered_events
+                if set(list(map(str, witness_ids))).issubset(
+                    set(list(map(str, event.witness_ids)))
+                )
+            ]
+
+        return filtered_events
 
     def remove_event(self, event_id: UUID):
-        self.current_step_events = [
-            event for event in self.current_step_events if event.id != event_id
+        self.recent_events = [
+            event for event in self.recent_events if event.id != event_id
         ]
-        return self.current_step_events
+        return self.recent_events

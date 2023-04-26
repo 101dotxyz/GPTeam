@@ -9,6 +9,7 @@ class LogColor(Enum):
     MOVE = Fore.LIGHTCYAN_EX
     REACT = Fore.YELLOW
     ACT = Fore.BLUE
+    MESSAGE = Fore.LIGHTBLUE_EX
     REFLECT = Fore.MAGENTA
     MEMORY = Fore.RED
     THOUGHT = Fore.LIGHTBLACK_EX

@@ -53,6 +53,7 @@ create table "public"."Events" (
     "step" smallint,
     "type" event_type,
     "description" text,
+    "agent_id" uuid,
     "location_id" uuid,
     "witness_ids" uuid[],
     PRIMARY KEY ("id")
@@ -87,3 +88,7 @@ alter table "public"."Agents" validate constraint "Agents_world_id_fkey";
 alter table "public"."Events" add constraint "Events_location_id_fkey" FOREIGN KEY (location_id) REFERENCES "Locations"(id) ON DELETE CASCADE not valid;
 
 alter table "public"."Events" validate constraint "Events_location_id_fkey";
+
+alter table "public"."Events" add constraint "Events_agent_id_fkey" FOREIGN KEY (agent_id) REFERENCES "Agents"(id) ON DELETE CASCADE not valid;
+
+alter table "public"."Events" validate constraint "Events_agent_id_fkey";

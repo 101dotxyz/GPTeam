@@ -733,21 +733,45 @@ class Agent(BaseModel):
 
         return new_plans
 
+    def _respond_to_messages(self) -> None:
+        """Respond to all messages"""
+
+        all_recent_messages = self.context.events_manager.get_events(
+            type=EventType.MESSAGE,
+            location_id=self.location.id,
+        )
+
+        new_messages = [
+            event
+            for event in all_recent_messages
+            if event.step == self.context.world.current_step
+        ]
+
+        for event in new_messages:
+            message = event.description
+
+            if ":" in message:
+                self._log("Received Message", LogColor.MESSAGE, message)
+                recipient, content = message.split(":", 1)
+
+            else:
+                recipient = None
+                content = message
+
     def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
 
         # Pull in the events from the last step at this location
-        new_events = self.context.events_manager.get_events_by_location_id(
-            self.location.id, step="last"
+        all_events = self.context.events_manager.get_events(
+            location_id=self.location.id,
+            step=self.context.world.current_step - 1,
         )
 
-        new_messages = "\n".join(
-            [
-                event.description
-                for event in new_events
-                if event.type == EventType.MESSAGE
-            ]
-        )
+        new_events = [event for event in all_events if event.id != EventType.MESSAGE]
+
+        new_messages = [
+            event.description for event in all_events if event.id == EventType.MESSAGE
+        ]
 
         # Store them as observations for this agent
         for event in new_events:
@@ -760,7 +784,7 @@ class Agent(BaseModel):
             llm=ChatModel(temperature=0).defaultModel,
         )
 
-        self._log("New Messages", LogColor.REACT, new_messages)
+        self._log("New Messages", LogColor.REACT, "\n".join(new_messages))
 
         # Make the reaction prompter
         reaction_prompter = Prompter(
@@ -771,7 +795,7 @@ class Agent(BaseModel):
                 "private_bio": self.private_bio,
                 "directives": str(self.directives),
                 "recent_activity": self._summarize_activity(),
-                "new_messages": new_messages,
+                "new_messages": "\n".join(new_messages),
                 "current_plans": [
                     f"{index}. {plan.description}"
                     for index, plan in enumerate(self.plans)

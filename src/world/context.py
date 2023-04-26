@@ -1,11 +1,8 @@
-from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
 
 from ..event.base import EventsManager
-from ..utils.database.database import supabase
-from ..utils.parameters import DEFAULT_WORLD_ID
 
 
 class WorldData(BaseModel):
@@ -26,7 +23,9 @@ class WorldContext(BaseModel):
         locations: dict,
         world: WorldData,
     ):
-        events_manager = EventsManager(current_step=world.current_step)
+        events_manager = EventsManager(
+            current_step=world.current_step, world_id=world.id
+        )
         # convert all UUIDs to strings
         for agent in agents:
             agent["id"] = str(agent["id"])

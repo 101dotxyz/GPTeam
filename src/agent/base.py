@@ -481,8 +481,7 @@ class Agent(BaseModel):
 
         # first emit the depature event to the db
         event = Event(
-            timestamp=datetime.now(pytz.utc),
-            step=self.context.events_manager.current_step,
+            step=self.context.world.current_step,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {self.location.name}",
             location_id=self.location.id,
@@ -496,8 +495,7 @@ class Agent(BaseModel):
 
         # emit the arrival to the db
         event = Event(
-            timestamp=self.context.events_manager.current_step,
-            step=self.context.events_manager.current_step,
+            step=self.context.world.current_step,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {location.name}",
             location_id=self.location.id,
@@ -821,8 +819,7 @@ class Agent(BaseModel):
         )
 
         event = Event(
-            timestamp=datetime.now(pytz.utc),
-            step=self.context.events_manager.current_step,
+            step=self.context.world.current_step,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} said the following: {response}",
             location_id=self.location.id,
@@ -858,7 +855,7 @@ class Agent(BaseModel):
         if resp.status == PlanStatus.FAILED:
             event = Event(
                 timestamp=datetime.now(pytz.utc),
-                step=self.context.events_manager.current_step,
+                step=self.context.world.current_step,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} has failed to complete the following: {plan.description} at the location: {plan.location.name}. {self.full_name} had the following problem: {resp.output}.",
                 location_id=self.location.id,
@@ -875,8 +872,7 @@ class Agent(BaseModel):
 
         elif resp.status == PlanStatus.IN_PROGRESS:
             event = Event(
-                timestamp=datetime.now(pytz.utc),
-                step=self.context.events_manager.current_step,
+                step=self.context.world.current_step,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}.",
                 location_id=self.location.id,
@@ -894,8 +890,7 @@ class Agent(BaseModel):
             self.plans = [p for p in self.plans if p.description != plan.description]
 
             event = Event(
-                timestamp=datetime.now(pytz.utc),
-                step=self.context.events_manager.current_step,
+                step=self.context.world.current_step,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} has just completed the following: {plan.description} at the location: {plan.location.name}. The result was: {resp.output}.",
                 location_id=self.location.id,
@@ -909,22 +904,6 @@ class Agent(BaseModel):
         """Do the first plan in the list"""
 
         current_plan = None
-
-        print(f"Agent locations from the perspective of {self.full_name}")
-        print(
-            list(
-                map(
-                    lambda agent: {
-                        "location": self.context.get_location_name(
-                            agent["location_id"]
-                        ),
-                        "id": agent["id"],
-                        "name": agent["full_name"],
-                    },
-                    self.context.agents,
-                )
-            )
-        )
 
         # If we do not have a plan state, consult the plans or plan something new
         # If we have no plans, make some

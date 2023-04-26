@@ -1,10 +1,11 @@
-from pydantic import BaseModel
 from uuid import UUID
 
-from ..world.context import WorldContext
+from pydantic import BaseModel
+
 from ..event.base import EventsManager
+from ..world.context import WorldContext
+
 
 class ToolContext(BaseModel):
     agent_id: UUID
-    world_context: WorldContext
-    events_manager: EventsManager
+    context: WorldContext

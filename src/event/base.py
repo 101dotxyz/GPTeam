@@ -5,10 +5,9 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
-from ..location.base import Location
-from ..utils.formatting import print_to_console
 from ..utils.colors import LogColor
 from ..utils.database.database import supabase
+from ..utils.formatting import print_to_console
 from ..utils.parameters import DEFAULT_WORLD_ID
 
 # class DiscordMessage(BaseModel):
@@ -16,9 +15,11 @@ from ..utils.parameters import DEFAULT_WORLD_ID
 #     location: Location
 #     timestamp: datetime.datetime
 
+
 class StepToUse(Enum):
     CURRENT = "current"
     NEXT = "next"
+
 
 class EventType(Enum):
     NON_MESSAGE = "non_message"
@@ -145,18 +146,19 @@ class EventsManager(BaseModel):
     def get_events(self):
         return self.current_step_events
 
-    def get_events_by_location(self, location: Location, step: StepToUse):
-        if step == 'last':
-            return [event for event in self.last_step_events if event.location_id == location.id]
+    def get_events_by_location_id(self, location_id: UUID, step: StepToUse):
+        if step == "last":
+            return [
+                event
+                for event in self.last_step_events
+                if event.location_id == location_id
+            ]
         else:
-            return [event for event in self.current_step_events if event.location_id == location.id]
-
-    def get_events_by_location_id(self, location_id: UUID):
-        return [
-            event
-            for event in self.current_step_events
-            if event.location_id == location_id
-        ]
+            return [
+                event
+                for event in self.current_step_events
+                if event.location_id == location_id
+            ]
 
     def get_events_by_step(self, step: int):
         return [event for event in self.current_step_events if event.step == step]

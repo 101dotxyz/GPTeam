@@ -99,12 +99,12 @@ class PlanExecutor(BaseModel):
     """Executes plans for an agent."""
 
     agent_id: UUID
-    world_context: WorldContext
+    context: WorldContext
     plan: Optional[SinglePlan] = None
     intermediate_steps: List[Tuple[AgentAction, str]] = []
 
-    def __init__(self, agent_id: UUID, world_context: WorldContext) -> None:
-        super().__init__(agent_id=agent_id, world_context=world_context)
+    def __init__(self, agent_id: UUID, context: WorldContext) -> None:
+        super().__init__(agent_id=agent_id, context=context)
 
     def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
         prompt = CustomPromptTemplate(
@@ -130,21 +130,18 @@ class PlanExecutor(BaseModel):
         )
         return executor
 
-    def update_location_context(self, location_context: str) -> None:
-        self.context.location_context = location_context
-
     def set_plan(self, plan: SinglePlan) -> None:
         self.plan = plan
         self.intermediate_steps = []
 
     def start_or_continue_plan(
-        self, plan: SinglePlan, events_manager: EventsManager, tools: list[CustomTool]
+        self, plan: SinglePlan, tools: list[CustomTool]
     ) -> PlanExecutorResponse:
         if not self.plan or self.plan.description != plan.description:
             self.set_plan(plan)
-        return self.execute(events_manager, tools)
+        return self.execute(tools)
 
-    def execute(self, events_manager: EventsManager, tools: list[CustomTool]) -> str:
+    def execute(self, tools: list[CustomTool]) -> str:
         if self.plan is None:
             raise ValueError("No plan set")
 
@@ -153,10 +150,10 @@ class PlanExecutor(BaseModel):
         response = executor.plan(
             input=self.plan.description,
             intermediate_steps=self.intermediate_steps,
-            location_context=self.world_context.location_context_string(self.agent_id),
+            location_context=self.context.location_context_string(self.agent_id),
         )
 
-        agent_name = self.world_context.get_agent_full_name(self.agent_id)
+        agent_name = self.context.get_agent_full_name(self.agent_id)
 
         for log in response.log.split("\n"):
             suffix = log.split(":")[0] if ":" in log else "Thought"
@@ -177,15 +174,14 @@ class PlanExecutor(BaseModel):
             else:
                 return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
-        tool = TOOLS[ToolName(response.tool.lower())]
-
-        if tool is None:
+        try:
+            tool = TOOLS[ToolName(response.tool.lower())]
+        except ValueError:
             raise ValueError(f"Tool: '{response.tool}' is not found in tool list")
 
         tool_context = ToolContext(
             agent_id=self.agent_id,
-            world_context=self.world_context,
-            events_manager=events_manager,
+            context=self.context,
         )
 
         result = tool.run(response.tool_input, tool_context)

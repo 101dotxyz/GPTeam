@@ -16,6 +16,9 @@ from ..utils.parameters import DEFAULT_WORLD_ID
 #     location: Location
 #     timestamp: datetime.datetime
 
+class StepToUse(Enum):
+    CURRENT = "current"
+    NEXT = "next"
 
 class EventType(Enum):
     NON_MESSAGE = "non_message"
@@ -142,12 +145,11 @@ class EventsManager(BaseModel):
     def get_events(self):
         return self.current_step_events
 
-    def get_events_by_location(self, location: Location):
-        return [
-            event
-            for event in self.current_step_events
-            if event.location_id == location.id
-        ]
+    def get_events_by_location(self, location: Location, step: StepToUse):
+        if step == 'last':
+            return [event for event in self.last_step_events if event.location_id == location.id]
+        else:
+            return [event for event in self.current_step_events if event.location_id == location.id]
 
     def get_events_by_location_id(self, location_id: UUID):
         return [

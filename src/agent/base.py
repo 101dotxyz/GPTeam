@@ -31,7 +31,8 @@ from ..utils.parameters import (
     REFLECTION_MEMORY_COUNT,
 )
 from ..utils.prompt import Prompter, PromptString
-from .executor import ExecutorContext, PlanExecutor, PlanExecutorResponse
+from ..world.context import WorldContext
+from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
@@ -134,13 +135,56 @@ class Agent(BaseModel):
         return [Location(**location) for location in data[1] + other_data[1]]
 
     @classmethod
-    def from_json_profile(cls, id: str):
-        path = os.path.dirname(os.path.abspath(__file__)) + f"/profiles/{id}.json"
-        f = open(path, "r")
-        profile = json.load(f)
-        f.close()
+    def from_db_dict(cls, agent_dict: dict, locations: list[Location]):
+        """Create an agent from a dictionary retrieved from the database."""
 
-        return cls(**profile)
+        (_, plans), count = (
+            supabase.table("Plans")
+            .select("*")
+            .in_("id", agent_dict["ordered_plan_ids"])
+            .execute()
+        )
+
+        ordered_plans = sorted(
+            plans, key=lambda plan: agent_dict["ordered_plan_ids"].index(plan["id"])
+        )
+
+        memories_data, memories_count = (
+            supabase.table("Memories")
+            .select("*")
+            .eq("agent_id", str(agent_dict["id"]))
+            .execute()
+        )
+
+        plans = [
+            SinglePlan(
+                **{key: value for key, value in plan.items() if key != "location_id"},
+                location=[
+                    location
+                    for location in locations
+                    if str(location.id) == plan["location_id"]
+                ][0],
+            )
+            for plan in ordered_plans
+        ]
+
+        agent_location = [
+            location
+            for location in locations
+            if str(location.id) == agent_dict["location_id"]
+        ][0]
+
+        return cls(
+            id=agent_dict["id"],
+            full_name=agent_dict["full_name"],
+            private_bio=agent_dict["private_bio"],
+            public_bio=agent_dict["public_bio"],
+            directives=agent_dict["directives"],
+            world_id=agent_dict["world_id"],
+            location=agent_location,
+            memories=[SingleMemory(**memory) for memory in memories_data[1]],
+            plans=plans,
+        )
 
     @classmethod
     def from_id(cls, id: UUID):
@@ -318,10 +362,11 @@ class Agent(BaseModel):
             "id": str(self.id),
             "full_name": self.full_name,
             "private_bio": self.private_bio,
+            "public_bio": self.public_bio,
             "directives": self.directives,
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
             "world_id": self.world_id,
-            "location": self.location.id,
+            "location_id": self.location.id,
         }
 
     def _related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
@@ -414,7 +459,12 @@ class Agent(BaseModel):
 
         return authorized_tools
 
-    def _move_to_location(self, location: Location, events_manager: EventsManager):
+    def _move_to_location(
+        self,
+        location: Location,
+        events_manager: EventsManager,
+        world_context: WorldContext,
+    ):
         """Move the agents, send event to Events table"""
 
         self._log(
@@ -434,6 +484,9 @@ class Agent(BaseModel):
 
         # Update the agents to the new location
         self.location = location
+
+        # Update the world context with the new agent location
+        world_context.update_agent(self._db_dict())
 
         # emit the arrival to the db
         event = Event(
@@ -542,7 +595,9 @@ class Agent(BaseModel):
                     related_memory_ids=related_memory_ids,
                 )
 
-    def _plan(self, location_context: str) -> list[SinglePlan]:
+    def _plan(
+        self, thought_process: str, world_context: WorldContext
+    ) -> list[SinglePlan]:
         """Trigger the agent's planning process
 
         Args:
@@ -584,7 +639,8 @@ class Agent(BaseModel):
                     for index, plan in enumerate(self.plans)
                 ],
                 "format_instructions": plan_parser.get_format_instructions(),
-                "location_context": location_context,
+                "location_context": world_context.location_context_string(self.id),
+                "thought_process": thought_process,
             },
         )
 
@@ -672,17 +728,19 @@ class Agent(BaseModel):
 
         return new_plans
 
-    def _react(self, events_manager: EventsManager, location_context: str) -> Reaction:
+    def _react(
+        self, events_manager: EventsManager, world_context: WorldContext
+    ) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on
 
         Arguments:
             events_manager {EventsManager} -- The event manager to get events from
-            location_context {str} -- Current description and the nearby agents
+            world_context -- handy dict objects for agents and locations
 
         """
 
-        # Pull in the events from last step
-        new_events = events_manager.last_step_events
+        # Pull in the events from the last step at this location
+        new_events = events_manager.get_events_by_location(self.location, step="last")
 
         # Store them as observations for this agent
         for event in new_events:
@@ -708,7 +766,7 @@ class Agent(BaseModel):
                     f"{index}. {plan.description}"
                     for index, plan in enumerate(self.plans)
                 ],
-                "location_context": location_context,
+                "location_context": world_context.location_context_string(self.id),
                 "event_descriptions": [
                     f"{index}. {event.description}"
                     for index, event in enumerate(new_events)
@@ -726,13 +784,16 @@ class Agent(BaseModel):
         # parse the reaction response
         parsed_reaction_response: LLMReactionResponse = reaction_parser.parse(response)
 
+        # add reaction to memory
+        self._add_memory(parsed_reaction_response.thought_process)
+
         self._log(
             "Reaction",
             LogColor.REACT,
-            f"Decided to {parsed_reaction_response.reaction.value} given the recent events at the {self.location.name}",
+            f"Decided to {parsed_reaction_response.reaction.value}: {parsed_reaction_response.thought_process}",
         )
 
-        return parsed_reaction_response.reaction
+        return parsed_reaction_response
 
     def _gossip(
         self,
@@ -775,13 +836,16 @@ class Agent(BaseModel):
         events_manager.add_event(event)
 
     def _act(
-        self, plan: SinglePlan, events_manager: EventsManager, location_context: str
+        self,
+        plan: SinglePlan,
+        events_manager: EventsManager,
+        world_context: WorldContext,
     ) -> None:
         """Act on a plan"""
 
         # If we are not in the right location, move to the new location
         if self.location.id != plan.location.id:
-            self._move_to_location(plan.location, events_manager)
+            self._move_to_location(plan.location, events_manager, world_context)
             return
 
         # Execute the plan
@@ -791,19 +855,11 @@ class Agent(BaseModel):
         # TODO: Tools are dependent on the location
         timeout = int(os.getenv("STEP_DURATION"))
 
-        # Set up the Executor Context
-        executor_context = ExecutorContext(
-            full_name=self.full_name,
-            private_bio=self.private_bio,
-            directives=self.directives,
-            location_context=location_context,
-        )
-
         # if there's no plan executor, create one
         if self.plan_executor is None:
-            self.plan_executor = PlanExecutor(executor_context)
+            self.plan_executor = PlanExecutor(self.id, world_context)
         else:
-            self.plan_executor.update_location_context(location_context)
+            self.plan_executor.world_context = world_context
 
         resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(
             plan, events_manager, tools=self._get_current_tools()
@@ -860,7 +916,7 @@ class Agent(BaseModel):
             self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
     def _do_first_plan(
-        self, events_manager: EventsManager, location_context: str
+        self, events_manager: EventsManager, world_context: WorldContext
     ) -> None:
         """Do the first plan in the list"""
 
@@ -870,96 +926,28 @@ class Agent(BaseModel):
         # If we have no plans, make some
         if len(self.plans) == 0:
             print(f"{self.full_name} has no plans, making some...")
-            plans = self._plan(location_context)
+            plans = self._plan(world_context)
         # Otherwise, just use the existing plans
         else:
             plans = self.plans
 
         current_plan = plans[0]
 
-        self._act(current_plan, events_manager, location_context)
+        self._act(current_plan, events_manager, world_context)
 
-    def run_for_one_step(self, events_manager: EventsManager, location_context: str):
+    def run_for_one_step(
+        self, events_manager: EventsManager, world_context: WorldContext
+    ):
         # First we decide if we need to reflect
         if self._should_reflect():
             self._reflect()
 
         # Generate a reaction to the latest events
-        reaction = self._react(events_manager, location_context)
+        react_response = self._react(events_manager, world_context)
 
         # If the reaction calls for a new plan, make one
-        if reaction == Reaction.REPLAN:
-            self._plan(location_context)
+        if react_response.reaction == Reaction.REPLAN:
+            self._plan(react_response.thought_process, world_context)
 
         # Work through the plans
-        self._do_first_plan(events_manager, location_context)
-
-
-class AgentsManager(BaseModel):
-    """A manager for agents"""
-
-    agents: list[Agent] = []
-
-    def __init__(self, world_id: int = DEFAULT_WORLD_ID):
-        (_, data), count = (
-            supabase.table("Agents").select("*").eq("world_id", world_id).execute()
-        )
-        agents = [Agent.from_id(agent["id"]) for agent in data]
-
-        return super().__init__(agents=agents)
-
-    def add_agent(self, agent: Agent) -> None:
-        """Add an agent to the manager"""
-        self.agents.append(agent)
-
-    def get_agent_by_name(self, name: str) -> Agent:
-        """Get an agent by name"""
-        for agent in self.agents:
-            if agent.full_name == name:
-                return agent
-
-        raise ValueError(f"Agent {name} not found")
-
-    def get_agent_by_id(self, id: int) -> Agent:
-        """Get an agent by id"""
-        for agent in self.agents:
-            if agent.id == id:
-                return agent
-
-        raise ValueError(f"Agent {id} not found")
-
-    def get_agents(self) -> list[Agent]:
-        """Get all agents"""
-        return self.agents
-
-    def get_agents_by_location(self, location: Location) -> list[Agent]:
-        """Get all agents at a location"""
-        agents = []
-        for agent in self.agents:
-            if agent.location.id == location.id:
-                agents.append(agent)
-
-        return agents
-
-    def make_location_context(self, agent: Agent, other_agents: list[Agent]):
-        # remove the agent from the list of other agents
-        other_agents = [a for a in other_agents if a.id != agent.id]
-
-        return (
-            "Current Location: \n"
-            + f"{agent.location.context_string}"
-            + "\n\nAgents in this location, with whom you can speak: \n- "
-            + "- ".join(
-                [f"{agent.full_name}: {agent.public_bio}\n" for agent in other_agents]
-            )
-        )
-
-    def run_for_one_step(self, events_manager: EventsManager) -> None:
-        """Run all the agents for one step"""
-        for agent in self.agents:
-            # Get the location context string
-            location_context = self.make_location_context(
-                agent, self.get_agents_by_location(agent.location)
-            )
-
-            agent.run_for_one_step(events_manager, location_context)
+        self._do_first_plan(events_manager, world_context)

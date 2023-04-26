@@ -8,7 +8,9 @@ from langchain.tools import BaseTool
 from typing_extensions import override
 
 from src.tools.company_directory import look_up_company_directory
+from src.tools.context import ToolContext
 
+from .directory import consult_directory
 from .name import ToolName
 from .send_message import send_message
 
@@ -35,24 +37,14 @@ class CustomTool(Tool):
         self.worldwide = worldwide
 
     @override
-    def run(self, agent_input: str | dict, system_context: dict = {}) -> List[BaseTool]:
-        # if the tool requires context, but none is provided, raise an error
-        if self.requires_context and not bool(system_context):
-            raise Exception(
-                f"tool {self.name} requires system_context, but none was provided"
-            )
-
+    def run(self, agent_input: str | dict, tool_context: ToolContext) -> List[BaseTool]:
         # if the tool requires context
         if self.requires_context:
-            # Combine the agent input and context into a dict
-            if isinstance(agent_input, str):
-                agent_input = {"agent_input": agent_input}
-            input = {**agent_input, **system_context}
+            input = {"agent_input": str(agent_input), "tool_context": tool_context}
 
         else:
             input = str(agent_input)
 
-        # Run the Tool with the combined input
         return super().run(input)
 
 
@@ -98,10 +90,10 @@ TOOLS: dict[ToolName, CustomTool] = {
         "human", requires_authorization=False, worldwide=True
     ),
     ToolName.COMPANY_DIRECTORY: CustomTool(
-        name="company-directory",
-        func=look_up_company_directory,
-        description="useful for when you need to get information on your colleagues, their skills and roles in the company. regardless of the input, it will always return the list of all your colleagues with the descriptions of their roles and skills",
-        requires_context=False,
+        name=ToolName.COMPANY_DIRECTORY.value,
+        func=consult_directory,
+        description="A directory of all the people you can speak with, detailing their full names, roles, and current locations. Useful for when you need help from another person.",
+        requires_context=True,  # this tool requires location_id as context
         requires_authorization=False,
         worldwide=True,
     ),

@@ -6,43 +6,66 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel
 
 from src.event.base import EventsManager
-from ..agent.base import AgentsManager
+from ..agent.base import Agent
 from ..location.base import Location
 from ..utils.database.database import supabase
+from .context import WorldContext
 
 
 class World(BaseModel):
     id: UUID
     name: str
     current_step: int
-    _locations: list[Location]
-    agents_manager: AgentsManager
+    locations: list[Location]
+    agents: list[Agent]
     events_manager: EventsManager
+    context: WorldContext
+
+    @property
+    def context(self):
+        return WorldContext(
+            agents = [agent._db_dict() for agent in self.agents],
+            locations = [location._db_dict() for location in self.locations]
+        )
 
     def __init__(self, name: str, current_step: int = 0, id: Optional[UUID] = None):
         if id is None:
             id = uuid4()
 
+        events_manager = EventsManager(current_step=current_step)
+
+        # get all locations
+        (_, locations), count = (
+            supabase.table("Locations")
+            .select("*")
+            .eq("world_id", id)
+            .execute()
+        )
+        locations = [Location(**location) for location in locations]
+
+        # get all agents
+        (_, agents), count = (
+            supabase.table("Agents")
+            .select("*")
+            .eq("world_id", id)
+            .execute()
+        )
+        agents = [Agent.from_db_dict(agent_dict, locations) for agent_dict in agents]
+
+        context = WorldContext(
+            agents = [agent._db_dict() for agent in agents],
+            locations = [location._db_dict() for location in locations]
+        )
+
         super().__init__(
             id=id,
             name=name,
             current_step=current_step,
-            agents_manager=AgentsManager(world_id=id),
-            events_manager=EventsManager(current_step=current_step),
+            locations=locations,
+            agents=agents,
+            events_manager=events_manager,
+            context = context
         )
-
-    @property
-    def locations(self) -> list[Location]:
-        if self._locations:
-            return self._locations
-
-        # get all locations with this id as world_id
-        data, count = (
-            supabase.table("Locations").select("*").eq("world_id", self.id).execute()
-        )
-        self._locations = [Location(**location) for location in data[1]]
-
-        return self._locations
 
     @classmethod
     def from_id(cls, id: UUID):
@@ -51,8 +74,12 @@ class World(BaseModel):
 
     @classmethod
     def from_name(cls, name: str):
-        data, count = supabase.table("Worlds").select("*").eq("name", name).execute()
-        return cls(**data[1][0])
+        (_, worlds), count = supabase.table("Worlds").select("*").eq("name", name).execute()
+
+        if not worlds:
+            raise ValueError(f"World with name {name} not found")
+
+        return cls(**worlds[0])
 
     def run_step(self):
 
@@ -60,10 +87,11 @@ class World(BaseModel):
         self.events_manager.refresh_events(self.current_step)
 
         # Run agents
-        self.agents_manager.run_for_one_step(self.events_manager)
-
-        # Add new events to agent memories
-        # ....
+        for agent in self.agents:
+        
+            agent.run_for_one_step(
+                self.events_manager, self.context
+            )
 
         # Increment step
         self.current_step += 1

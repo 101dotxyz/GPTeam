@@ -38,6 +38,9 @@ class WorldContext(BaseModel):
             events_manager=events_manager,
         )
 
+    def get_agents_at_location(self, location_id: str):
+        return [a for a in self.agents if str(a["location_id"]) == str(location_id)]
+
     def location_context_string(self, agent_id: UUID | str):
         if isinstance(agent_id, UUID):
             agent_id = str(agent_id)
@@ -45,12 +48,10 @@ class WorldContext(BaseModel):
         # get agent
         agent = [agent for agent in self.agents if agent["id"] == agent_id][0]
 
+        agents_at_location = self.get_agents_at_location(agent["location_id"])
+
         # get other agents in this location
-        other_agents = [
-            a
-            for a in self.agents
-            if a["location_id"] == agent["location_id"] and a["id"] != agent_id
-        ]
+        other_agents = [a for a in agents_at_location if a["id"] != agent_id]
 
         location = [
             loc for loc in self.locations if str(loc["id"]) == str(agent["location_id"])

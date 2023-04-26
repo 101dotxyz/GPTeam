@@ -459,7 +459,12 @@ class Agent(BaseModel):
     def _get_current_tools(self) -> list[CustomTool]:
         location_tools = self.location.available_tools
 
-        all_tools = get_tools(location_tools, include_worldwide=True)
+        all_tools = get_tools(
+            location_tools,
+            context=self.context,
+            agent_id=self.id,
+            include_worldwide=True,
+        )
 
         authorized_tools = [
             tool

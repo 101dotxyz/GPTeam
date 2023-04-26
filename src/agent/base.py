@@ -741,6 +741,14 @@ class Agent(BaseModel):
             self.location.id, step="last"
         )
 
+        new_messages = "\n".join(
+            [
+                event.description
+                for event in new_events
+                if event.type == EventType.MESSAGE
+            ]
+        )
+
         # Store them as observations for this agent
         for event in new_events:
             self._add_memory(event.description, MemoryType.OBSERVATION)
@@ -752,6 +760,8 @@ class Agent(BaseModel):
             llm=ChatModel(temperature=0).defaultModel,
         )
 
+        self._log("New Messages", LogColor.REACT, new_messages)
+
         # Make the reaction prompter
         reaction_prompter = Prompter(
             PromptString.REACT,
@@ -761,6 +771,7 @@ class Agent(BaseModel):
                 "private_bio": self.private_bio,
                 "directives": str(self.directives),
                 "recent_activity": self._summarize_activity(),
+                "new_messages": new_messages,
                 "current_plans": [
                     f"{index}. {plan.description}"
                     for index, plan in enumerate(self.plans)

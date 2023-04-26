@@ -74,16 +74,13 @@ def get_tools(
     agent_id: str | UUID,
     include_worldwide=False,
 ) -> List[CustomTool]:
-    if isinstance(agent_id, str):
-        agent_id = UUID(agent_id)
-
     location_id = context.get_agent_location_id(agent_id=agent_id)
 
     location_name = context.get_location_name(location_id=location_id)
 
     agents_at_location = context.get_agents_at_location(location_id=location_id)
 
-    other_agents = [a for a in agents_at_location if a["id"] != agent_id]
+    other_agents = [a for a in agents_at_location if str(a["id"]) != str(agent_id)]
 
     # names of other agents at location
     other_agent_names = ", ".join([a["full_name"] for a in other_agents])
@@ -100,15 +97,7 @@ def get_tools(
         ToolName.SPEAK: CustomTool(
             name="speak",
             func=send_message,
-            description=f"say something in the {location_name}. {other_agent_names} are also in the {location_name} and will hear what you say. You can say something to everyone, or address one of the other people at your location (one of {other_agent_names}). The input should be what you want to say. If you want to address someone, the input should be of the format full_name:message (e.g. David Summers:How are you doing today?).",
-            requires_context=True,
-            requires_authorization=False,
-            worldwide=True,
-        ),
-        ToolName.PRIVATE_MESSAGE: CustomTool(
-            name="private-message",
-            func=send_message,
-            description="privately message anyone in the company. The input should be of the form full_name:message (e.g. David Summers:How are you doing today?)",
+            description=f"say something in the {location_name}. {other_agent_names} are also in the {location_name} and will hear what you say. You can say something to everyone, or address one of the other people at your location (one of {other_agent_names}). The input should be what you want to say. If you want to address someone, the input should be of the format full_name, message (e.g. David Summers, How are you doing today?).",
             requires_context=True,
             requires_authorization=False,
             worldwide=True,

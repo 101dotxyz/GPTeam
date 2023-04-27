@@ -8,7 +8,6 @@ from ..event.base import EventsManager
 class WorldData(BaseModel):
     id: str
     name: str
-    current_step: int
 
 
 class WorldContext(BaseModel):
@@ -23,9 +22,7 @@ class WorldContext(BaseModel):
         locations: dict,
         world: WorldData,
     ):
-        events_manager = EventsManager(
-            current_step=world.current_step, world_id=world.id
-        )
+        events_manager = EventsManager(world_id=world.id)
         # convert all UUIDs to strings
         for agent in agents:
             agent["id"] = str(agent["id"])
@@ -102,6 +99,10 @@ class WorldContext(BaseModel):
 
         return agent["location_id"]
 
+    def get_agent_id_from_full_name(self, full_name: str) -> str:
+        agent = [agent for agent in self.agents if agent["full_name"] == full_name][0]
+        return str(agent["id"])
+
     def get_agent_full_name(self, agent_id: UUID | str) -> str:
         if isinstance(agent_id, UUID):
             agent_id = str(agent_id)
@@ -116,6 +117,3 @@ class WorldContext(BaseModel):
         agent["location_id"] = str(agent["location_id"])
         new_agents.append(agent)
         self.agents = new_agents
-
-    def update_step(self, step: int):
-        self.world.current_step = step

@@ -9,10 +9,6 @@ from ..tools.context import ToolContext
 def consult_directory(agent_input, tool_context: ToolContext):
     """Shows a list of all agents and their current locations"""
 
-    # TIMC - For testing purposes
-    if input("Agent wants to consult the directory. Continue? (y/n) ") != "y":
-        return
-
     # first, craft the event object
     agents = tool_context.context.agents
 

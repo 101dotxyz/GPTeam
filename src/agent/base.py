@@ -1,7 +1,7 @@
 import json
 import os
 from ctypes import Union
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal, Optional, Type, cast
 from uu import Error
 from uuid import UUID, uuid4
@@ -34,6 +34,7 @@ from ..utils.prompt import Prompter, PromptString
 from ..world.context import WorldContext
 from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
+from .message import AgentMessage
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
@@ -53,6 +54,7 @@ class Agent(BaseModel):
     private_bio: str
     public_bio: str
     directives: Optional[list[str]]
+    last_checked_events: datetime
     memories: list[SingleMemory]
     plans: list[SinglePlan]
     authorized_tools: list[ToolName]
@@ -70,6 +72,7 @@ class Agent(BaseModel):
         full_name: str,
         private_bio: str,
         public_bio: str,
+        last_checked_events: datetime,
         context: WorldContext,
         directives: list[str] = None,
         memories: list[SingleMemory] = [],
@@ -91,6 +94,7 @@ class Agent(BaseModel):
             private_bio=private_bio,
             public_bio=public_bio,
             directives=directives,
+            last_checked_events=last_checked_events,
             authorized_tools=authorized_tools,
             memories=memories,
             plans=plans,
@@ -188,6 +192,7 @@ class Agent(BaseModel):
             private_bio=agent_dict["private_bio"],
             public_bio=agent_dict["public_bio"],
             directives=agent_dict["directives"],
+            last_checked_events=agent_dict["last_checked_events"],
             world_id=agent_dict["world_id"],
             location=agent_location,
             context=context,
@@ -262,6 +267,7 @@ class Agent(BaseModel):
             private_bio=agent.get("private_bio"),
             public_bio=agent.get("public_bio"),
             directives=agent.get("directives"),
+            last_checked_events=agent.get("last_checked_events"),
             authorized_tools=authorized_tools,
             memories=[SingleMemory(**memory) for memory in memories_data[1]],
             plans=plans,
@@ -486,7 +492,6 @@ class Agent(BaseModel):
 
         # first emit the depature event to the db
         event = Event(
-            step=self.context.world.current_step,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {self.location.name}",
             location_id=self.location.id,
@@ -500,7 +505,6 @@ class Agent(BaseModel):
 
         # emit the arrival to the db
         event = Event(
-            step=self.context.world.current_step,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {location.name}",
             location_id=self.location.id,
@@ -734,46 +738,78 @@ class Agent(BaseModel):
         return new_plans
 
     def _respond_to_messages(self) -> None:
-        """Respond to all messages"""
+        """Respond to new messages"""
 
-        all_recent_messages: list[Event] = self.context.events_manager.get_events(
+        all_recent_message_events: list[Event] = self.context.events_manager.get_events(
             type=EventType.MESSAGE,
             location_id=self.location.id,
         )
 
-        new_messages = [
-            event
-            for event in all_recent_messages
-            if event.step == self.context.world.current_step
+        new_messages_at_location = [
+            AgentMessage.from_event(event=event, context=self.context)
+            for event in all_recent_message_events
+            # TODO: Only respond to messages that were not yet seen by this agent
+            if event.timestamp > datetime.now() - timedelta(minutes=5)
         ]
 
-        for event in new_messages:
-            message = event.description
+        new_messages = [
+            message
+            for message in new_messages_at_location
+            if (message.recipient == self.id or message.recipient is None)
+            and message.sender != self.id
+        ]
 
-            if ":" in message:
-                self._log("Received Message", LogColor.MESSAGE, message)
-                recipient, content = message.split(":", 1)
+        self._log(
+            "New Messages",
+            LogColor.MESSAGE,
+            "\n".join(new_messages),
+        )
 
-            else:
-                recipient = None
-                content = message
+        for message in new_messages:
+            sender_name = self.context.get_agent_full_name(message.sender)
 
-            if recipient == self.full_name:
-                self._log("Responding to Message", LogColor.MESSAGE, message)
+            self._log("Responding to Message", LogColor.MESSAGE, message)
+            # Make the reaction prompter
+            reaction_prompter = Prompter(
+                PromptString.RESPOND,
+                {
+                    "sender_name": sender_name,
+                    "full_name": self.full_name,
+                    "private_bio": self.private_bio,
+                    "directives": str(self.directives),
+                    "current_plans": [
+                        f"{index}. {plan.description}"
+                        for index, plan in enumerate(self.plans)
+                    ],
+                    "location_context": self.context.location_context_string(self.id),
+                },
+            )
+
+            # Get the reaction
+            llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+            response = llm.get_chat_completion(
+                reaction_prompter.prompt,
+                loading_text="🤔 Responding to message...",
+            )
+
+            self._log("Response", LogColor.MESSAGE, response)
 
     def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
 
         # Pull in the events from the last step at this location
-        all_events = self.context.events_manager.get_events(
+        all_events: list[Event] = self.context.events_manager.get_events(
             location_id=self.location.id,
-            step=self.context.world.current_step - 1,
+            after=self.last_checked_events,
         )
 
-        new_events = [event for event in all_events if event.id != EventType.MESSAGE]
+        # Update the last checked events
+        self.last_checked_events = datetime.now()
+
+        new_events = [event for event in all_events if event.type != EventType.MESSAGE]
 
         new_messages = [
-            event.description for event in all_events if event.id == EventType.MESSAGE
+            event.description for event in all_events if event.type == EventType.MESSAGE
         ]
 
         # Store them as observations for this agent
@@ -786,8 +822,6 @@ class Agent(BaseModel):
             parser=PydanticOutputParser(pydantic_object=LLMReactionResponse),
             llm=ChatModel(temperature=0).defaultModel,
         )
-
-        self._log("New Messages", LogColor.REACT, "\n".join(new_messages))
 
         # Make the reaction prompter
         reaction_prompter = Prompter(
@@ -862,7 +896,6 @@ class Agent(BaseModel):
         )
 
         event = Event(
-            step=self.context.world.current_step,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} said the following: {response}",
             location_id=self.location.id,
@@ -898,7 +931,6 @@ class Agent(BaseModel):
         if resp.status == PlanStatus.FAILED:
             event = Event(
                 timestamp=datetime.now(pytz.utc),
-                step=self.context.world.current_step,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} has failed to complete the following: {plan.description} at the location: {plan.location.name}. {self.full_name} had the following problem: {resp.output}.",
                 location_id=self.location.id,
@@ -915,7 +947,6 @@ class Agent(BaseModel):
 
         elif resp.status == PlanStatus.IN_PROGRESS:
             event = Event(
-                step=self.context.world.current_step,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}.",
                 location_id=self.location.id,
@@ -933,7 +964,6 @@ class Agent(BaseModel):
             self.plans = [p for p in self.plans if p.description != plan.description]
 
             event = Event(
-                step=self.context.world.current_step,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} has just completed the following: {plan.description} at the location: {plan.location.name}. The result was: {resp.output}.",
                 location_id=self.location.id,
@@ -962,6 +992,9 @@ class Agent(BaseModel):
         self._act(current_plan)
 
     def run_for_one_step(self):
+        # Refresh the events
+        self.context.events_manager.refresh_events()
+
         # First we decide if we need to reflect
         if self._should_reflect():
             self._reflect()
@@ -972,6 +1005,9 @@ class Agent(BaseModel):
         # If the reaction calls for a new plan, make one
         if react_response.reaction == Reaction.REPLAN:
             self._plan(react_response.thought_process)
+
+        # Respond to all messages
+        self._respond_to_messages()
 
         # Work through the plans
         self._do_first_plan()

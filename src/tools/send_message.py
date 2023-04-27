@@ -26,13 +26,8 @@ def send_message(agent_input, tool_context: ToolContext):
     # Tim Connors said: "Hello, world!"
     event_message = f"{agent_name} said: '{agent_input}'"
 
-    # TIMC - For testing purposes
-    if input("Agent wants to send a message. Continue? (y/n) ") != "y":
-        return
-
     # first, craft the event object
     event = Event(
-        step=tool_context.context.world.current_step,
         type=EventType.MESSAGE,
         description=event_message,
         location_id=agent_location_id,
@@ -48,10 +43,4 @@ def send_message(agent_input, tool_context: ToolContext):
         event_message,
     )
 
-    print(
-        "Message added to event manager at step "
-        + str(tool_context.context.world.current_step)
-        + "."
-    )
-
-    return "Message sent!"
+    return event_message

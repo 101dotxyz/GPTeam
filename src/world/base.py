@@ -20,7 +20,7 @@ class World(BaseModel):
     agents: list[Agent]
     context: WorldContext
 
-    def __init__(self, name: str, current_step: int = 0, id: Optional[UUID] = None):
+    def __init__(self, name: str, id: Optional[UUID] = None):
         if id is None:
             id = uuid4()
 
@@ -35,7 +35,7 @@ class World(BaseModel):
         )
 
         context = WorldContext(
-            world=WorldData(id=id, name=name, current_step=current_step),
+            world=WorldData(id=id, name=name),
             agents=agents,
             locations=locations,
         )
@@ -71,18 +71,9 @@ class World(BaseModel):
         return cls(**worlds[0])
 
     def run_step(self):
-        # Refresh events for this step
-        self.context.events_manager.refresh_events(self.context.world.current_step)
-
         # Run agents
         for agent in self.agents:
             agent.run_for_one_step()
-
-        # Increment step
-        self.context.update_step(self.context.world.current_step + 1)
-        supabase.table("Worlds").update(
-            {"current_step": self.context.world.current_step}
-        ).eq("id", str(self.id)).execute()
 
     def run(self, steps: int = 1):
         for _ in range(steps):

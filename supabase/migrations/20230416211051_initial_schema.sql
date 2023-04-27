@@ -13,6 +13,7 @@ CREATE TABLE "public"."Agents" (
     "authorized_tools" text[],
     "directives" text[],
     "world_id" uuid,
+    "last_checked_events" timestamp with time zone,
     "ordered_plan_ids" uuid[],
     "location_id" uuid,
     "discord_bot_token" text,
@@ -50,7 +51,6 @@ create table "public"."Plans" (
 create table "public"."Events" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
     "timestamp" timestamp with time zone default now(),
-    "step" smallint,
     "type" event_type,
     "description" text,
     "agent_id" uuid,
@@ -73,7 +73,6 @@ create table "public"."Locations" (
 create table "public"."Worlds" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
     "name" text,
-    "current_step" smallint,
     PRIMARY KEY ("id")
 );
 

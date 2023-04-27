@@ -736,7 +736,7 @@ class Agent(BaseModel):
     def _respond_to_messages(self) -> None:
         """Respond to all messages"""
 
-        all_recent_messages = self.context.events_manager.get_events(
+        all_recent_messages: list[Event] = self.context.events_manager.get_events(
             type=EventType.MESSAGE,
             location_id=self.location.id,
         )
@@ -757,6 +757,9 @@ class Agent(BaseModel):
             else:
                 recipient = None
                 content = message
+
+            if recipient == self.full_name:
+                self._log("Responding to Message", LogColor.MESSAGE, message)
 
     def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""

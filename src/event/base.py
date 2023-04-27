@@ -33,6 +33,7 @@ class Event(BaseModel):
     timestamp: datetime
     step: int
     type: EventType
+    agent_id: Optional[UUID] = None
     description: str
     location_id: UUID
     witness_ids: list[UUID] = []
@@ -45,6 +46,7 @@ class Event(BaseModel):
         step: int,
         timestamp: datetime = datetime.now(pytz.utc),
         witness_ids: list[UUID] = [],
+        agent_id: Optional[UUID | str] = None,
         id: Optional[UUID] = None,
     ):
         if id is None:
@@ -52,6 +54,9 @@ class Event(BaseModel):
 
         if isinstance(location_id, str):
             location_id = UUID(location_id)
+
+        if isinstance(agent_id, str):
+            agent_id = UUID(agent_id)
 
         if witness_ids is None:
             witness_ids = []
@@ -62,6 +67,7 @@ class Event(BaseModel):
             description=description,
             timestamp=timestamp,
             step=step,
+            agent_id=agent_id,
             location_id=location_id,
             witness_ids=witness_ids,
         )
@@ -117,7 +123,7 @@ class EventsManager(BaseModel):
             world_id=world_id,
         )
 
-    def refresh_events(self, current_step: int = None):
+    def refresh_events(self, current_step: int = None) -> list[Event]:
         print_to_console(
             "Refreshing events...", LogColor.GENERAL, f"new step = {current_step}"
         )
@@ -176,7 +182,7 @@ class EventsManager(BaseModel):
         description: Optional[str] = None,
         witness_ids: Optional[list[UUID]] = None,
         refresh: Optional[bool] = False,
-    ) -> list["Event"]:
+    ) -> list[Event]:
         if refresh:
             self.refresh_events()
 

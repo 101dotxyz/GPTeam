@@ -1005,7 +1005,7 @@ class Agent(BaseModel):
         # If we have no plans, make some
         if len(self.plans) == 0:
             print(f"{self.full_name} has no plans, making some...")
-            plans = self._plan()
+            plans = await self._plan()
         # Otherwise, just use the existing plans
         else:
             plans = self.plans
@@ -1034,7 +1034,3 @@ class Agent(BaseModel):
 
         # Work through the plans
         await self._do_first_plan()
-
-    async def run(self):
-        while True:
-            await self.run_for_one_step()

@@ -1,4 +1,6 @@
 import asyncio
+import os
+from collections import deque
 from datetime import datetime
 from enum import Enum
 from typing import Optional
@@ -20,6 +22,11 @@ class World(BaseModel):
     locations: list[Location]
     agents: list[Agent]
     context: WorldContext
+    agent_queue: deque[tuple[Agent, asyncio.Lock]]
+    queue_lock: asyncio.Lock
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def __init__(self, name: str, id: Optional[UUID] = None):
         if id is None:
@@ -47,12 +54,17 @@ class World(BaseModel):
             for agent_dict in agents
         ]
 
+        agent_queue = deque([(agent, asyncio.Lock()) for agent in agents])
+        queue_lock = asyncio.Lock()
+
         super().__init__(
             id=id,
             name=name,
             locations=locations,
             agents=agents,
             context=context,
+            agent_queue=agent_queue,
+            queue_lock=queue_lock,
         )
 
     @classmethod
@@ -76,9 +88,26 @@ class World(BaseModel):
         tasks = [agent.run_for_one_step() for agent in self.agents]
         await asyncio.gather(*tasks)
 
+    async def run_agent_cycle(self):
+        while True:
+            async with self.queue_lock:
+                if not self.agent_queue:
+                    continue
+                agent, agent_lock = self.agent_queue.popleft()
+
+            # Attempt to acquire the agent's lock; if not acquired, move on to the next agent
+            if agent_lock.locked():
+                async with self.queue_lock:
+                    self.agent_queue.append((agent, agent_lock))
+                continue
+
+            await self.run_step_for_agent(agent, agent_lock)
+
+            async with self.queue_lock:
+                self.agent_queue.append((agent, agent_lock))
+
     async def run(self):
-        # TODO: Handle num agents > num threads - this will just run up to the number of threads.
-        tasks = [agent.run() for agent in self.agents]
+        tasks = [self.run_agent_cycle() for _ in range(os.cpu_count())]
         await asyncio.gather(*tasks)
 
 

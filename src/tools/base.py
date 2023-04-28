@@ -9,6 +9,7 @@ from typing_extensions import override
 
 from src.tools.company_directory import look_up_company_directory
 from src.tools.context import ToolContext
+from src.utils.prompt import PromptString
 
 from .directory import consult_directory
 from .name import ToolName
@@ -19,6 +20,7 @@ class CustomTool(Tool):
     requires_context: Optional[bool] = False
     requires_authorization: bool = False
     worldwide: bool = True
+    summarize: Optional[PromptString] = None
 
     def __init__(
         self,
@@ -28,6 +30,7 @@ class CustomTool(Tool):
         requires_context: Optional[bool],
         worldwide: bool,
         requires_authorization: bool,
+        summarize: Optional[PromptString] = None,
         **kwargs: Any,
     ):
         super().__init__(name, func, description, **kwargs)
@@ -35,6 +38,7 @@ class CustomTool(Tool):
         self.requires_context = requires_context
         self.requires_authorization = requires_authorization
         self.worldwide = worldwide
+        self.summarize = summarize
 
     @override
     def run(self, agent_input: str | dict, tool_context: ToolContext) -> List[BaseTool]:
@@ -49,7 +53,10 @@ class CustomTool(Tool):
 
 
 def load_built_in_tool(
-    tool: str, worldwide=True, requires_authorization=False
+    tool: str,
+    worldwide=True,
+    requires_authorization=False,
+    summarize: Optional[PromptString] = None,
 ) -> CustomTool:
     tools = load_tools(tool_names=[tool], llm=OpenAI())
 
@@ -62,6 +69,7 @@ def load_built_in_tool(
         worldwide=worldwide,
         requires_authorization=requires_authorization,
         args_schema=tool.args_schema,
+        summarize=summarize,
         requires_context=False,
     )
 
@@ -71,6 +79,7 @@ TOOLS: dict[ToolName, CustomTool] = {
         name="search",
         func=GoogleSearchAPIWrapper().run,
         description="useful for when you need to search for information you do not know. the input to this should be a single search term.",
+        summarize=PromptString.GOSSIP_SEARCH,
         requires_context=False,
         requires_authorization=False,
         worldwide=True,
@@ -79,6 +88,7 @@ TOOLS: dict[ToolName, CustomTool] = {
         name="speak",
         func=send_message,
         description="useful for when you need to speak to someone at your location. the input to this should be a single message, including the name of the person you want to speak to. e.g. David Summers: Do you know the printing code?",
+        summarize=PromptString.GOSSIP_SPEAK,
         requires_context=True,
         requires_authorization=False,
         worldwide=True,
@@ -87,12 +97,16 @@ TOOLS: dict[ToolName, CustomTool] = {
         "wolfram-alpha", requires_authorization=False, worldwide=True
     ),
     ToolName.HUMAN: load_built_in_tool(
-        "human", requires_authorization=False, worldwide=True
+        "human",
+        summarize=PromptString.GOSSIP_HUMAN,
+        requires_authorization=False,
+        worldwide=True,
     ),
     ToolName.COMPANY_DIRECTORY: CustomTool(
         name=ToolName.COMPANY_DIRECTORY.value,
         func=consult_directory,
-        description="A directory of all the people you can speak with, detailing their full names, roles, and current locations. Useful for when you need help from another person.",
+        description="A directory of all the people you can speak with, detailing their full names, roles, and current locations. Useful for when you need find out information about other people working at the company.",
+        summarize=PromptString.GOSSIP_COMPANY_DIRECTORY,
         requires_context=True,  # this tool requires location_id as context
         requires_authorization=False,
         worldwide=True,

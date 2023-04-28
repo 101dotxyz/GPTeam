@@ -4,10 +4,10 @@ from enum import Enum
 from langchain.schema import BaseMessage, SystemMessage
 from pydantic import BaseModel
 
+
 class Examples(Enum):
-    PLAN_EXAMPLES = [
-        ""
-    ]
+    PLAN_EXAMPLES = [""]
+
 
 class PromptString(Enum):
     REFLECTION_QUESTIONS = "Here are a list of statements:\n{memory_descriptions}\n\nGiven only the information above, what are 3 most salient high-level questions we can answer about the subjects in the statements?\n\n{format_instructions}"
@@ -22,9 +22,17 @@ class PromptString(Enum):
 
     EXECUTE_PLAN = "Given the tools and context, complete the task as best you can. Here are the tools you have access to:\n\n{tools}\n\nHere is the location context:\n{location_context}\n\nYour response should use the following format:\n\nTask: the task you must complete\nThought: you should always think about what to do\nAction: the action to take, should be one of [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeat N times)\nThought: 'I have completed the task'\nFinal Response: the final response to the task\n\nIf you determine that you are incapable of completing the task with the tools you have been given, return 'Final Response: Need Help'\nBegin!\n\nTask: {input}\n\n{agent_scratchpad}"
 
-    REACT = 'You are a reaction AI. Given the character\'s personal info, current plans, and location context, decide whether they should continue with their current plans ("maintain_plans"), or if they should make new plans based on the new events ("replan"). If the events have a material impact on the character\'s goals or existing plans, they should replan. You should always replan if you see that another person has said something to you, or has said something that applies to you, or is looking for information that you can provide. Always include a \'thought process\' that describes why the reaction was chosen and what should be done next.\n\n{format_instructions}\n\nLet\'s Being!\n\nName: {full_name}\nBio: {private_bio}\nGoals: {directives}\nRecent Activity: {recent_activity}\nCurrent Plans: {current_plans}\nLocation Context: {location_context}\n\nNew Events: {event_descriptions}.'
+    REACT = "You are a reaction AI. Given the character's personal info, current plans, and location context, decide whether they should continue with their current plans (\"maintain_plans\"), or if they should make new plans based on the new events (\"replan\"). If the events have a material impact on the character's goals or existing plans, they should replan. You should always replan if you see that another person has said something to you, or has said something that applies to you, or is looking for information that you can provide. Always include a 'thought process' that describes why the reaction was chosen and what should be done next.\n\n{format_instructions}\n\nLet's Being!\n\nName: {full_name}\nBio: {private_bio}\nGoals: {directives}\nRecent Activity: {recent_activity}\nCurrent Plans: {current_plans}\nLocation Context: {location_context}\n\nNew Events: {event_descriptions}."
 
-    GOSSIP = "You are currently working on the following plan: {plan_description}. You have just used the tool {tool_name} with the following input {tool_input} and got the following result {tool_result}. Write a single sentence of useful information to share with others in your location about what you have just found out."
+    GOSSIP_DEFAULT = "You are currently working on the following plan: {plan_description}. You have just used the tool {tool_name} with the following input {tool_input} and got the following result {tool_result}. Write a single sentence with useful information to share with others in your location about what you have just found out."
+
+    GOSSIP_COMPANY_DIRECTORY = "You have just consulted the company directory and found out the following: {tool_result}. Write a single sentence with useful information to share with others in your location about how what you found out from the company directory can help you accomplish your plan: {plan_description}."
+
+    GOSSIP_SEARCH = "You have just searched Google with the following search input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}."
+
+    GOSSIP_SPEAK = "You have just said {tool_input}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}."
+
+    GOSSIP_HUMAN = "You have just asked a human for help by saying {tool_input}. This is what they replied: {tool_result}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}."
 
 
 class Prompter(BaseModel):

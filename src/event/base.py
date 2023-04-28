@@ -75,6 +75,7 @@ class Event(BaseModel):
             "id": str(self.id),
             "timestamp": str(self.timestamp),
             "type": self.type.value,
+            "agent_id": str(self.agent_id),
             "description": self.description,
             "location_id": str(self.location_id),
             "witness_ids": [str(witness_id) for witness_id in self.witness_ids],
@@ -141,6 +142,7 @@ class EventsManager(BaseModel):
                 type=event["type"],
                 description=event["description"],
                 location_id=event["location_id"]["id"],
+                agent_id=event["agent_id"],
                 timestamp=datetime.fromisoformat(event["timestamp"]),
                 witness_ids=event["witness_ids"],
             )

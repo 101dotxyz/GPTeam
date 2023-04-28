@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 from typing import List
 
+import openai
 import pytz
 from json_log_formatter import JSONFormatter
 
@@ -52,11 +53,6 @@ def get_key_value(text):
 class OpenAIFilter(logging.Filter):
     def filter(self, record):
         return "openai" in record.name
-
-
-class LLMRequestFilter(logging.Filter):
-    def filter(self, record):
-        return "processing_ms=" not in record.message
 
 
 class CustomJsonFormatter(JSONFormatter):
@@ -132,5 +128,12 @@ def set_up_logging():
 
     logger.addHandler(file_handler)
 
-    # Set minimum logging level for langchain.llms to avoid info messages about API response times
-    logger.addFilter(LLMRequestFilter())
+
+class LoggingFilter(logging.Filter):
+    def filter(self, record):
+        print("logging filter", record)
+        return True
+
+
+def init_logging():
+    openai.util.logger.setLevel(logging.WARNING)

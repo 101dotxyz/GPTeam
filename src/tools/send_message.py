@@ -28,6 +28,7 @@ def send_message(agent_input, tool_context: ToolContext):
 
     # first, craft the event object
     event = Event(
+        agent_id=tool_context.agent_id,
         type=EventType.MESSAGE,
         description=event_message,
         location_id=agent_location_id,

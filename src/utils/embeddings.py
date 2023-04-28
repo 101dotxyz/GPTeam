@@ -13,9 +13,11 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     return similarity
 
 
-def get_embedding(text: str, model="text-embedding-ada-002") -> np.ndarray:
-    embedding: list[float] = openai.Embedding.create(
+async def get_embedding(text: str, model="text-embedding-ada-002") -> np.ndarray:
+    response: list[float] = await openai.Embedding.acreate(
         input=[text.replace("\n", " ")], model=model
-    )["data"][0]["embedding"]
+    )
+
+    embedding = response["data"][0]["embedding"]
 
     return np.array(embedding)

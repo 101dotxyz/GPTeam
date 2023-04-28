@@ -15,6 +15,7 @@ class AgentMessage(BaseModel):
     recipient: Optional[str] = None
     location: Location
     timestamp: datetime
+    context: WorldContext
 
     @classmethod
     def from_event(cls, event: Event, context: WorldContext):
@@ -44,10 +45,11 @@ class AgentMessage(BaseModel):
             sender=str(event.agent_id),
             location=location,
             recipient=recipient,
+            context=context,
             timestamp=event.timestamp,
         )
 
-    def get_chat_history(self) -> list["AgentMessage"]:
+    def get_chat_history(self) -> str:
         if self.recipient is None:
             recent_message_events_at_location = self.context.events_manager.get_events(
                 type=EventType.MESSAGE,
@@ -59,7 +61,12 @@ class AgentMessage(BaseModel):
                 for event in recent_message_events_at_location
             ]
 
-            return recent_messages_at_location
+            formatted_messages = [
+                f"{self.context.get_agent_full_name(m.sender)}: {m.content} @ {m.timestamp}"
+                for m in recent_messages_at_location
+            ]
+
+            return "\n".join(formatted_messages)
 
     def __str__(self):
-        return f"{self.sender}: {self.content}"
+        return f"{self.content}"

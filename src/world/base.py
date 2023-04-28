@@ -1,5 +1,5 @@
 import asyncio
-import datetime
+from datetime import datetime
 from enum import Enum
 from typing import Optional
 from uuid import UUID, uuid4
@@ -76,9 +76,10 @@ class World(BaseModel):
         tasks = [agent.run_for_one_step() for agent in self.agents]
         await asyncio.gather(*tasks)
 
-    async def run(self, steps: int = 1):
-        for _ in range(steps):
-            await self.run_step()
+    async def run(self):
+        # TODO: Handle num agents > num threads - this will just run up to the number of threads.
+        tasks = [agent.run() for agent in self.agents]
+        await asyncio.gather(*tasks)
 
 
 def get_worlds():

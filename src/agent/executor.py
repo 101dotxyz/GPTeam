@@ -101,8 +101,10 @@ class PlanExecutor(BaseModel):
         super().__init__(agent_id=agent_id, context=context)
 
     def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
+        full_name = self.context.get_agent_full_name(self.agent_id)
+
         prompt = CustomPromptTemplate(
-            template=PromptString.EXECUTE_PLAN.value,
+            template=PromptString.EXECUTE_PLAN.value.replace("{full_name}", full_name),
             tools=tools,
             # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
             # This includes the `intermediate_steps` variable because that is needed

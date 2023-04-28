@@ -19,6 +19,7 @@ from ..tools.base import CustomTool, get_tools
 from ..tools.name import ToolName
 from ..utils.colors import LogColor
 from ..utils.database.database import supabase
+from ..utils.embeddings import get_embedding
 from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
@@ -298,6 +299,7 @@ class Agent(BaseModel):
             type=type,
             description=description,
             importance=await self._calculate_importance(description),
+            embedding=await get_embedding(description),
             related_memory_ids=related_memory_ids,
         )
 
@@ -387,10 +389,10 @@ class Agent(BaseModel):
             "location_id": self.location.id,
         }
 
-    def _related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
+    async def _related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
         # Calculate relevance for each memory and store it in a list of dictionaries
         memories_with_relevance = [
-            RelatedMemory(memory=memory, relevance=memory.relevance(query))
+            RelatedMemory(memory=memory, relevance=await memory.relevance(query))
             for memory in self.memories
         ]
 
@@ -494,6 +496,7 @@ class Agent(BaseModel):
 
         # first emit the depature event to the db
         event = Event(
+            agent_id=self.id,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {self.location.name}",
             location_id=self.location.id,
@@ -507,6 +510,7 @@ class Agent(BaseModel):
 
         # emit the arrival to the db
         event = Event(
+            agent_id=self.id,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {location.name}",
             location_id=self.location.id,
@@ -558,7 +562,7 @@ class Agent(BaseModel):
         # For each question in the parsed questions...
         for question in parsed_questions_response.questions:
             # Get the related memories
-            related_memories = self._related_memories(question, 20)
+            related_memories = await self._related_memories(question, 20)
 
             # Format them into a string
             memory_strings = [
@@ -742,14 +746,20 @@ class Agent(BaseModel):
     async def _respond_to_messages(self) -> None:
         """Respond to new messages"""
 
-        all_recent_message_events: list[Event] = self.context.events_manager.get_events(
-            type=EventType.MESSAGE,
+        all_events: list[Event] = self.context.events_manager.get_events(
             location_id=self.location.id,
+            after=self.last_checked_events,
         )
+
+        new_events = [event for event in all_events if event.type != EventType.MESSAGE]
+
+        new_message_events: list[Event] = [
+            event for event in all_events if event.type == EventType.MESSAGE
+        ]
 
         new_messages_at_location = [
             AgentMessage.from_event(event=event, context=self.context)
-            for event in all_recent_message_events
+            for event in new_message_events
             # TODO: Only respond to messages that were not yet seen by this agent
             if event.timestamp > datetime.now(pytz.utc) - timedelta(minutes=5)
         ]
@@ -768,8 +778,11 @@ class Agent(BaseModel):
         )
 
         for message in new_messages:
-            self._log("Responding to Message", LogColor.MESSAGE, message)
             sender_name = self.context.get_agent_full_name(message.sender)
+
+            chat_history = message.get_chat_history()
+
+            print("chat history", chat_history)
 
             # Make the reaction prompter
             reaction_prompter = Prompter(
@@ -783,6 +796,7 @@ class Agent(BaseModel):
                         f"{index}. {plan.description}"
                         for index, plan in enumerate(self.plans)
                     ],
+                    "chat_history": chat_history,
                     "location_context": self.context.location_context_string(self.id),
                 },
             )
@@ -879,6 +893,7 @@ class Agent(BaseModel):
         reaction_prompter = Prompter(
             PromptString.GOSSIP,
             {
+                "full_name": self.full_name,
                 "plan_description": plan.description,
                 "tool_name": result.tool.name,
                 "tool_input": result.tool_input,
@@ -900,6 +915,7 @@ class Agent(BaseModel):
         )
 
         event = Event(
+            agent_id=self.id,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} said the following: {response}",
             location_id=self.location.id,
@@ -934,6 +950,7 @@ class Agent(BaseModel):
 
         if resp.status == PlanStatus.FAILED:
             event = Event(
+                agent_id=self.id,
                 timestamp=datetime.now(pytz.utc),
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} has failed to complete the following: {plan.description} at the location: {plan.location.name}. {self.full_name} had the following problem: {resp.output}.",
@@ -951,6 +968,7 @@ class Agent(BaseModel):
 
         elif resp.status == PlanStatus.IN_PROGRESS:
             event = Event(
+                agent_id=self.id,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}.",
                 location_id=self.location.id,
@@ -968,6 +986,7 @@ class Agent(BaseModel):
             self.plans = [p for p in self.plans if p.description != plan.description]
 
             event = Event(
+                agent_id=self.id,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} has just completed the following: {plan.description} at the location: {plan.location.name}. The result was: {resp.output}.",
                 location_id=self.location.id,
@@ -1015,3 +1034,7 @@ class Agent(BaseModel):
 
         # Work through the plans
         await self._do_first_plan()
+
+    async def run(self):
+        while True:
+            await self.run_for_one_step()

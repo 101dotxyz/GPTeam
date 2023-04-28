@@ -287,7 +287,7 @@ class Agent(BaseModel):
         memories = [SingleMemory(**memory) for memory in data]
         return memories
 
-    def _add_memory(
+    async def _add_memory(
         self,
         description: str,
         type: MemoryType = MemoryType.OBSERVATION,
@@ -297,7 +297,7 @@ class Agent(BaseModel):
             agent_id=self.id,
             type=type,
             description=description,
-            importance=self._calculate_importance(description),
+            importance=await self._calculate_importance(description),
             related_memory_ids=related_memory_ids,
         )
 
@@ -315,6 +315,7 @@ class Agent(BaseModel):
             "full_name": self.full_name,
             "private_bio": self.private_bio,
             "directives": self.directives,
+            "last_checked_events": self.last_checked_events.isoformat(),
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
         }
 
@@ -380,6 +381,7 @@ class Agent(BaseModel):
             "private_bio": self.private_bio,
             "public_bio": self.public_bio,
             "directives": self.directives,
+            "last_checked_events": self.last_checked_events.isoformat(),
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
             "world_id": self.world_id,
             "location_id": self.location.id,
@@ -399,7 +401,7 @@ class Agent(BaseModel):
 
         return sorted_memories[:k]
 
-    def _summarize_activity(self, k: int = 20) -> str:
+    async def _summarize_activity(self, k: int = 20) -> str:
         recent_memories = sorted(
             self.memories, key=lambda memory: memory.created_at, reverse=True
         )[:k]
@@ -419,7 +421,7 @@ class Agent(BaseModel):
 
         low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
 
-        response = low_temp_llm.get_chat_completion(
+        response = await low_temp_llm.get_chat_completion(
             summary_prompter.prompt,
             loading_text="🤔 Summarizing recent activity...",
         )
@@ -431,7 +433,7 @@ class Agent(BaseModel):
     ):
         print_to_console(f"{self.full_name}: {title}", color, description)
 
-    def _calculate_importance(self, memory_description: str) -> int:
+    async def _calculate_importance(self, memory_description: str) -> int:
         # Set up a complex chat model
         complex_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
 
@@ -451,7 +453,7 @@ class Agent(BaseModel):
             },
         )
 
-        response = complex_llm.get_chat_completion(
+        response = await complex_llm.get_chat_completion(
             importance_prompter.prompt,
             loading_text="🤔 Calculating memory importance...",
         )
@@ -514,7 +516,7 @@ class Agent(BaseModel):
         # update the agents row in the db
         self._update_agent_row()
 
-    def _reflect(self):
+    async def _reflect(self):
         recent_memories = sorted(
             self.memories,
             key=lambda memory: memory.last_accessed or memory.created_at,
@@ -545,7 +547,7 @@ class Agent(BaseModel):
         )
 
         # Get the reflection questions
-        response = chat_llm.get_chat_completion(
+        response = await chat_llm.get_chat_completion(
             questions_prompter.prompt,
             loading_text="🤔 Thinking about what to reflect on...",
         )
@@ -583,7 +585,7 @@ class Agent(BaseModel):
             )
 
             # Get the reflection insights
-            response = chat_llm.get_chat_completion(
+            response = await chat_llm.get_chat_completion(
                 reflection_prompter.prompt,
                 loading_text="🤔 Reflecting",
             )
@@ -602,13 +604,13 @@ class Agent(BaseModel):
                 ]
 
                 # Add a new memory
-                self._add_memory(
+                await self._add_memory(
                     description=reflection_insight.insight,
                     type=MemoryType.REFLECTION,
                     related_memory_ids=related_memory_ids,
                 )
 
-    def _plan(self, thought_process: str = "") -> list[SinglePlan]:
+    async def _plan(self, thought_process: str = "") -> list[SinglePlan]:
         """Trigger the agent's planning process
 
         Args:
@@ -628,7 +630,7 @@ class Agent(BaseModel):
         )
 
         # Get a summary of the recent activity
-        recent_activity = self._summarize_activity()
+        recent_activity = await self._summarize_activity()
 
         self._log("Recent Activity Summary", LogColor.PLAN, recent_activity)
 
@@ -658,7 +660,7 @@ class Agent(BaseModel):
         chat_llm = ChatModel(temperature=0.5, streaming=True, request_timeout=600)
 
         # Get the plans
-        response = chat_llm.get_chat_completion(
+        response = await chat_llm.get_chat_completion(
             plan_prompter.prompt,
             loading_text="🤔 Making plans...",
         )
@@ -681,7 +683,7 @@ class Agent(BaseModel):
             )
 
             # Get the plans
-            response = chat_llm.get_chat_completion(
+            response = await chat_llm.get_chat_completion(
                 plan_prompter.prompt
                 + [
                     AIMessage(content=response),
@@ -737,7 +739,7 @@ class Agent(BaseModel):
 
         return new_plans
 
-    def _respond_to_messages(self) -> None:
+    async def _respond_to_messages(self) -> None:
         """Respond to new messages"""
 
         all_recent_message_events: list[Event] = self.context.events_manager.get_events(
@@ -749,7 +751,7 @@ class Agent(BaseModel):
             AgentMessage.from_event(event=event, context=self.context)
             for event in all_recent_message_events
             # TODO: Only respond to messages that were not yet seen by this agent
-            if event.timestamp > datetime.now() - timedelta(minutes=5)
+            if event.timestamp > datetime.now(pytz.utc) - timedelta(minutes=5)
         ]
 
         new_messages = [
@@ -762,13 +764,13 @@ class Agent(BaseModel):
         self._log(
             "New Messages",
             LogColor.MESSAGE,
-            "\n".join(new_messages),
+            "\n".join([m.content for m in new_messages]),
         )
 
         for message in new_messages:
+            self._log("Responding to Message", LogColor.MESSAGE, message)
             sender_name = self.context.get_agent_full_name(message.sender)
 
-            self._log("Responding to Message", LogColor.MESSAGE, message)
             # Make the reaction prompter
             reaction_prompter = Prompter(
                 PromptString.RESPOND,
@@ -787,14 +789,14 @@ class Agent(BaseModel):
 
             # Get the reaction
             llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
-            response = llm.get_chat_completion(
+            response = await llm.get_chat_completion(
                 reaction_prompter.prompt,
                 loading_text="🤔 Responding to message...",
             )
 
             self._log("Response", LogColor.MESSAGE, response)
 
-    def _react(self) -> LLMReactionResponse:
+    async def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
 
         # Pull in the events from the last step at this location
@@ -802,9 +804,6 @@ class Agent(BaseModel):
             location_id=self.location.id,
             after=self.last_checked_events,
         )
-
-        # Update the last checked events
-        self.last_checked_events = datetime.now()
 
         new_events = [event for event in all_events if event.type != EventType.MESSAGE]
 
@@ -814,7 +813,7 @@ class Agent(BaseModel):
 
         # Store them as observations for this agent
         for event in new_events:
-            self._add_memory(event.description, MemoryType.OBSERVATION)
+            await self._add_memory(event.description, MemoryType.OBSERVATION)
 
         # LLM call to decide how to react to new events
         # Make the reaction parser
@@ -831,7 +830,7 @@ class Agent(BaseModel):
                 "full_name": self.full_name,
                 "private_bio": self.private_bio,
                 "directives": str(self.directives),
-                "recent_activity": self._summarize_activity(),
+                "recent_activity": await self._summarize_activity(),
                 "new_messages": "\n".join(new_messages),
                 "current_plans": [
                     f"{index}. {plan.description}"
@@ -847,7 +846,7 @@ class Agent(BaseModel):
 
         # Get the reaction
         llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
-        response = llm.get_chat_completion(
+        response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Deciding how to react...",
         )
@@ -856,7 +855,7 @@ class Agent(BaseModel):
         parsed_reaction_response: LLMReactionResponse = reaction_parser.parse(response)
 
         # add reaction to memory
-        self._add_memory(parsed_reaction_response.thought_process)
+        await self._add_memory(parsed_reaction_response.thought_process)
 
         self._log(
             "Reaction",
@@ -864,9 +863,14 @@ class Agent(BaseModel):
             f"Decided to {parsed_reaction_response.reaction.value}: {parsed_reaction_response.thought_process}",
         )
 
+        # Update the last checked events
+        self.last_checked_events = datetime.now(pytz.utc)
+        self.context.update_agent(self._db_dict())
+        self._update_agent_row()
+
         return parsed_reaction_response
 
-    def _gossip(
+    async def _gossip(
         self,
         plan: SinglePlan,
         result: PlanExecutorResponse,
@@ -884,7 +888,7 @@ class Agent(BaseModel):
 
         # Get the reaction
         llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
-        response = llm.get_chat_completion(
+        response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Creating gossip...",
         )
@@ -903,7 +907,7 @@ class Agent(BaseModel):
 
         self.context.events_manager.add_event(event)
 
-    def _act(
+    async def _act(
         self,
         plan: SinglePlan,
     ) -> None:
@@ -956,7 +960,7 @@ class Agent(BaseModel):
 
             self._log("Action In Progress", LogColor.ACT, f"{plan.description}")
 
-            self._gossip(plan, resp)
+            await self._gossip(plan, resp)
 
         # If the plan is done, remove it from the list of plans
         elif resp.status == PlanStatus.DONE:
@@ -973,7 +977,7 @@ class Agent(BaseModel):
 
             self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
-    def _do_first_plan(self) -> None:
+    async def _do_first_plan(self) -> None:
         """Do the first plan in the list"""
 
         current_plan = None
@@ -989,25 +993,25 @@ class Agent(BaseModel):
 
         current_plan = plans[0]
 
-        self._act(current_plan)
+        await self._act(current_plan)
 
-    def run_for_one_step(self):
+    async def run_for_one_step(self):
         # Refresh the events
         self.context.events_manager.refresh_events()
 
         # First we decide if we need to reflect
         if self._should_reflect():
-            self._reflect()
+            await self._reflect()
 
         # Generate a reaction to the latest events
-        react_response = self._react()
+        react_response = await self._react()
 
         # If the reaction calls for a new plan, make one
         if react_response.reaction == Reaction.REPLAN:
-            self._plan(react_response.thought_process)
+            await self._plan(react_response.thought_process)
 
         # Respond to all messages
-        self._respond_to_messages()
+        await self._respond_to_messages()
 
         # Work through the plans
-        self._do_first_plan()
+        await self._do_first_plan()

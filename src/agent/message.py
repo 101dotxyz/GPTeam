@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from typing import Optional
 
@@ -20,17 +21,22 @@ class AgentMessage(BaseModel):
         if event.type != EventType.MESSAGE:
             raise ValueError("Event must be of type message")
 
-        if ":" in event.description:
-            recipient, content = event.description.split(":", 1)
+        message = re.search(r"'(.+?)'", event.description).group(1)
+
+        if ":" in message:
+            recipient, content = message.split(":", 1)
         else:
             recipient = None
-            content = event.description
+            content = message
 
         if recipient is not None:
+            print(f"Message: {message}")
             recipient = context.get_agent_id_from_full_name(recipient)
 
         location = [
-            Location(loc) for loc in context.locations if loc.id == event.location_id
+            Location(**loc)
+            for loc in context.locations
+            if str(loc["id"]) == str(event.location_id)
         ][0]
 
         return cls(

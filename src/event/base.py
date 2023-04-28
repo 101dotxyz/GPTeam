@@ -104,12 +104,21 @@ class EventsManager(BaseModel):
             (_, data), _ = (
                 supabase.table("Events")
                 .select("*, location_id(*)")
-                .eq("location_id.world_id", self.world_id)
+                .eq("location_id.world_id", world_id)
                 .order("timestamp", desc=True)
                 .limit(RECENT_EVENTS_BUFFER)
                 .execute()
             )
-            recent_events = [Event(**event) for event in data]
+            recent_events = [
+                Event(
+                    type=event["type"],
+                    description=event["description"],
+                    location_id=event["location_id"]["id"],
+                    timestamp=datetime.fromisoformat(event["timestamp"]),
+                    witness_ids=event["witness_ids"],
+                )
+                for event in data
+            ]
 
         super().__init__(
             recent_events=recent_events,
@@ -132,7 +141,7 @@ class EventsManager(BaseModel):
                 type=event["type"],
                 description=event["description"],
                 location_id=event["location_id"]["id"],
-                timestamp=event["timestamp"],
+                timestamp=datetime.fromisoformat(event["timestamp"]),
                 witness_ids=event["witness_ids"],
             )
             for event in data

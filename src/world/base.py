@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 from enum import Enum
 from typing import Optional
@@ -70,14 +71,14 @@ class World(BaseModel):
 
         return cls(**worlds[0])
 
-    def run_step(self):
-        # Run agents
-        for agent in self.agents:
-            agent.run_for_one_step()
+    async def run_step(self):
+        # Run agents asynchronously
+        tasks = [agent.run_for_one_step() for agent in self.agents]
+        await asyncio.gather(*tasks)
 
-    def run(self, steps: int = 1):
+    async def run(self, steps: int = 1):
         for _ in range(steps):
-            self.run_step()
+            await self.run_step()
 
 
 def get_worlds():

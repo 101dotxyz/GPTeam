@@ -49,7 +49,6 @@ class WorldContext(BaseModel):
 
         # get other agents in this location
         other_agents = [a for a in agents_at_location if a["id"] != agent_id]
-
         location = [
             loc for loc in self.locations if str(loc["id"]) == str(agent["location_id"])
         ][0]
@@ -70,45 +69,60 @@ class WorldContext(BaseModel):
         if isinstance(location_id, UUID):
             location_id = str(location_id)
 
-        # get location
-        location = [
-            location
-            for location in self.locations
-            if str(location["id"]) == str(location_id)
-        ][0]
+        try:
+            location = [
+                location
+                for location in self.locations
+                if str(location["id"]) == str(location_id)
+            ][0]
+        except IndexError:
+            raise Exception(f"Could not find location with id {location_id}")
 
         return location["name"]
 
     def get_channel_id(self, location_id: UUID | str):
-        if isinstance(location_id, UUID):
-            location_id = str(location_id)
-
         # get location
-        location = [
-            location for location in self.locations if location["id"] == location_id
-        ][0]
+        try:
+            location = [
+                location
+                for location in self.locations
+                if str(location["id"]) == str(location_id)
+            ][0]
+        except IndexError:
+            raise Exception(f"Could not find location with id {location_id}")
 
         return location["channel_id"]
 
     def get_agent_location_id(self, agent_id: UUID | str):
-        if isinstance(agent_id, UUID):
-            agent_id = str(agent_id)
-
         # get agent
-        agent = [agent for agent in self.agents if agent["id"] == agent_id][0]
+        try:
+            agent = [
+                agent for agent in self.agents if str(agent["id"]) == str(agent_id)
+            ][0]
+        except IndexError:
+            raise Exception(f"Could not find agent with id {agent_id}")
 
         return agent["location_id"]
 
     def get_agent_id_from_full_name(self, full_name: str) -> str:
-        agent = [agent for agent in self.agents if agent["full_name"] == full_name][0]
+        try:
+            agent = [
+                agent
+                for agent in self.agents
+                if agent["full_name"].lower() == full_name.lower()
+            ][0]
+        except IndexError:
+            raise Exception(f"Could not find agent with full name {full_name}")
         return str(agent["id"])
 
     def get_agent_full_name(self, agent_id: UUID | str) -> str:
-        if isinstance(agent_id, UUID):
-            agent_id = str(agent_id)
-
         # get agent
-        agent = [agent for agent in self.agents if agent["id"] == agent_id][0]
+        try:
+            agent = [
+                agent for agent in self.agents if str(agent["id"]) == str(agent_id)
+            ][0]
+        except IndexError:
+            raise Exception(f"Could not find agent with id {agent_id}")
 
         return agent["full_name"]
 

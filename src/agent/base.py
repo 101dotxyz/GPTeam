@@ -16,7 +16,9 @@ from ..event.base import Event, EventsManager, EventType
 from ..location.base import Location
 from ..memory.base import MemoryType, SingleMemory
 from ..tools.base import CustomTool, get_tools
+from ..tools.context import ToolContext
 from ..tools.name import ToolName
+from ..tools.send_message import send_message
 from ..utils.colors import LogColor
 from ..utils.database.database import supabase
 from ..utils.embeddings import get_embedding
@@ -753,8 +755,6 @@ class Agent(BaseModel):
         new_messages_at_location = [
             AgentMessage.from_event(event=event, context=self.context)
             for event in new_message_events
-            # TODO: Only respond to messages that were not yet seen by this agent
-            if event.timestamp > datetime.now(pytz.utc) - timedelta(minutes=5)
         ]
 
         new_messages = [
@@ -773,9 +773,9 @@ class Agent(BaseModel):
         for message in new_messages:
             sender_name = self.context.get_agent_full_name(message.sender)
 
-            chat_history = message.get_chat_history()
+            conversation_history = message.get_chat_history()
 
-            print("chat history", chat_history)
+            print("conversation_history", conversation_history)
 
             # Make the reaction prompter
             reaction_prompter = Prompter(
@@ -789,7 +789,7 @@ class Agent(BaseModel):
                         f"{index}. {plan.description}"
                         for index, plan in enumerate(self.plans)
                     ],
-                    "chat_history": chat_history,
+                    "conversation_history": conversation_history,
                     "location_context": self.context.location_context_string(self.id),
                 },
             )
@@ -800,6 +800,8 @@ class Agent(BaseModel):
                 reaction_prompter.prompt,
                 loading_text="🤔 Responding to message...",
             )
+
+            send_message(response, ToolContext(context=self.context, agent_id=self.id))
 
             self._log("Response", LogColor.MESSAGE, response)
 
@@ -1011,6 +1013,7 @@ class Agent(BaseModel):
         # Update the last checked events
         self.last_checked_events = datetime.now(pytz.utc)
 
+        # TODO: Think about where best to put this
         # Respond to all messages
         await self._respond_to_messages(events)
 

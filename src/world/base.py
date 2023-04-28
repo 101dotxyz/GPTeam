@@ -22,8 +22,7 @@ class World(BaseModel):
     locations: list[Location]
     agents: list[Agent]
     context: WorldContext
-    agent_queue: deque[tuple[Agent, asyncio.Lock]]
-    queue_lock: asyncio.Lock
+    agent_queue: asyncio.Queue[Agent]
 
     class Config:
         arbitrary_types_allowed = True
@@ -54,8 +53,11 @@ class World(BaseModel):
             for agent_dict in agents
         ]
 
-        agent_queue = deque([(agent, asyncio.Lock()) for agent in agents])
-        queue_lock = asyncio.Lock()
+        queue = asyncio.Queue()
+
+        # Add all agents to the queue
+        for agent in agents:
+            queue.put_nowait(agent)
 
         super().__init__(
             id=id,
@@ -63,8 +65,7 @@ class World(BaseModel):
             locations=locations,
             agents=agents,
             context=context,
-            agent_queue=agent_queue,
-            queue_lock=queue_lock,
+            agent_queue=queue,
         )
 
     @classmethod
@@ -88,26 +89,18 @@ class World(BaseModel):
         tasks = [agent.run_for_one_step() for agent in self.agents]
         await asyncio.gather(*tasks)
 
-    async def run_agent_cycle(self):
+    async def run_next_agent(self):
+        agent = await self.agent_queue.get()
+        await agent.run_for_one_step()
+        self.agent_queue.put_nowait(agent)
+
+    async def run_agent_loop(self):
         while True:
-            async with self.queue_lock:
-                if not self.agent_queue:
-                    continue
-                agent, agent_lock = self.agent_queue.popleft()
-
-            # Attempt to acquire the agent's lock; if not acquired, move on to the next agent
-            if agent_lock.locked():
-                async with self.queue_lock:
-                    self.agent_queue.append((agent, agent_lock))
-                continue
-
-            await self.run_step_for_agent(agent, agent_lock)
-
-            async with self.queue_lock:
-                self.agent_queue.append((agent, agent_lock))
+            await self.run_next_agent()
 
     async def run(self):
-        tasks = [self.run_agent_cycle() for _ in range(os.cpu_count())]
+        concurrency = min(os.cpu_count(), len(self.agents))
+        tasks = [self.run_agent_loop() for _ in range(concurrency)]
         await asyncio.gather(*tasks)
 
 

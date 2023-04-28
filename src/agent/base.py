@@ -644,7 +644,7 @@ class Agent(BaseModel):
             {
                 "time_window": PLAN_LENGTH,
                 "allowed_location_descriptions": [
-                    f"'id: {location.id}, name: {location.name}, description: {location.description}\n"
+                    f"'uuid: {location.id}, name: {location.name}, description: {location.description}\n"
                     for location in self.allowed_locations
                 ],
                 "full_name": self.full_name,
@@ -683,7 +683,7 @@ class Agent(BaseModel):
             self._log(
                 "Invalid Locations in Plan",
                 LogColor.PLAN,
-                f"The following locations are not in your allowed locations: {invalid_locations}",
+                f"The following locations are invalid: {invalid_locations}",
             )
 
             # Get the plans
@@ -692,7 +692,7 @@ class Agent(BaseModel):
                 + [
                     AIMessage(content=response),
                     HumanMessage(
-                        content=f"Your response included the following invalid location_id: {invalid_locations}. Please try again."
+                        content=f"Your response included the following invalid location_ids: {invalid_locations}. Please try again."
                     ),
                 ],
                 loading_text="🤔 Correcting plans...",
@@ -714,7 +714,7 @@ class Agent(BaseModel):
                     (
                         location
                         for location in self.allowed_locations
-                        if location.id == plan.location_id
+                        if str(location.id) == str(plan.location_id)
                     ),
                     None,
                 ),
@@ -743,18 +743,11 @@ class Agent(BaseModel):
 
         return new_plans
 
-    async def _respond_to_messages(self) -> None:
+    async def _respond_to_messages(self, events: list[Event]) -> None:
         """Respond to new messages"""
 
-        all_events: list[Event] = self.context.events_manager.get_events(
-            location_id=self.location.id,
-            after=self.last_checked_events,
-        )
-
-        new_events = [event for event in all_events if event.type != EventType.MESSAGE]
-
         new_message_events: list[Event] = [
-            event for event in all_events if event.type == EventType.MESSAGE
+            event for event in events if event.type == EventType.MESSAGE
         ]
 
         new_messages_at_location = [
@@ -810,19 +803,13 @@ class Agent(BaseModel):
 
             self._log("Response", LogColor.MESSAGE, response)
 
-    async def _react(self) -> LLMReactionResponse:
+    async def _react(self, events: list[Event]) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
 
-        # Pull in the events from the last step at this location
-        all_events: list[Event] = self.context.events_manager.get_events(
-            location_id=self.location.id,
-            after=self.last_checked_events,
-        )
-
-        new_events = [event for event in all_events if event.type != EventType.MESSAGE]
+        new_events = [event for event in events if event.type != EventType.MESSAGE]
 
         new_messages = [
-            event.description for event in all_events if event.type == EventType.MESSAGE
+            event.description for event in events if event.type == EventType.MESSAGE
         ]
 
         # Store them as observations for this agent
@@ -877,8 +864,6 @@ class Agent(BaseModel):
             f"Decided to {parsed_reaction_response.reaction.value}: {parsed_reaction_response.thought_process}",
         )
 
-        # Update the last checked events
-        self.last_checked_events = datetime.now(pytz.utc)
         self.context.update_agent(self._db_dict())
         self._update_agent_row()
 
@@ -1018,19 +1003,27 @@ class Agent(BaseModel):
         # Refresh the events
         self.context.events_manager.refresh_events()
 
+        events: list[Event] = self.context.events_manager.get_events(
+            location_id=self.location.id,
+            after=self.last_checked_events,
+        )
+
+        # Update the last checked events
+        self.last_checked_events = datetime.now(pytz.utc)
+
+        # Respond to all messages
+        await self._respond_to_messages(events)
+
         # First we decide if we need to reflect
         if self._should_reflect():
             await self._reflect()
 
         # Generate a reaction to the latest events
-        react_response = await self._react()
+        react_response = await self._react(events)
 
         # If the reaction calls for a new plan, make one
         if react_response.reaction == Reaction.REPLAN:
             await self._plan(react_response.thought_process)
-
-        # Respond to all messages
-        await self._respond_to_messages()
 
         # Work through the plans
         await self._do_first_plan()

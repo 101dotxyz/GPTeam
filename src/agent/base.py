@@ -796,7 +796,9 @@ class Agent(BaseModel):
     ) -> None:
         # Make the reaction prompter
         reaction_prompter = Prompter(
-            result.tool.summarize if result.tool.summarize else PromptString.GOSSIP,
+            result.tool.summarize
+            if result.tool.summarize
+            else PromptString.GOSSIP_DEFAULT,
             {
                 "plan_description": plan.description,
                 "tool_name": result.tool.name,

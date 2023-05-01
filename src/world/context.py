@@ -104,15 +104,15 @@ class WorldContext(BaseModel):
 
         return agent["location_id"]
 
-    def get_agent_id_from_full_name(self, full_name: str) -> str:
+    def get_agent_id_from_name(self, full_name: str) -> str:
         try:
             agent = [
                 agent
                 for agent in self.agents
-                if agent["full_name"].lower() == full_name.lower()
+                if agent["full_name"].lower() in full_name.lower()
             ][0]
         except IndexError:
-            raise Exception(f"Could not find agent with full name {full_name}")
+            raise Exception(f"Could not find agent with name {full_name}")
         return str(agent["id"])
 
     def get_agent_full_name(self, agent_id: UUID | str) -> str:

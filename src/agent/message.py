@@ -32,7 +32,7 @@ class AgentMessage(BaseModel):
 
         if recipient is not None:
             print(f"Message: {message}")
-            recipient = context.get_agent_id_from_full_name(recipient)
+            recipient = context.get_agent_id_from_name(recipient)
 
         location = [
             Location(**loc)

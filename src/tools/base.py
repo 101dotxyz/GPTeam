@@ -111,7 +111,7 @@ def get_tools(
         ToolName.COMPANY_DIRECTORY: CustomTool(
             name=ToolName.COMPANY_DIRECTORY.value,
             func=consult_directory,
-            description="A directory of all the people you can speak with, detailing their full names, roles, and current locations. Useful for when you need help from another person.",
+            description="A directory of all the people you can speak with, detailing their names, roles, and current locations. Useful for when you need help from another person.",
             requires_context=True,  # this tool requires location_id as context
             requires_authorization=False,
             worldwide=True,

@@ -764,18 +764,10 @@ class Agent(BaseModel):
             and message.sender != self.id
         ]
 
-        self._log(
-            "New Messages",
-            LogColor.MESSAGE,
-            "\n".join([m.content for m in new_messages]),
-        )
-
         for message in new_messages:
             sender_name = self.context.get_agent_full_name(message.sender)
 
             conversation_history = message.get_chat_history()
-
-            print("conversation_history", conversation_history)
 
             # Make the reaction prompter
             reaction_prompter = Prompter(
@@ -802,8 +794,6 @@ class Agent(BaseModel):
             )
 
             send_message(response, ToolContext(context=self.context, agent_id=self.id))
-
-            self._log("Response", LogColor.MESSAGE, response)
 
     async def _react(self, events: list[Event]) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
@@ -965,7 +955,7 @@ class Agent(BaseModel):
 
             self._log("Action In Progress", LogColor.ACT, f"{plan.description}")
 
-            await self._gossip(plan, resp)
+            # await self._gossip(plan, resp)
 
         # If the plan is done, remove it from the list of plans
         elif resp.status == PlanStatus.DONE:

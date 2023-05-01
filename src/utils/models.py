@@ -41,23 +41,10 @@ class ChatModel:
         self.backupModel = get_chat_model(backup_model_name, **kwargs)
 
     @chat_json_cache(sleep_range=(0, 0))
-    def get_chat_completion(self, messages: list[BaseMessage], **kwargs) -> str:
-        with Spinner(kwargs.get("loading_text", "🤔 Thinking... ")):
-            try:
-                resp = self.defaultModel.generate([messages])
-            except Exception:
-                resp = self.backupModel.generate([messages])
-
-        return resp.generations[0][0].text
-
-
-class OpenAIChatModel(ChatOpenAI):
-    def __init__(self, model_name: ChatModelName, **kwargs):
-        super().__init__(model_name=model_name.value, **kwargs)
-
-    @chat_json_cache(sleep_range=(0, 0))
-    def get_chat_completion(self, messages: list[BaseMessage], **kwargs) -> str:
-        with Spinner(kwargs.get("loading_text", "🤔 Thinking... ")):
-            resp = super().generate([messages])
+    async def get_chat_completion(self, messages: list[BaseMessage], **kwargs) -> str:
+        try:
+            resp = await self.defaultModel.agenerate([messages])
+        except Exception:
+            resp = await self.backupModel.agenerate([messages])
 
         return resp.generations[0][0].text

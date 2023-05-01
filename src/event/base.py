@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 import pytz
@@ -31,8 +31,8 @@ class EventType(Enum):
 class Event(BaseModel):
     id: UUID
     timestamp: datetime
-    step: int
     type: EventType
+    agent_id: Optional[UUID] = None
     description: str
     location_id: UUID
     witness_ids: list[UUID] = []
@@ -42,16 +42,20 @@ class Event(BaseModel):
         type: EventType,
         description: str,
         location_id: UUID | str,
-        step: int,
         timestamp: datetime = datetime.now(pytz.utc),
         witness_ids: list[UUID] = [],
+        agent_id: Optional[UUID | str] = None,
         id: Optional[UUID] = None,
+        **kwargs: Any,
     ):
         if id is None:
             id = uuid4()
 
         if isinstance(location_id, str):
             location_id = UUID(location_id)
+
+        if isinstance(agent_id, str):
+            agent_id = UUID(agent_id)
 
         if witness_ids is None:
             witness_ids = []
@@ -61,7 +65,7 @@ class Event(BaseModel):
             type=type,
             description=description,
             timestamp=timestamp,
-            step=step,
+            agent_id=agent_id,
             location_id=location_id,
             witness_ids=witness_ids,
         )
@@ -70,8 +74,8 @@ class Event(BaseModel):
         return {
             "id": str(self.id),
             "timestamp": str(self.timestamp),
-            "step": self.step,
             "type": self.type.value,
+            "agent_id": str(self.agent_id),
             "description": self.description,
             "location_id": str(self.location_id),
             "witness_ids": [str(witness_id) for witness_id in self.witness_ids],
@@ -89,43 +93,46 @@ class Event(BaseModel):
     #     pass
 
 
-class EventsManager(BaseModel):
-    """Saves events from the current step and the last step"""
+RECENT_EVENTS_BUFFER = 500
 
-    current_step_events: list[Event] = []
-    last_step_events: list[Event] = []
-    current_step: int = 0
+
+class EventsManager(BaseModel):
+    recent_events: list[Event] = []
     world_id: str
 
-    def __init__(
-        self, world_id: str, events: list[Event] = None, current_step: int = 0
-    ):
+    def __init__(self, world_id: str, events: list[Event] = None):
         if not events:
-            (_, data), count = (
-                supabase.table("Events").select("*").gte("step", current_step).execute()
+            (_, data), _ = (
+                supabase.table("Events")
+                .select("*, location_id(*)")
+                .eq("location_id.world_id", world_id)
+                .order("timestamp", desc=True)
+                .limit(RECENT_EVENTS_BUFFER)
+                .execute()
             )
-            current_step_events = [Event(**event) for event in data]
+            recent_events = [
+                Event(
+                    type=event["type"],
+                    description=event["description"],
+                    location_id=event["location_id"]["id"],
+                    timestamp=datetime.fromisoformat(event["timestamp"]),
+                    witness_ids=event["witness_ids"],
+                )
+                for event in data
+            ]
 
         super().__init__(
-            current_step_events=current_step_events,
-            current_step=current_step,
+            recent_events=recent_events,
             world_id=world_id,
         )
 
-    # get the next steps events, save last step
-    def refresh_events(self, current_step: int = None):
-        print_to_console(
-            "Refreshing events...", LogColor.GENERAL, f"new step = {current_step}"
-        )
-
-        if current_step:
-            self.current_step = current_step
-
+    def refresh_events(self) -> list[Event]:
         (_, data), _ = (
             supabase.table("Events")
             .select("*, location_id(*)")
             .eq("location_id.world_id", self.world_id)
-            .gte("step", self.current_step - 1)
+            .order("timestamp", desc=True)
+            .limit(RECENT_EVENTS_BUFFER)
             .execute()
         )
 
@@ -135,24 +142,18 @@ class EventsManager(BaseModel):
                 type=event["type"],
                 description=event["description"],
                 location_id=event["location_id"]["id"],
-                step=event["step"],
-                timestamp=event["timestamp"],
+                agent_id=event["agent_id"],
+                timestamp=datetime.fromisoformat(event["timestamp"]),
                 witness_ids=event["witness_ids"],
             )
             for event in data
         ]
 
-        self.last_step_events = [
-            event for event in events if event.step == self.current_step - 1
-        ]
+        self.recent_events = events
 
-        self.current_step_events = [
-            event for event in events if event.step == self.current_step
-        ]
+        return self.recent_events
 
-        return self.current_step_events
-
-    def add_event(self, event: Event):
+    def add_event(self, event: Event) -> None:
         """Adds an event in the current step to the DB and local object"""
 
         # get the witnesses
@@ -168,32 +169,55 @@ class EventsManager(BaseModel):
         supabase.table("Events").insert(event.db_dict()).execute()
 
         # add event to local events list
-        self.current_step_events.append(event)
+        self.recent_events.append(event)
 
-        return self.current_step_events
+    def get_events(
+        self,
+        location_id: Optional[UUID] = None,
+        type: Optional[EventType] = None,
+        description: Optional[str] = None,
+        after: Optional[datetime] = None,
+        witness_ids: Optional[list[UUID]] = None,
+        refresh: Optional[bool] = False,
+    ) -> list[Event]:
+        if refresh:
+            self.refresh_events()
 
-    def get_events(self):
-        return self.current_step_events
+        filtered_events = self.recent_events
 
-    def get_events_by_location_id(self, location_id: UUID, step: StepToUse):
-        if step == "last":
-            return [
-                event
-                for event in self.last_step_events
-                if event.location_id == location_id
+        if after is not None:
+            filtered_events = [
+                event for event in filtered_events if event.timestamp > after
             ]
-        else:
-            return [
+
+        if location_id is not None:
+            filtered_events = [
                 event
-                for event in self.current_step_events
-                if event.location_id == location_id
+                for event in filtered_events
+                if str(event.location_id) == str(location_id)
             ]
 
-    def get_events_by_step(self, step: int):
-        return [event for event in self.current_step_events if event.step == step]
+        if type is not None:
+            filtered_events = [event for event in filtered_events if event.type == type]
+
+        if description is not None:
+            filtered_events = [
+                event for event in filtered_events if event.description == description
+            ]
+
+        if witness_ids is not None:
+            filtered_events = [
+                event
+                for event in filtered_events
+                if set(list(map(str, witness_ids))).issubset(
+                    set(list(map(str, event.witness_ids)))
+                )
+            ]
+
+        return filtered_events
 
     def remove_event(self, event_id: UUID):
-        self.current_step_events = [
-            event for event in self.current_step_events if event.id != event_id
+        self.recent_events = [
+            event for event in self.recent_events if event.id != event_id
         ]
-        return self.current_step_events
+        return self.recent_events

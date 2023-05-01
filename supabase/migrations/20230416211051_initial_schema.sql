@@ -13,6 +13,7 @@ CREATE TABLE "public"."Agents" (
     "authorized_tools" text[],
     "directives" text[],
     "world_id" uuid,
+    "last_checked_events" timestamp with time zone default now(),
     "ordered_plan_ids" uuid[],
     "location_id" uuid,
     "discord_bot_token" text,
@@ -50,9 +51,9 @@ create table "public"."Plans" (
 create table "public"."Events" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
     "timestamp" timestamp with time zone default now(),
-    "step" smallint,
     "type" event_type,
     "description" text,
+    "agent_id" uuid,
     "location_id" uuid,
     "witness_ids" uuid[],
     PRIMARY KEY ("id")
@@ -72,7 +73,6 @@ create table "public"."Locations" (
 create table "public"."Worlds" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
     "name" text,
-    "current_step" smallint,
     PRIMARY KEY ("id")
 );
 
@@ -87,3 +87,7 @@ alter table "public"."Agents" validate constraint "Agents_world_id_fkey";
 alter table "public"."Events" add constraint "Events_location_id_fkey" FOREIGN KEY (location_id) REFERENCES "Locations"(id) ON DELETE CASCADE not valid;
 
 alter table "public"."Events" validate constraint "Events_location_id_fkey";
+
+alter table "public"."Events" add constraint "Events_agent_id_fkey" FOREIGN KEY (agent_id) REFERENCES "Agents"(id) ON DELETE CASCADE not valid;
+
+alter table "public"."Events" validate constraint "Events_agent_id_fkey";

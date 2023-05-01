@@ -1,0 +1,72 @@
+import re
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel
+
+from ..event.base import Event, EventType
+from ..location.base import Location
+from ..world.context import WorldContext
+
+
+class AgentMessage(BaseModel):
+    content: str
+    sender: str
+    recipient: Optional[str] = None
+    location: Location
+    timestamp: datetime
+    context: WorldContext
+
+    @classmethod
+    def from_event(cls, event: Event, context: WorldContext):
+        if event.type != EventType.MESSAGE:
+            raise ValueError("Event must be of type message")
+
+        message = re.search(r"'(.+?)'", event.description).group(1)
+
+        if ":" in message:
+            recipient, content = message.split(":", 1)
+        else:
+            recipient = None
+            content = message
+
+        if recipient is not None:
+            print(f"Message: {message}")
+            recipient = context.get_agent_id_from_name(recipient)
+
+        location = [
+            Location(**loc)
+            for loc in context.locations
+            if str(loc["id"]) == str(event.location_id)
+        ][0]
+
+        return cls(
+            content=content,
+            sender=str(event.agent_id),
+            location=location,
+            recipient=recipient,
+            context=context,
+            timestamp=event.timestamp,
+        )
+
+    def get_chat_history(self) -> str:
+        if self.recipient is None:
+            recent_message_events_at_location = self.context.events_manager.get_events(
+                type=EventType.MESSAGE,
+                location_id=self.location.id,
+            )
+
+            recent_messages_at_location = [
+                AgentMessage.from_event(event, self.context)
+                for event in recent_message_events_at_location
+            ]
+
+            formatted_messages = [
+                f"{self.context.get_agent_full_name(m.sender)}: {m.content} @ {m.timestamp}"
+                for m in recent_messages_at_location
+            ]
+
+            return "\n".join(formatted_messages)
+
+    def __str__(self):
+        return f"{self.content}"

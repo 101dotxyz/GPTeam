@@ -6,6 +6,8 @@ import re
 from datetime import datetime
 from typing import List
 
+import openai
+import pytz
 from json_log_formatter import JSONFormatter
 
 
@@ -109,9 +111,8 @@ class JsonArrayFileHandler(logging.FileHandler):
 def set_up_logging():
     # Set up logging to a file
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
     # set path to be this current directory
-    timestamp = datetime.now().strftime("%H-%M__%m-%d-%y")
+    timestamp = datetime.now(pytz.utc).strftime("%H-%M__%m-%d-%y")
     path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         f"logs/{timestamp}_logs.json",
@@ -126,3 +127,13 @@ def set_up_logging():
     file_handler.setFormatter(formatter)
 
     logger.addHandler(file_handler)
+
+
+class LoggingFilter(logging.Filter):
+    def filter(self, record):
+        print("logging filter", record)
+        return True
+
+
+def init_logging():
+    openai.util.logger.setLevel(logging.WARNING)

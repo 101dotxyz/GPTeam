@@ -1,5 +1,6 @@
 import enum
 from typing import Any, List, Optional
+from uuid import UUID
 
 from langchain import GoogleSearchAPIWrapper
 from langchain.agents import Tool, load_tools
@@ -9,6 +10,7 @@ from typing_extensions import override
 
 from src.tools.company_directory import look_up_company_directory
 from src.tools.context import ToolContext
+from src.world.context import WorldContext
 
 from .directory import consult_directory
 from .name import ToolName
@@ -66,41 +68,56 @@ def load_built_in_tool(
     )
 
 
-TOOLS: dict[ToolName, CustomTool] = {
-    ToolName.SEARCH: CustomTool(
-        name="search",
-        func=GoogleSearchAPIWrapper().run,
-        description="useful for when you need to search for information you do not know. the input to this should be a single search term.",
-        requires_context=False,
-        requires_authorization=False,
-        worldwide=True,
-    ),
-    ToolName.SPEAK: CustomTool(
-        name="speak",
-        func=send_message,
-        description="useful for when you need to speak to someone at your location. the input to this should be a single message, including the name of the person you want to speak to. e.g. David Summers: Do you know the printing code?",
-        requires_context=True,
-        requires_authorization=False,
-        worldwide=True,
-    ),
-    ToolName.WOLFRAM_APLHA: load_built_in_tool(
-        "wolfram-alpha", requires_authorization=False, worldwide=True
-    ),
-    ToolName.HUMAN: load_built_in_tool(
-        "human", requires_authorization=False, worldwide=True
-    ),
-    ToolName.COMPANY_DIRECTORY: CustomTool(
-        name=ToolName.COMPANY_DIRECTORY.value,
-        func=consult_directory,
-        description="A directory of all the people you can speak with, detailing their full names, roles, and current locations. Useful for when you need help from another person.",
-        requires_context=True,  # this tool requires location_id as context
-        requires_authorization=False,
-        worldwide=True,
-    ),
-}
+def get_tools(
+    tools: List[ToolName],
+    context: WorldContext,
+    agent_id: str | UUID,
+    include_worldwide=False,
+) -> List[CustomTool]:
+    location_id = context.get_agent_location_id(agent_id=agent_id)
 
+    location_name = context.get_location_name(location_id=location_id)
 
-def get_tools(tools: List[ToolName], include_worldwide=False) -> List[CustomTool]:
+    agents_at_location = context.get_agents_at_location(location_id=location_id)
+
+    other_agents = [a for a in agents_at_location if str(a["id"]) != str(agent_id)]
+
+    # names of other agents at location
+    other_agent_names = ", ".join([a["full_name"] for a in other_agents])
+
+    TOOLS: dict[ToolName, CustomTool] = {
+        ToolName.SEARCH: CustomTool(
+            name="search",
+            func=GoogleSearchAPIWrapper().run,
+            description="useful for when you need to search for information you do not know. the input to this should be a single search term.",
+            requires_context=False,
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.SPEAK: CustomTool(
+            name="speak",
+            func=send_message,
+            description=f"say something in the {location_name}. {other_agent_names} are also in the {location_name} and will hear what you say. You can say something to everyone, or address one of the other people at your location (one of {other_agent_names}). The input should be what you want to say. If you want to address someone, the input should be of the format full_name, message (e.g. David Summers, How are you doing today?).",
+            requires_context=True,
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.WOLFRAM_APLHA: load_built_in_tool(
+            "wolfram-alpha", requires_authorization=False, worldwide=True
+        ),
+        ToolName.HUMAN: load_built_in_tool(
+            "human", requires_authorization=False, worldwide=True
+        ),
+        ToolName.COMPANY_DIRECTORY: CustomTool(
+            name=ToolName.COMPANY_DIRECTORY.value,
+            func=consult_directory,
+            description="A directory of all the people you can speak with, detailing their names, roles, and current locations. Useful for when you need help from another person.",
+            requires_context=True,  # this tool requires location_id as context
+            requires_authorization=False,
+            worldwide=True,
+        ),
+    }
+
     if not include_worldwide:
         return [TOOLS[tool] for tool in tools]
 

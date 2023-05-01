@@ -52,18 +52,16 @@ class SingleMemory(BaseModel):
         type: MemoryType,
         description: str,
         importance: int,
+        embedding: np.ndarray,
         related_memory_ids: Optional[list[UUID]] = [],
         id: Optional[UUID] = None,
         created_at: Optional[datetime] = datetime.now(tz=pytz.utc),
-        embedding: Optional[np.ndarray] = None,
         last_accessed: Optional[datetime] = None,
     ):
         if id is None:
             id = uuid4()
 
-        if embedding is None:
-            embedding = get_embedding(description)
-        elif isinstance(embedding, str):
+        if isinstance(embedding, str):
             embedding = parse_array(embedding)
         else:
             embedding = np.array(embedding)
@@ -82,9 +80,6 @@ class SingleMemory(BaseModel):
             last_accessed=last_accessed or created_at,
             related_memory_ids=related_memory_ids,
         )
-
-    def __str__(self):
-        return f"[{self.type.name}] - {self.description} ({self.importance})"
 
     def db_dict(self):
         return {
@@ -110,13 +105,13 @@ class SingleMemory(BaseModel):
     def update_last_accessed(self):
         self.last_accessed = datetime.now(tz=pytz.utc)
 
-    def similarity(self, query: str) -> float:
-        query_embedding = get_embedding(query)
+    async def similarity(self, query: str) -> float:
+        query_embedding = await get_embedding(query)
         return cosine_similarity(self.embedding, query_embedding)
 
-    def relevance(self, query: str) -> float:
+    async def relevance(self, query: str) -> float:
         return (
             IMPORTANCE_WEIGHT * self.importance
-            + SIMILARITY_WEIGHT * self.similarity(query)
+            + SIMILARITY_WEIGHT * (await self.similarity(query))
             + RECENCY_WEIGHT * self.recency
         )

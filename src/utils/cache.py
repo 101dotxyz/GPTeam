@@ -1,10 +1,12 @@
+import asyncio
+import hashlib
 import json
 import os
 import random
 import time
 from functools import wraps
+
 from langchain.schema import messages_to_dict
-import hashlib
 
 from .spinner import Spinner
 
@@ -55,12 +57,10 @@ def json_cache(sleep_range=(0, 0)):
 def chat_json_cache(sleep_range=(0, 0)):
     def decorator(func):
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs):
             x, y = sleep_range
             sleep_seconds = random.uniform(x, y)
-            loading_text = kwargs.get("loading_text", "🤔 Thinking... ")
-            with Spinner(loading_text):
-                time.sleep(sleep_seconds)
+            await asyncio.sleep(sleep_seconds)
             temp_args = args
             # check if args[1] is list
             if len(args) > 1 and isinstance(args[1], list):
@@ -70,7 +70,7 @@ def chat_json_cache(sleep_range=(0, 0)):
             key = get_hash(key_string)
             if key in cache:
                 return cache[key]
-            result = func(*args, **kwargs)
+            result = await func(*args, **kwargs)
             cache[key] = result
             save_cache(cache)
             return result

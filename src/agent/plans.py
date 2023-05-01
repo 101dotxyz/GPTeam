@@ -87,7 +87,9 @@ class SinglePlan(BaseModel):
 class LLMSinglePlan(BaseModel):
     index: int = Field(description="The plan number")
     description: str = Field(description="A description of the plan")
-    location_id: UUID = Field(description="The id of the location")
+    location_id: UUID = Field(
+        description="The id of the location. Must be a valid UUID from the available locations."
+    )
     start_time: datetime = Field(description="The starting time, in UTC, of the plan")
     stop_condition: str = Field(
         description="The condition that will cause this plan to be completed"

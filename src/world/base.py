@@ -1,4 +1,7 @@
-import datetime
+import asyncio
+import os
+from collections import deque
+from datetime import datetime
 from enum import Enum
 from typing import Optional
 from uuid import UUID, uuid4
@@ -19,8 +22,12 @@ class World(BaseModel):
     locations: list[Location]
     agents: list[Agent]
     context: WorldContext
+    agent_queue: asyncio.Queue[Agent]
 
-    def __init__(self, name: str, current_step: int = 0, id: Optional[UUID] = None):
+    class Config:
+        arbitrary_types_allowed = True
+
+    def __init__(self, name: str, id: Optional[UUID] = None):
         if id is None:
             id = uuid4()
 
@@ -35,7 +42,7 @@ class World(BaseModel):
         )
 
         context = WorldContext(
-            world=WorldData(id=id, name=name, current_step=current_step),
+            world=WorldData(id=id, name=name),
             agents=agents,
             locations=locations,
         )
@@ -46,12 +53,19 @@ class World(BaseModel):
             for agent_dict in agents
         ]
 
+        queue = asyncio.Queue()
+
+        # Add all agents to the queue
+        for agent in agents:
+            queue.put_nowait(agent)
+
         super().__init__(
             id=id,
             name=name,
             locations=locations,
             agents=agents,
             context=context,
+            agent_queue=queue,
         )
 
     @classmethod
@@ -70,23 +84,24 @@ class World(BaseModel):
 
         return cls(**worlds[0])
 
-    def run_step(self):
-        # Refresh events for this step
-        self.context.events_manager.refresh_events(self.context.world.current_step)
+    async def run_step(self):
+        # Run agents asynchronously
+        tasks = [agent.run_for_one_step() for agent in self.agents]
+        await asyncio.gather(*tasks)
 
-        # Run agents
-        for agent in self.agents:
-            agent.run_for_one_step()
+    async def run_next_agent(self):
+        agent = await self.agent_queue.get()
+        await agent.run_for_one_step()
+        self.agent_queue.put_nowait(agent)
 
-        # Increment step
-        self.context.update_step(self.context.world.current_step + 1)
-        supabase.table("Worlds").update(
-            {"current_step": self.context.world.current_step}
-        ).eq("id", str(self.id)).execute()
+    async def run_agent_loop(self):
+        while True:
+            await self.run_next_agent()
 
-    def run(self, steps: int = 1):
-        for _ in range(steps):
-            self.run_step()
+    async def run(self):
+        concurrency = min(os.cpu_count(), len(self.agents))
+        tasks = [self.run_agent_loop() for _ in range(concurrency)]
+        await asyncio.gather(*tasks)
 
 
 def get_worlds():

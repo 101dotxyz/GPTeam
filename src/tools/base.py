@@ -1,4 +1,5 @@
 import enum
+from enum import Enum
 from typing import Any, List, Optional
 
 from langchain import GoogleSearchAPIWrapper
@@ -79,7 +80,7 @@ TOOLS: dict[ToolName, CustomTool] = {
         name="search",
         func=GoogleSearchAPIWrapper().run,
         description="useful for when you need to search for information you do not know. the input to this should be a single search term.",
-        summarize=PromptString.GOSSIP_SEARCH,
+        summarize="You have just searched Google with the following search input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}.",
         requires_context=False,
         requires_authorization=False,
         worldwide=True,
@@ -88,7 +89,7 @@ TOOLS: dict[ToolName, CustomTool] = {
         name="speak",
         func=send_message,
         description="useful for when you need to speak to someone at your location. the input to this should be a single message, including the name of the person you want to speak to. e.g. David Summers: Do you know the printing code?",
-        summarize=PromptString.GOSSIP_SPEAK,
+        summarize="You have just said {tool_input}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}.",
         requires_context=True,
         requires_authorization=False,
         worldwide=True,
@@ -98,7 +99,7 @@ TOOLS: dict[ToolName, CustomTool] = {
     ),
     ToolName.HUMAN: load_built_in_tool(
         "human",
-        summarize=PromptString.GOSSIP_HUMAN,
+        summarize="You have just asked a human for help by saying {tool_input}. This is what they replied: {tool_result}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}.",
         requires_authorization=False,
         worldwide=True,
     ),
@@ -106,7 +107,7 @@ TOOLS: dict[ToolName, CustomTool] = {
         name=ToolName.COMPANY_DIRECTORY.value,
         func=consult_directory,
         description="A directory of all the people you can speak with, detailing their full names, roles, and current locations. Useful for when you need find out information about other people working at the company.",
-        summarize=PromptString.GOSSIP_COMPANY_DIRECTORY,
+        summarize="You have just consulted the company directory and found out the following: {tool_result}. Write a single sentence with useful information to share with others in your location about how what you found out from the company directory can help you accomplish your plan: {plan_description}.",
         requires_context=True,  # this tool requires location_id as context
         requires_authorization=False,
         worldwide=True,

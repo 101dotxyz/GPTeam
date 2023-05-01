@@ -26,21 +26,16 @@ class PromptString(Enum):
 
     GOSSIP_DEFAULT = "You are currently working on the following plan: {plan_description}. You have just used the tool {tool_name} with the following input {tool_input} and got the following result {tool_result}. Write a single sentence with useful information to share with others in your location about what you have just found out."
 
-    GOSSIP_COMPANY_DIRECTORY = "You have just consulted the company directory and found out the following: {tool_result}. Write a single sentence with useful information to share with others in your location about how what you found out from the company directory can help you accomplish your plan: {plan_description}."
-
-    GOSSIP_SEARCH = "You have just searched Google with the following search input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}."
-
-    GOSSIP_SPEAK = "You have just said {tool_input}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}."
-
-    GOSSIP_HUMAN = "You have just asked a human for help by saying {tool_input}. This is what they replied: {tool_result}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}."
-
 
 class Prompter(BaseModel):
     template: str
     inputs: dict
 
-    def __init__(self, template: PromptString, inputs: dict) -> None:
-        super().__init__(inputs=inputs, template=template.value)
+    def __init__(self, template: PromptString | str, inputs: dict) -> None:
+        if isinstance(template, PromptString):
+            template = template.value
+
+        super().__init__(inputs=inputs, template=template)
 
         # Find all variables in the template string
         input_names = set(re.findall(r"{(\w+)}", self.template))

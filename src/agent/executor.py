@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import time
@@ -77,9 +78,14 @@ class CustomOutputParser(AgentOutputParser):
             raise ValueError(f"Could not parse LLM output: `{llm_output}`")
         action = match.group(1).strip()
         action_input = match.group(2)
+        # try parsing action_input as json
+        try:
+            action_input = json.loads(action_input)
+        except json.JSONDecodeError:
+            action_input = action_input.strip(" ").strip('"')
         # Return the action and action input
         return AgentAction(
-            tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output
+            tool=action, tool_input=action_input, log=llm_output
         )
 
 
@@ -234,5 +240,5 @@ class PlanExecutor(BaseModel):
             status=PlanStatus.IN_PROGRESS,
             output=result,
             tool=tool,
-            tool_input=response.tool_input,
+            tool_input=str(response.tool_input),
         )

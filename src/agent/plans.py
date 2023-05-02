@@ -120,6 +120,7 @@ class SinglePlan(BaseModel):
             # "Respond to what {full_name} said to you."
             return f"{self.description}"
 
+
 class LLMSinglePlan(BaseModel):
     index: int = Field(description="The plan number")
     description: str = Field(description="A description of the plan")

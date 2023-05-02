@@ -84,6 +84,28 @@ class Event(BaseModel):
             "witness_ids": [str(witness_id) for witness_id in self.witness_ids],
         }
 
+    @classmethod
+    def from_id(cls, event_id: UUID) -> "Event":
+        (_, data), _ = (
+            supabase.table("Events")
+            .select("*, location_id(*)")
+            .eq("id", str(event_id))
+            .limit(1)
+            .execute()
+        )
+
+        event = data[0]
+
+        return cls(
+            id=event["id"],
+            type=event["type"],
+            description=event["description"],
+            location_id=event["location_id"]["id"],
+            agent_id=event["agent_id"],
+            timestamp=datetime.fromisoformat(event["timestamp"]),
+            witness_ids=event["witness_ids"],
+        )
+
     # @staticmethod
     # def from_discord_message(message: DiscordMessage, witnesses: list[UUID]) -> "Event":
     #     # parse user provided message into an event
@@ -176,6 +198,7 @@ class EventsManager(BaseModel):
 
     def get_events(
         self,
+        agent_id: Optional[UUID] = None,
         location_id: Optional[UUID] = None,
         type: Optional[EventType] = None,
         description: Optional[str] = None,
@@ -198,6 +221,13 @@ class EventsManager(BaseModel):
                 event
                 for event in filtered_events
                 if str(event.location_id) == str(location_id)
+            ]
+        
+        if agent_id is not None:
+            filtered_events = [
+                event
+                for event in filtered_events
+                if str(event.agent_id) == str(agent_id)
             ]
 
         if type is not None:

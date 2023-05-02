@@ -131,6 +131,7 @@ plans = [
         "max_duration_hrs": 1,
         "stop_condition": "The meeting is over",
         "location_id": locations[2]["id"],  # conference room
+        "type": "default"
     },
     {
         "id": "2bedb32a-e1e8-46b3-a0c9-e98dfaabc391",
@@ -139,6 +140,7 @@ plans = [
         "max_duration_hrs": 1,
         "stop_condition": "The meeting is over",
         "location_id": locations[2]["id"],  # conference room
+        "type": "default"
     },
 ]
 

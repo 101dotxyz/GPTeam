@@ -19,6 +19,7 @@ class AgentMessage(BaseModel):
     location: Location
     timestamp: datetime
     context: WorldContext
+    event_id: UUID = None
 
     @classmethod
     def from_agent_input(cls, agent_input: str, agent_id: UUID, context: WorldContext):
@@ -87,6 +88,7 @@ class AgentMessage(BaseModel):
             recipient_name=recipient_name,
             context=context,
             timestamp=event.timestamp,
+            event_id=event.id,
         )
 
     def to_event(self) -> Event:
@@ -104,29 +106,37 @@ class AgentMessage(BaseModel):
             location_id=self.location.id,
         )
 
+        self.event_id = event.id
+
         return event
 
+    # Given a message, get the relevant chat history
     def get_chat_history(self) -> str:
-        if self.recipient_id is None:
-            recent_message_events_at_location = self.context.events_manager.get_events(
-                type=EventType.MESSAGE,
-                location_id=self.location.id,
-            )
 
-            recent_messages_at_location = [
-                AgentMessage.from_event(event, self.context)
-                for event in recent_message_events_at_location
-            ]
+        # get all the messages sent at the location
+        recent_message_events_at_location = self.context.events_manager.get_events(
+            type=EventType.MESSAGE,
+            location_id=self.location.id,
+        )
 
-            formatted_messages = [
-                f"{m.sender_name}: {m.content} @ {m.timestamp}"
-                for m in recent_messages_at_location
-            ]
+        messages = [
+            AgentMessage.from_event(event, self.context)
+            for event in recent_message_events_at_location
+        ]
+        
+        formatted_messages = [
+            f"{m.sender_name}: {m.content} @ {m.timestamp}"
+            for m in messages
+        ]
 
-            return "\n".join(formatted_messages)
+        return "\n".join(formatted_messages)
+        
 
     def __str__(self):
-        return f"{self.content}"
+        if self.recipient_name is None:
+            return f"[{self.location.name}] {self.sender_name}: {self.content}"
+        else:
+            return f"[{self.location.name}] {self.sender_name} to {self.recipient_name}: {self.content}"
 
 class LLMMessageResponse(BaseModel):
     to: str = Field(description="The recipient of the message")

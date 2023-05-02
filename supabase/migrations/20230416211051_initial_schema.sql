@@ -4,6 +4,7 @@ create extension if not exists "vector" with schema "extensions";
 create type "public"."memory_type" as enum ('reflection', 'observation');
 create type "public"."event_type" as enum ('non_message', 'message');
 create type "public"."plan_status" as enum ('in_progress', 'todo', 'done');
+create type "public"."plan_type" as enum ('default', 'response');
 
 CREATE TABLE "public"."Agents" (
     "id" uuid DEFAULT uuid_generate_v4() NOT NULL,
@@ -45,6 +46,8 @@ create table "public"."Plans" (
     "completed_at" timestamp with time zone,
     "scratchpad" text,
     "status" plan_status not null default 'todo'::plan_status,
+    "type" plan_type not null default 'default'::plan_type,
+    "related_event_id" uuid,
     PRIMARY KEY ("id")
 );
 

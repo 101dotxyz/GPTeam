@@ -35,6 +35,17 @@ class WorldContext(BaseModel):
             events_manager=events_manager,
         )
 
+    def get_agent_dict_from_id(self, agent_id: UUID | str) -> dict:
+        # get agent
+        try:
+            agent = [
+                agent for agent in self.agents if str(agent["id"]) == str(agent_id)
+            ][0]
+        except IndexError:
+            raise Exception(f"Could not find agent with id {agent_id}")
+
+        return agent
+
     def get_agents_at_location(self, location_id: str):
         return [a for a in self.agents if str(a["location_id"]) == str(location_id)]
 
@@ -94,15 +105,7 @@ class WorldContext(BaseModel):
         return location["channel_id"]
 
     def get_agent_location_id(self, agent_id: UUID | str):
-        # get agent
-        try:
-            agent = [
-                agent for agent in self.agents if str(agent["id"]) == str(agent_id)
-            ][0]
-        except IndexError:
-            raise Exception(f"Could not find agent with id {agent_id}")
-
-        return agent["location_id"]
+        return self.get_agent_dict_from_id(agent_id)["location_id"]
 
     def get_agent_id_from_name(self, full_name: str) -> UUID:
         try:
@@ -116,15 +119,13 @@ class WorldContext(BaseModel):
         return UUID(agent["id"])
 
     def get_agent_full_name(self, agent_id: UUID | str) -> str:
-        # get agent
-        try:
-            agent = [
-                agent for agent in self.agents if str(agent["id"]) == str(agent_id)
-            ][0]
-        except IndexError:
-            raise Exception(f"Could not find agent with id {agent_id}")
+        return self.get_agent_dict_from_id(agent_id)["full_name"]
 
-        return agent["full_name"]
+    def get_agent_public_bio(self, agent_id: UUID | str) -> str:
+        return self.get_agent_dict_from_id(agent_id)["public_bio"]
+    
+    def get_agent_private_bio(self, agent_id: UUID | str) -> str:
+        return self.get_agent_dict_from_id(agent_id)["private_bio"]
 
     def update_agent(self, agent: dict):
         new_agents = [a for a in self.agents if str(a["id"]) != str(agent["id"])]

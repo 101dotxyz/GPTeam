@@ -24,7 +24,8 @@ from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
 from ..world.context import WorldContext
-from .plans import PlanStatus, SinglePlan
+from .plans import PlanStatus, SinglePlan, PlanType
+from .message import AgentMessage
 
 load_dotenv()
 
@@ -93,22 +94,45 @@ class PlanExecutor(BaseModel):
     """Executes plans for an agent."""
 
     agent_id: UUID
+    message_to_respond_to: Optional[AgentMessage] = None
     context: WorldContext
     plan: Optional[SinglePlan] = None
     intermediate_steps: List[Tuple[AgentAction, str]] = []
 
-    def __init__(self, agent_id: UUID, context: WorldContext) -> None:
-        super().__init__(agent_id=agent_id, context=context)
+    def __init__(self, agent_id: UUID, world_context: WorldContext, message_to_respond_to: AgentMessage = None) -> None:
+        print("Plan Executor Initialized with related message: ", message_to_respond_to) #TIMC
+        super().__init__(agent_id=agent_id, context=world_context, message_to_respond_to=message_to_respond_to)
 
     def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
-        full_name = self.context.get_agent_full_name(self.agent_id)
+    
+        if self.plan.type == PlanType.RESPONSE:
+            template=PromptString.EXECUTE_RESPONSE_PLAN.value
+            input_variables=["input",
+                "intermediate_steps", 
+                "your_name",
+                "correspondent_name",
+                "your_private_bio",
+                "location_context",
+                "correspondent_public_bio",
+                "conversation_history",
+            ]
+
+
+        elif self.plan.type == PlanType.DEFAULT:
+            template=PromptString.EXECUTE_PLAN.value
+            input_variables=["input",
+                "intermediate_steps", 
+                "your_name",
+                "location_context",
+            ]
+
 
         prompt = CustomPromptTemplate(
-            template=PromptString.EXECUTE_PLAN.value.replace("{full_name}", full_name),
+            template=template,
             tools=tools,
             # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
             # This includes the `intermediate_steps` variable because that is needed
-            input_variables=["input", "intermediate_steps", "location_context"],
+            input_variables=input_variables,
         )
 
         # set up a simple completion llm
@@ -143,11 +167,27 @@ class PlanExecutor(BaseModel):
 
         executor = self.get_executor(tools=tools)
 
-        response = executor.plan(
-            input=self.plan.make_plan_prompt(),
-            intermediate_steps=self.intermediate_steps,
-            location_context=self.context.location_context_string(self.agent_id),
-        )
+        # If this is a RESPONSE plan, we need to pass in more variables
+        if self.plan.type == PlanType.RESPONSE:
+            response = executor.plan(
+                input=self.plan.make_plan_prompt(),
+                intermediate_steps=self.intermediate_steps,
+                your_name=self.context.get_agent_full_name(self.agent_id),
+                correspondent_name=self.context.get_agent_full_name(self.message_to_respond_to.sender_id),
+                your_private_bio=self.context.get_agent_private_bio(self.agent_id),
+                location_context=self.context.location_context_string(self.agent_id),
+                correspondent_public_bio=self.context.get_agent_public_bio(self.message_to_respond_to.sender_id),
+                conversation_history=self.message_to_respond_to.get_chat_history(),
+            )
+
+        # Elif the plan is a default plan
+        elif self.plan.type == PlanType.DEFAULT:
+            response = executor.plan(
+                input=self.plan.make_plan_prompt(),
+                intermediate_steps=self.intermediate_steps,
+                your_name=self.context.get_agent_full_name(self.agent_id),
+                location_context=self.context.location_context_string(self.agent_id),
+            )
 
         agent_name = self.context.get_agent_full_name(self.agent_id)
 

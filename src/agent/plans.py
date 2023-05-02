@@ -7,6 +7,7 @@ import pytz
 from pydantic import BaseModel, Field, validator
 
 from ..location.base import Location
+from .message import AgentMessage
 from ..utils.database.database import supabase
 
 
@@ -16,14 +17,19 @@ class PlanStatus(Enum):
     DONE = "done"
     FAILED = "failed"
 
+class PlanType(Enum):
+    DEFAULT = "default"
+    RESPONSE = "response"
 
 class SinglePlan(BaseModel):
     id: UUID
     description: str
+    type: PlanType = PlanType.DEFAULT
     location: Location
     max_duration_hrs: float
     created_at: datetime
     agent_id: UUID
+    related_message: Optional[AgentMessage] = None
     stop_condition: str
     status: PlanStatus
     scratchpad: Optional[str]
@@ -41,6 +47,8 @@ class SinglePlan(BaseModel):
         created_at: Optional[datetime] = None,
         completed_at: Optional[datetime] = None,
         id: Optional[UUID] = None,
+        type: PlanType = PlanType.DEFAULT,
+        related_message: Optional[AgentMessage] = None,
     ):
         if id is None:
             id = uuid4()
@@ -59,6 +67,8 @@ class SinglePlan(BaseModel):
             completed_at=completed_at,
             status=status,
             scratchpad=scratchpad,
+            type=type,
+            related_message=related_message,
         )
 
     def __str__(self):
@@ -83,8 +93,32 @@ class SinglePlan(BaseModel):
         data, count = supabase.table("Plans").delete().eq("id", str(self.id)).execute()
         return data
 
+    def _db_dict(self):
+
+        row = {
+            "id": str(self.id),
+            "description": self.description,
+            "type": self.type.value,
+            "location_id": str(self.location.id),
+            "max_duration_hrs": self.max_duration_hrs,
+            "created_at": self.created_at.isoformat(),
+            "agent_id": str(self.id),
+            "related_event_id": str(self.related_message.event_id) if self.related_message else None,
+            "stop_condition": self.stop_condition,
+            "status": self.status.value,
+            "scratchpad": self.scratchpad,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+        return row
+    
+    
     def make_plan_prompt(self):
-        return f"Do this: {self.description}\nAt this location: {self.location.name}\nStop when this happens: {self.stop_condition}\nIf do not finish within {self.max_duration_hrs} hours, stop."
+        if self.type == PlanType.RESPONSE:
+            return f"Do this: {self.description}\nAt this location: {self.location.name}\nStop when this happens: {self.stop_condition}\nIf do not finish within {self.max_duration_hrs} hours, stop.\n\n{self.scratchpad}"
+        else:
+            # "Respond to what {full_name} said to you."
+            return f"{self.description}"
 
 class LLMSinglePlan(BaseModel):
     index: int = Field(description="The plan number")

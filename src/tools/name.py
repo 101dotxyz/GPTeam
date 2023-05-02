@@ -7,3 +7,4 @@ class ToolName(Enum):
     WOLFRAM_APLHA = "wolfram-alpha"
     HUMAN = "human"
     COMPANY_DIRECTORY = "company-directory"
+    WAIT = "wait"

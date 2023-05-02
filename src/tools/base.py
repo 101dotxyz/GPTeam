@@ -8,13 +8,13 @@ from langchain.llms import OpenAI
 from langchain.tools import BaseTool
 from typing_extensions import override
 
-from src.tools.company_directory import look_up_company_directory
 from src.tools.context import ToolContext
 from src.world.context import WorldContext
 
 from .directory import consult_directory
 from .name import ToolName
 from .send_message import send_message
+from .wait import wait
 
 
 class CustomTool(Tool):
@@ -97,8 +97,16 @@ def get_tools(
         ToolName.SPEAK: CustomTool(
             name="speak",
             func=send_message,
-            description=f"say something in the {location_name}. {other_agent_names} are also in the {location_name} and will hear what you say. You can say something to everyone, or address one of the other people at your location (one of {other_agent_names}). The input should be what you want to say. If you want to address someone, the input should be of the format full_name, message (e.g. David Summers, How are you doing today?).",
+            description=f"say something in the {location_name}. {other_agent_names} are also in the {location_name} and will hear what you say. No one else will hear you. You can say something to everyone nearby, or address a specific person at your location (one of {other_agent_names}). The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let\'s get this meeting started.'). Do not use a semi-colon in your message.",
             requires_context=True,
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.WAIT: CustomTool(
+            name="wait",
+            func=wait,
+            description="Don't do anything. Useful for when you are waiting for something to happen. Takes an empty string as input.",
+            requires_context=False,
             requires_authorization=False,
             worldwide=True,
         ),

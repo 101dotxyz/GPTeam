@@ -144,7 +144,7 @@ class PlanExecutor(BaseModel):
         executor = self.get_executor(tools=tools)
 
         response = executor.plan(
-            input=self.plan.description,
+            input=self.plan.make_plan_prompt(),
             intermediate_steps=self.intermediate_steps,
             location_context=self.context.location_context_string(self.agent_id),
         )

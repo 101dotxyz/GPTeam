@@ -42,7 +42,7 @@ class Event(BaseModel):
         type: EventType,
         description: str,
         location_id: UUID | str,
-        timestamp: datetime = datetime.now(pytz.utc),
+        timestamp: datetime = None,
         witness_ids: list[UUID] = [],
         agent_id: Optional[UUID | str] = None,
         id: Optional[UUID] = None,
@@ -50,6 +50,9 @@ class Event(BaseModel):
     ):
         if id is None:
             id = uuid4()
+
+        if timestamp is None:
+            timestamp = datetime.now(pytz.utc)
 
         if isinstance(location_id, str):
             location_id = UUID(location_id)

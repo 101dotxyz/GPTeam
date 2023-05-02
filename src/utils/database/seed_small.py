@@ -127,7 +127,7 @@ plans = [
     {
         "id": "06d08245-81a4-4236-ad98-e128ed01167b",
         "agent_id": "16b8e29c-ce8e-4d7e-96a4-8ba4b6550460",  # marty
-        "description": "Conduct a team meeting in the conference room",
+        "description": "Meet with Rebecca in the conference room and ask her how she is doing",
         "max_duration_hrs": 1,
         "stop_condition": "The meeting is over",
         "location_id": locations[2]["id"],  # conference room

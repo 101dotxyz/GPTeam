@@ -83,6 +83,8 @@ class SinglePlan(BaseModel):
         data, count = supabase.table("Plans").delete().eq("id", str(self.id)).execute()
         return data
 
+    def make_plan_prompt(self):
+        return f"Do this: {self.description}\nAt this location: {self.location.name}\nStop when this happens: {self.stop_condition}\nIf do not finish within {self.max_duration_hrs} hours, stop."
 
 class LLMSinglePlan(BaseModel):
     index: int = Field(description="The plan number")

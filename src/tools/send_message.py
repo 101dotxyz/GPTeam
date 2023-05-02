@@ -7,32 +7,28 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 from src.tools.context import ToolContext
-
+from src.agent.message import AgentMessage
 from ..event.base import Event, EventType
 from ..utils.discord import send_message as send_discord_message
 
 load_dotenv()
 
 
-def send_message(agent_input, tool_context: ToolContext):
-    """Emits a message event to the Events table"""
+def send_message(agent_input: str, tool_context: ToolContext):
+    """ Emits a message event to the Events table
+        And triggers discord to send a message to the appropriate channel
+    """
 
-    # get the agent name
-    agent_name = tool_context.context.get_agent_full_name(tool_context.agent_id)
-    agent_location_id = tool_context.context.get_agent_location_id(
-        tool_context.agent_id
-    )
+    print("Sending message... AGENT INPUT: ", agent_input) #TIMC
 
-    # Tim Connors said: "Hello, world!"
-    event_message = f"{agent_name} said: '{agent_input}'"
+    # TIMC
+    input("Press any key to continue...")
 
-    # first, craft the event object
-    event = Event(
-        agent_id=tool_context.agent_id,
-        type=EventType.MESSAGE,
-        description=event_message,
-        location_id=agent_location_id,
-    )
+    # Make an AgentMessage object
+    agent_message = AgentMessage.from_agent_input(agent_input, tool_context.agent_id, tool_context.context)
+
+    # Covert the AgentMessage to an event
+    event = agent_message.to_event()
 
     # now add it to the events manager
     tool_context.context.events_manager.add_event(event)
@@ -40,8 +36,8 @@ def send_message(agent_input, tool_context: ToolContext):
     # now time to send the message in discord
     send_discord_message(
         os.environ.get("DISCORD_TOKEN"),
-        tool_context.context.get_channel_id(agent_location_id),
-        event_message,
+        tool_context.context.get_channel_id(agent_message.location.id),
+        event.description,
     )
 
-    return event_message
+    return event.description

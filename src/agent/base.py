@@ -38,7 +38,7 @@ from ..world.context import WorldContext
 from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
 from .message import AgentMessage, LLMMessageResponse
-from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan, PlanType
+from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, PlanType, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
 
@@ -173,14 +173,30 @@ class Agent(BaseModel):
 
         plans = []
         for plan in ordered_plans:
-            location = [location for location in locations if str(location.id) == plan["location_id"]][0]
-            related_event = Event.from_id(plan["related_event_id"]) if plan["related_event_id"] is not None else None
-            related_message = AgentMessage.from_event(related_event, context) if related_event else None
+            location = [
+                location
+                for location in locations
+                if str(location.id) == plan["location_id"]
+            ][0]
+            related_event = (
+                Event.from_id(plan["related_event_id"])
+                if plan["related_event_id"] is not None
+                else None
+            )
+            related_message = (
+                AgentMessage.from_event(related_event, context)
+                if related_event
+                else None
+            )
             plans.append(
                 SinglePlan(
-                    **{key: value for key, value in plan.items() if (key != "location_id" and key != 'related_event_id')},
+                    **{
+                        key: value
+                        for key, value in plan.items()
+                        if (key != "location_id" and key != "related_event_id")
+                    },
                     location=location,
-                    related_message=related_message
+                    related_message=related_message,
                 )
             )
 
@@ -329,7 +345,6 @@ class Agent(BaseModel):
     def _add_plan_rows(self, plans: list[SinglePlan]):
         for plan in plans:
             supabase.table("Plans").upsert(plan._db_dict()).execute()
-        
 
     def _get_memories_since(self, date: datetime):
         data, count = (
@@ -742,29 +757,38 @@ class Agent(BaseModel):
 
         # Get new relevant messages
         new_messages: list[AgentMessage] = [
-            AgentMessage.from_event(event=event, context=self.context) 
-            for event in events if event.type == EventType.MESSAGE
+            AgentMessage.from_event(event=event, context=self.context)
+            for event in events
+            if event.type == EventType.MESSAGE
         ]
 
         # Get the relevant messages, with the newest first
         relevant_messages = [
-            message for message in new_messages
+            message
+            for message in new_messages
             if (message.recipient_id == self.id or message.recipient_id is None)
             and message.sender_id != self.id
         ]
         relevant_messages.sort(key=lambda message: message.timestamp, reverse=True)
 
-        print(f"\n\nRELEVANT MESSAGES:\n") #TIMC
-        for message in relevant_messages:
-            print(message, "\n")
-        print("\n\n") #TIMC
+        if not relevant_messages:
+            self._log("Inbox Empty", LogColor.MESSAGE, "No new messages.")
+            return
+
+        self._log(
+            "New Messages",
+            LogColor.MESSAGE,
+            f"{len(relevant_messages)} new messages in inbox.",
+        )
+
+        low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0, streaming=True)
 
         response_plans = []
 
         # For each unique message.sender_id...
         unique_senders = {message.sender_id for message in relevant_messages}
 
-        # Make a plan to respond 
+        # Make a plan to respond
         for sender_id in unique_senders:
             sender_name = self.context.get_agent_full_name(sender_id)
             new_plan = SinglePlan(
@@ -774,7 +798,11 @@ class Agent(BaseModel):
                 agent_id=self.id,
                 stop_condition="When the conversation is over.",
                 type=PlanType.RESPONSE,
-                related_message=[relevant_messages for relevant_messages in relevant_messages if relevant_messages.sender_id == sender_id][0],
+                related_message=[
+                    relevant_messages
+                    for relevant_messages in relevant_messages
+                    if relevant_messages.sender_id == sender_id
+                ][0],
             )
             response_plans.append(new_plan)
 
@@ -782,8 +810,13 @@ class Agent(BaseModel):
         for plan in response_plans:
             await self._act(plan)
 
-    async def _react(self, events: list[Event]) -> LLMReactionResponse:
+    async def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
+
+        # Get the recent events
+        (events, _) = self.context.events_manager.get_events(
+            location_id=self.location.id, after=self.last_checked_events
+        )
 
         # Store them as observations for this agent
         for event in events:
@@ -890,14 +923,10 @@ class Agent(BaseModel):
         # If we are not in the right location, move to the new location
         if self.location.id != plan.location.id:
             self._move_to_location(plan.location)
-            return
 
         # Execute the plan
 
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
-
-        # TODO: Tools are dependent on the location
-        timeout = int(os.getenv("STEP_DURATION"))
 
         # TODO: Inbound messages will overwrite the previous plan executor
         if executor is None:
@@ -906,7 +935,11 @@ class Agent(BaseModel):
                 print("plantype default")
             elif plan.type == PlanType.RESPONSE:
                 print("plan type response: ", plan.related_message)
-                self.plan_executor = PlanExecutor(self.id, world_context=self.context, message_to_respond_to=plan.related_message)
+                self.plan_executor = PlanExecutor(
+                    self.id,
+                    world_context=self.context,
+                    message_to_respond_to=plan.related_message,
+                )
 
         resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(
             plan, tools=self._get_current_tools()
@@ -986,18 +1019,17 @@ class Agent(BaseModel):
         await self._act(current_plan, executor)
 
     async def run_for_one_step(self):
-        # Refresh the events
-        self.context.events_manager.refresh_events()
+        print(f"{self.full_name}: run_for_one_step...")  # TIMC
+        print(
+            f"Getting events at {self.location.name}, after {self.last_checked_events}..."
+        )  # TIMC
 
-        print(f"[{self.full_name}]: RUN_FOR_ONE_STEP...") #TIMC
+        print(f"[{self.full_name}]: RUN_FOR_ONE_STEP...")  # TIMC
 
-        events: list[Event] = self.context.events_manager.get_events(
+        (events, first_refresh_time) = self.context.events_manager.get_events(
             location_id=self.location.id,
             after=self.last_checked_events,
         )
-        
-        # Update the last checked events
-        self.last_checked_events = datetime.now(pytz.utc)
 
         previous_executor = self.plan_executor
 
@@ -1005,11 +1037,13 @@ class Agent(BaseModel):
         await self._respond_to_messages(events)
 
         # Generate a reaction to the latest events
-        react_response = await self._react(events)
+        react_response = await self._react()
 
         # If the reaction calls for a new plan, make one
         if react_response.reaction == Reaction.REPLAN:
             await self._plan(react_response.thought_process)
+
+        self.last_checked_events = first_refresh_time
 
         # Work through the plans
         await self._do_first_plan(previous_executor)

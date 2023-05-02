@@ -83,12 +83,15 @@ class SinglePlan(BaseModel):
         data, count = supabase.table("Plans").delete().eq("id", str(self.id)).execute()
         return data
 
+    def make_plan_prompt(self):
+        return f"Do this: {self.description}\nAt this location: {self.location.name}\nStop when this happens: {self.stop_condition}\nIf do not finish within {self.max_duration_hrs} hours, stop."
+
 
 class LLMSinglePlan(BaseModel):
     index: int = Field(description="The plan number")
     description: str = Field(description="A description of the plan")
     location_id: UUID = Field(
-        description="The id of the location. Must be a valid UUID"
+        description="The id of the location. Must be a valid UUID from the available locations."
     )
     start_time: datetime = Field(description="The starting time, in UTC, of the plan")
     stop_condition: str = Field(
@@ -97,17 +100,6 @@ class LLMSinglePlan(BaseModel):
     max_duration_hrs: float = Field(
         description="The maximum amount of time to spend on this activity before reassessing"
     )
-
-    @validator("location_id")
-    def location_is_valid_uuid(cls, v):
-        if isinstance(v, UUID):
-            return v
-        try:
-            UUID(v)
-        except ValueError:
-            raise ValueError("location_id must be a valid UUID")
-
-        return v
 
 
 class LLMPlanResponse(BaseModel):

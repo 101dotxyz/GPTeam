@@ -10,3 +10,4 @@ class ToolName(Enum):
     SAVE_DOCUMENT = "save-document"
     READ_DOCUMENT = "read-document"
     SEARCH_DOCUMENTS = "search-documents"
+    WAIT = "wait"

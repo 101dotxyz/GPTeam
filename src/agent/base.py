@@ -18,7 +18,6 @@ from ..memory.base import MemoryType, SingleMemory
 from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
-from ..tools.send_message import send_message
 from ..utils.colors import LogColor
 from ..utils.database.database import supabase
 from ..utils.embeddings import get_embedding
@@ -66,6 +65,7 @@ class Agent(BaseModel):
     plan_executor: PlanExecutor = None
     context: WorldContext
     location: Location
+    discord_bot_token: str = None
 
     class Config:
         allow_underscore_names = True
@@ -84,6 +84,7 @@ class Agent(BaseModel):
         id: Optional[str | UUID] = None,
         world_id: Optional[UUID] = DEFAULT_WORLD_ID,
         location: Location = Location.from_id(DEFAULT_LOCATION_ID),
+        discord_bot_token: str = None,
     ):
         if id is None:
             id = uuid4()
@@ -104,6 +105,7 @@ class Agent(BaseModel):
             world_id=world_id,
             location=location,
             context=context,
+            discord_bot_token=discord_bot_token,
         )
 
         # if the memories are None, retrieve them
@@ -218,6 +220,7 @@ class Agent(BaseModel):
             context=context,
             memories=[SingleMemory(**memory) for memory in memories_data[1]],
             plans=plans,
+            discord_bot_token=agent_dict["discord_bot_token"],
         )
 
     @classmethod
@@ -294,6 +297,7 @@ class Agent(BaseModel):
             world_id=agent.get("world_id"),
             location=location,
             context=context,
+            discord_bot_token=agent.get("discord_bot_token"),
         )
 
     def _get_memories(self):
@@ -396,6 +400,7 @@ class Agent(BaseModel):
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
             "world_id": self.world_id,
             "location_id": self.location.id,
+            "discord_bot_token": self.discord_bot_token,
         }
 
     async def _related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
@@ -941,7 +946,7 @@ class Agent(BaseModel):
                     message_to_respond_to=plan.related_message,
                 )
 
-        resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(
+        resp: PlanExecutorResponse = await self.plan_executor.start_or_continue_plan(
             plan, tools=self._get_current_tools()
         )
 

@@ -1,6 +1,7 @@
 import enum
-from typing import Any, List, Optional
+from typing import Any, Awaitable, Callable, Optional, Type, Union, Optional, List
 from uuid import UUID
+import asyncio
 
 from langchain import GoogleSearchAPIWrapper
 from langchain.agents import Tool, load_tools
@@ -14,7 +15,7 @@ from src.world.context import WorldContext
 
 from .directory import consult_directory
 from .name import ToolName
-from .send_message import send_message
+from .send_message import send_message_async, send_message_sync
 from .wait import wait
 
 
@@ -22,6 +23,7 @@ class CustomTool(Tool):
     requires_context: Optional[bool] = False
     requires_authorization: bool = False
     worldwide: bool = True
+    is_async: bool = False
 
     def __init__(
         self,
@@ -31,6 +33,7 @@ class CustomTool(Tool):
         requires_context: Optional[bool],
         worldwide: bool,
         requires_authorization: bool,
+        is_async: Optional[bool] = False,
         **kwargs: Any,
     ):
         super().__init__(name, func, description, **kwargs)
@@ -38,6 +41,7 @@ class CustomTool(Tool):
         self.requires_context = requires_context
         self.requires_authorization = requires_authorization
         self.worldwide = worldwide
+        self.is_async = is_async
 
     @override
     def run(self, agent_input: str | dict, tool_context: ToolContext) -> List[BaseTool]:
@@ -48,6 +52,17 @@ class CustomTool(Tool):
         else:
             input = agent_input
         return super().run(input)
+
+    @override
+    def arun(self, agent_input: str | dict, tool_context: ToolContext) -> Awaitable:
+        # if the tool requires context
+        if self.requires_context:
+            input = {"agent_input": str(agent_input), "tool_context": tool_context}
+
+        else:
+            input = str(agent_input)
+
+        return super().arun(input)
 
 
 def load_built_in_tool(
@@ -65,6 +80,7 @@ def load_built_in_tool(
         requires_authorization=requires_authorization,
         args_schema=tool.args_schema,
         requires_context=False,
+
     )
 
 
@@ -96,11 +112,13 @@ def get_tools(
         ),
         ToolName.SPEAK: CustomTool(
             name="speak",
-            func=send_message,
+            func=send_message_sync,
+            coroutine=send_message_async,
             description=f"say something in the {location_name}. {other_agent_names} are also in the {location_name} and will hear what you say. No one else will hear you. You can say something to everyone nearby, or address a specific person at your location (one of {other_agent_names}). The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let\'s get this meeting started.'). Do not use a semi-colon in your message.",
             requires_context=True,
             requires_authorization=False,
             worldwide=True,
+            is_async=True,
         ),
         ToolName.WAIT: CustomTool(
             name="wait",

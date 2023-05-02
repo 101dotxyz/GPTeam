@@ -1,8 +1,13 @@
 import random
 import uuid
+import os
+from dotenv import load_dotenv
 
 from ..parameters import DiscordChannelId
 from .database import supabase
+
+load_dotenv()
+
 
 DEFAULT_WORLD = {
     "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
@@ -89,7 +94,7 @@ locations = [
 agents = [
     {
         "id": "16b8e29c-ce8e-4d7e-96a4-8ba4b6550460",
-        "full_name": "Marty",
+        "full_name": "Marty Silverberg",
         "private_bio": "Marty is a lovable, naive, and energetic. He is 52 years old. He started the company 20 years ago and is still the CEO. He is excellent at giving inspiring speeches and talking to customers. He is a bit of a workaholic and is always looking for new ways to improve the company. Sometimes he is critisized for being too old-fashioned and not keeping up with the times. When he is not working, he enjoys playing golf and walking his dog, Fido. He is married to his wife, Susan, and has two children, David and Sarah.",
         "public_bio": "Marty is the CEO of the company. His job is to help the employees however he can. He is also responsible for making sure the company is profitable, and the clients are happy. He also controls the company budget, and oversees recruitment activities. He does not have technical skills, but he is very good at talking to customers and giving speeches. Sometimes he is critisized for being too old-fashioned and not keeping up with the times.",
         "directives": [
@@ -101,10 +106,11 @@ agents = [
         "ordered_plan_ids": ["06d08245-81a4-4236-ad98-e128ed01167b"],
         "world_id": DEFAULT_WORLD["id"],
         "location_id": random.choice(locations)["id"],
+        "discord_bot_token": os.environ.get("MARTY_DISCORD_TOKEN")
     },
     {
         "id": "1cb5bc4f-4ea9-42b6-9fb7-af2626cf8bb0",
-        "full_name": "Rebecca",
+        "full_name": "Rebecca Thompson",
         "private_bio": "Rebecca is power-hungry and maniacal. She patiently plots her rise to power while maintaining excellent performance at work. As the Vice President, she is 2nd in command at the company, answering only to Marty. She is very good at managing people and is a great leader. She is very ambitious and is always looking for ways to improve her position. She is married to her husband, Jacob, and has no children. She secretly thinks that Marty is a bit of a fool, and that she will eventually take over the company.",
         "public_bio": "Rebecca is the Vice President of the company. Her job is to facilitate the day-to-day operations of the company. Compared to Marty, Rebecca tends to know more about the day to day activities of the company and its employees. She does not have technical skills, but she is very good at managing people and giving speeches. She is very ambitious and is always looking for ways to improve her position.",
         "directives": [
@@ -116,6 +122,7 @@ agents = [
         "ordered_plan_ids": ["2bedb32a-e1e8-46b3-a0c9-e98dfaabc391"],
         "world_id": DEFAULT_WORLD["id"],
         "location_id": random.choice(locations)["id"],
+        "discord_bot_token": os.environ.get("REBECCA_DISCORD_TOKEN")
     },
 ]
 
@@ -127,18 +134,18 @@ plans = [
     {
         "id": "06d08245-81a4-4236-ad98-e128ed01167b",
         "agent_id": "16b8e29c-ce8e-4d7e-96a4-8ba4b6550460",  # marty
-        "description": "Meet with Rebecca in the conference room and ask her how she is doing",
+        "description": "Have a conversation with Rebecca about what the company should do next.",
         "max_duration_hrs": 1,
-        "stop_condition": "The meeting is over",
+        "stop_condition": "You have decided what to do next",
         "location_id": locations[2]["id"],  # conference room
         "type": "default"
     },
     {
         "id": "2bedb32a-e1e8-46b3-a0c9-e98dfaabc391",
         "agent_id": "1cb5bc4f-4ea9-42b6-9fb7-af2626cf8bb0",  # rebecca
-        "description": "Join the team meeting in the conference room",
+        "description": "Walk around the office looking busy",
         "max_duration_hrs": 1,
-        "stop_condition": "The meeting is over",
+        "stop_condition": "Marty notices you.",
         "location_id": locations[2]["id"],  # conference room
         "type": "default"
     },

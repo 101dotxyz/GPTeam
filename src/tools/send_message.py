@@ -19,8 +19,6 @@ def send_message(agent_input: str, tool_context: ToolContext):
         And triggers discord to send a message to the appropriate channel
     """
 
-    print("Sending message... AGENT INPUT: ", agent_input) #TIMC
-
     # TIMC
     input("Press any key to continue...")
 

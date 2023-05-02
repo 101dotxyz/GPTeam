@@ -989,16 +989,13 @@ class Agent(BaseModel):
         # Refresh the events
         self.context.events_manager.refresh_events()
 
-        print(f"{self.full_name}: run_for_one_step...") #TIMC
-        print(f"Getting events at {self.location.name}, after {self.last_checked_events}...") #TIMC
+        print(f"[{self.full_name}]: RUN_FOR_ONE_STEP...") #TIMC
 
         events: list[Event] = self.context.events_manager.get_events(
             location_id=self.location.id,
             after=self.last_checked_events,
         )
         
-        print(f"\nNEW EVENTS AT {self.location.name}:\n{events}") #TIMC
-
         # Update the last checked events
         self.last_checked_events = datetime.now(pytz.utc)
 

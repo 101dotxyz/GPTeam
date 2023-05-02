@@ -764,6 +764,16 @@ class Agent(BaseModel):
             and message.sender_id != self.id
         ]
 
+        if not new_messages:
+            self._log("Inbox Empty", LogColor.MESSAGE, "No new messages.")
+            return
+
+        self._log(
+            "New Messages",
+            LogColor.MESSAGE,
+            f"{len(new_messages)} new messages in inbox.",
+        )
+
         low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0, streaming=True)
 
         # Make the response parser
@@ -775,7 +785,6 @@ class Agent(BaseModel):
         )
 
         for message in new_messages:
-
             conversation_history = message.get_chat_history()
 
             # Make the reaction prompter
@@ -809,10 +818,17 @@ class Agent(BaseModel):
             # Format the agent_input for the send_message function
             agent_input = f"{message.sender_name};{parsed_response.content}"
 
-            send_message(agent_input, ToolContext(context=self.context, agent_id=self.id))
+            send_message(
+                agent_input, ToolContext(context=self.context, agent_id=self.id)
+            )
 
-    async def _react(self, events: list[Event]) -> LLMReactionResponse:
+    async def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
+
+        # Get the recent events
+        (events, _) = self.context.events_manager.get_events(
+            location_id=self.location.id, after=self.last_checked_events
+        )
 
         # Store them as observations for this agent
         for event in events:
@@ -918,14 +934,10 @@ class Agent(BaseModel):
         # If we are not in the right location, move to the new location
         if self.location.id != plan.location.id:
             self._move_to_location(plan.location)
-            return
 
         # Execute the plan
 
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
-
-        # TODO: Tools are dependent on the location
-        timeout = int(os.getenv("STEP_DURATION"))
 
         if self.plan_executor is None:
             self.plan_executor = PlanExecutor(self.id, context=self.context)
@@ -1001,43 +1013,35 @@ class Agent(BaseModel):
         await self._act(current_plan)
 
     async def run_for_one_step(self):
-        # Refresh the events
-        self.context.events_manager.refresh_events()
+        print(f"{self.full_name}: run_for_one_step...")  # TIMC
+        print(
+            f"Getting events at {self.location.name}, after {self.last_checked_events}..."
+        )  # TIMC
 
-        print(f"{self.full_name}: run_for_one_step...") #TIMC
-        print(f"Getting events at {self.location.name}, after {self.last_checked_events}...") #TIMC
-
-        events: list[Event] = self.context.events_manager.get_events(
+        (events, first_refresh_time) = self.context.events_manager.get_events(
             location_id=self.location.id,
             after=self.last_checked_events,
         )
 
-        print(f"\nNEW EVENTS AT {self.location.name}:\n{events}") #TIMC
+        print(
+            f"\nNEW EVENTS AT {self.location.name}:\n{[event.description for event in events]}"
+        )  # TIMC
 
-        # Update the last checked events
-        self.last_checked_events = datetime.now(pytz.utc)
-
-        # TODO: Think about where best to put this
         # Respond to all messages
         await self._respond_to_messages(events)
-
-        # add any new events created by the messages
-        events += self.context.events_manager.get_events(
-            location_id=self.location.id,
-            after=self.last_checked_events,
-        )
 
         # First we decide if we need to reflect
         if self._should_reflect():
             await self._reflect()
 
-
         # Generate a reaction to the latest events
-        react_response = await self._react(events)
+        react_response = await self._react()
 
         # If the reaction calls for a new plan, make one
         if react_response.reaction == Reaction.REPLAN:
             await self._plan(react_response.thought_process)
+
+        self.last_checked_events = first_refresh_time
 
         # Work through the plans
         await self._do_first_plan()

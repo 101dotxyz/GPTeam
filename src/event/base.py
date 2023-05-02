@@ -136,10 +136,11 @@ class EventsManager(BaseModel):
             refresh_lock=threading.Lock(),
         )
 
-    def refresh_events(self) -> tuple[list[Event], datetime]:
+    def refresh_events(self) -> None:
+        started_checking_events = datetime.now(pytz.utc)
+
         with self.refresh_lock:
             print("Refreshing events...")
-            updated_refresh = datetime.now(pytz.utc)
             (_, data), _ = (
                 supabase.table("Events")
                 .select("*, location_id(*)")
@@ -163,9 +164,9 @@ class EventsManager(BaseModel):
             ]
 
             self.recent_events = events
-            self.last_refresh = updated_refresh
-
-        return (self.recent_events, updated_refresh)
+            self.last_refresh = max(
+                datetime.fromisoformat(data[0]["timestamp"]), started_checking_events
+            )
 
     def add_event(self, event: Event) -> None:
         """Adds an event in the current step to the DB and local object"""
@@ -192,13 +193,13 @@ class EventsManager(BaseModel):
         description: Optional[str] = None,
         after: Optional[datetime] = None,
         witness_ids: Optional[list[UUID]] = None,
-        refresh: Optional[bool] = False,
-    ) -> tuple(list[Event], datetime):
+        force_refresh: Optional[bool] = False,
+    ) -> tuple[list[Event], datetime]:
         if (
             (datetime.now(pytz.utc) - self.last_refresh).seconds
             > REFRESH_INTERVAL_SECONDS
-        ) or refresh:
-            (_, refresh_time) = self.refresh_events()
+        ) or force_refresh:
+            self.refresh_events()
 
         filtered_events = self.recent_events
 
@@ -231,7 +232,7 @@ class EventsManager(BaseModel):
                 )
             ]
 
-        return (filtered_events, refresh_time)
+        return (filtered_events, self.last_refresh)
 
     def remove_event(self, event_id: UUID):
         self.recent_events = [

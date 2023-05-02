@@ -127,6 +127,9 @@ class WorldContext(BaseModel):
     def get_agent_private_bio(self, agent_id: UUID | str) -> str:
         return self.get_agent_dict_from_id(agent_id)["private_bio"]
 
+    def get_discord_token(self, agent_id: UUID | str) -> str:
+        return self.get_agent_dict_from_id(agent_id)["discord_bot_token"]
+
     def update_agent(self, agent: dict):
         new_agents = [a for a in self.agents if str(a["id"]) != str(agent["id"])]
         agent["location_id"] = str(agent["location_id"])

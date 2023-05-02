@@ -1,10 +1,11 @@
+import threading
 from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
 import pytz
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import desc
 
 from ..utils.colors import LogColor
@@ -98,63 +99,73 @@ class Event(BaseModel):
 
 RECENT_EVENTS_BUFFER = 500
 
+REFRESH_INTERVAL_SECONDS = 5
+
 
 class EventsManager(BaseModel):
     recent_events: list[Event] = []
     world_id: str
+    last_refresh: datetime
+    refresh_lock: Any
 
-    def __init__(self, world_id: str, events: list[Event] = None):
-        if not events:
-            (_, data), _ = (
-                supabase.table("Events")
-                .select("*, location_id(*)")
-                .eq("location_id.world_id", world_id)
-                .order("timestamp", desc=True)
-                .limit(RECENT_EVENTS_BUFFER)
-                .execute()
-            )
-            recent_events = [
-                Event(
-                    type=event["type"],
-                    description=event["description"],
-                    location_id=event["location_id"]["id"],
-                    timestamp=datetime.fromisoformat(event["timestamp"]),
-                    witness_ids=event["witness_ids"],
-                )
-                for event in data
-            ]
-
-        super().__init__(
-            recent_events=recent_events,
-            world_id=world_id,
-        )
-
-    def refresh_events(self) -> list[Event]:
+    def __init__(self, world_id: str):
+        last_refresh = datetime.now(pytz.utc)
         (_, data), _ = (
             supabase.table("Events")
             .select("*, location_id(*)")
-            .eq("location_id.world_id", self.world_id)
+            .eq("location_id.world_id", world_id)
             .order("timestamp", desc=True)
             .limit(RECENT_EVENTS_BUFFER)
             .execute()
         )
-
-        events = [
+        recent_events = [
             Event(
-                id=event["id"],
                 type=event["type"],
                 description=event["description"],
                 location_id=event["location_id"]["id"],
-                agent_id=event["agent_id"],
                 timestamp=datetime.fromisoformat(event["timestamp"]),
                 witness_ids=event["witness_ids"],
             )
             for event in data
         ]
 
-        self.recent_events = events
+        super().__init__(
+            recent_events=recent_events,
+            world_id=world_id,
+            last_refresh=last_refresh,
+            refresh_lock=threading.Lock(),
+        )
 
-        return self.recent_events
+    def refresh_events(self) -> tuple[list[Event], datetime]:
+        with self.refresh_lock:
+            print("Refreshing events...")
+            updated_refresh = datetime.now(pytz.utc)
+            (_, data), _ = (
+                supabase.table("Events")
+                .select("*, location_id(*)")
+                .eq("location_id.world_id", self.world_id)
+                .order("timestamp", desc=True)
+                .limit(RECENT_EVENTS_BUFFER)
+                .execute()
+            )
+
+            events = [
+                Event(
+                    id=event["id"],
+                    type=event["type"],
+                    description=event["description"],
+                    location_id=event["location_id"]["id"],
+                    agent_id=event["agent_id"],
+                    timestamp=datetime.fromisoformat(event["timestamp"]),
+                    witness_ids=event["witness_ids"],
+                )
+                for event in data
+            ]
+
+            self.recent_events = events
+            self.last_refresh = updated_refresh
+
+        return (self.recent_events, updated_refresh)
 
     def add_event(self, event: Event) -> None:
         """Adds an event in the current step to the DB and local object"""
@@ -182,9 +193,12 @@ class EventsManager(BaseModel):
         after: Optional[datetime] = None,
         witness_ids: Optional[list[UUID]] = None,
         refresh: Optional[bool] = False,
-    ) -> list[Event]:
-        if refresh:
-            self.refresh_events()
+    ) -> tuple(list[Event], datetime):
+        if (
+            (datetime.now(pytz.utc) - self.last_refresh).seconds
+            > REFRESH_INTERVAL_SECONDS
+        ) or refresh:
+            (_, refresh_time) = self.refresh_events()
 
         filtered_events = self.recent_events
 
@@ -217,7 +231,7 @@ class EventsManager(BaseModel):
                 )
             ]
 
-        return filtered_events
+        return (filtered_events, refresh_time)
 
     def remove_event(self, event_id: UUID):
         self.recent_events = [

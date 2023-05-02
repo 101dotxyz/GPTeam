@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from src.tools.context import ToolContext
 from src.agent.message import AgentMessage
 from ..event.base import Event, EventType
-from ..utils.discord import send_message as send_discord_message
+from ..utils.discord import send_message_async as send_discord_message
 
 load_dotenv()
 
@@ -42,6 +42,7 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
     )
 
     return event.description
+
 
 def send_message_sync(agent_input: str, tool_context: ToolContext):
     """ Emits a message event to the Events table

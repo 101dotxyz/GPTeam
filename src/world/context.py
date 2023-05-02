@@ -8,6 +8,7 @@ from ..event.base import EventsManager
 class WorldData(BaseModel):
     id: str
     name: str
+    goal: str
 
 
 class WorldContext(BaseModel):

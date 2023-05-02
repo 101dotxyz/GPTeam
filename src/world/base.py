@@ -15,10 +15,13 @@ from ..location.base import Location
 from ..utils.database.database import supabase
 from .context import WorldContext, WorldData
 
+goal = "Write a research paper on AI alignment"
+
 
 class World(BaseModel):
     id: UUID
     name: str
+    goal: str
     locations: list[Location]
     agents: list[Agent]
     context: WorldContext
@@ -42,7 +45,7 @@ class World(BaseModel):
         )
 
         context = WorldContext(
-            world=WorldData(id=id, name=name),
+            world=WorldData(id=id, name=name, goal=goal),
             agents=agents,
             locations=locations,
         )
@@ -62,6 +65,7 @@ class World(BaseModel):
         super().__init__(
             id=id,
             name=name,
+            goal=goal,
             locations=locations,
             agents=agents,
             context=context,

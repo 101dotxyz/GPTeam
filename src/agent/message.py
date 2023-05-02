@@ -125,7 +125,7 @@ class AgentMessage(BaseModel):
             )
 
         # get all the messages sent at the location
-        recent_message_events_at_location = self.context.events_manager.get_events(
+        (recent_message_events_at_location, _) = self.context.events_manager.get_events(
             type=EventType.MESSAGE,
             location_id=self.location.id,
         )

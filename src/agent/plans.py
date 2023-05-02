@@ -100,6 +100,8 @@ class LLMSinglePlan(BaseModel):
 
     @validator("location_id")
     def location_is_valid_uuid(cls, v):
+        if isinstance(v, UUID):
+            return v
         try:
             UUID(v)
         except ValueError:

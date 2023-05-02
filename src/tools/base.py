@@ -10,6 +10,7 @@ from typing_extensions import override
 
 from src.tools.company_directory import look_up_company_directory
 from src.tools.context import ToolContext
+from src.tools.document import ReadDocumentToolInput, SaveDocumentToolInput, SearchDocumentsToolInput, read_document, save_document, search_documents
 from src.world.context import WorldContext
 
 from .directory import consult_directory
@@ -42,11 +43,10 @@ class CustomTool(Tool):
     def run(self, agent_input: str | dict, tool_context: ToolContext) -> List[BaseTool]:
         # if the tool requires context
         if self.requires_context:
-            input = {"agent_input": str(agent_input), "tool_context": tool_context}
+            input = {"agent_input": agent_input, "tool_context": tool_context} if isinstance(agent_input, str) else {**agent_input, "tool_context": tool_context}
 
         else:
-            input = str(agent_input)
-
+            input = agent_input
         return super().run(input)
 
 
@@ -113,6 +113,37 @@ def get_tools(
             func=consult_directory,
             description="A directory of all the people you can speak with, detailing their full names, roles, and current locations. Useful for when you need help from another person.",
             requires_context=True,  # this tool requires location_id as context
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.SAVE_DOCUMENT: CustomTool(
+            name=ToolName.SAVE_DOCUMENT.value,
+            func=save_document,
+            description="""Write text to an existing document or create a new one. Useful for when you need to save a document for later use.
+Input should be a json string with two keys: "title" and "document".
+The value of "title" should be a string, and the value of "document" should be a string.""",
+            requires_context=True,  # this tool requires document_name and content as context
+            args_schema=SaveDocumentToolInput,
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.READ_DOCUMENT: CustomTool(
+            name=ToolName.READ_DOCUMENT.value,
+            func=read_document,
+            description="""Read text from an existing document. Useful for when you need to read a document that you have saved.
+Input should be a json string with one key: "title". The value of "title" should be a string.""",
+            requires_context=True,  # this tool requires document_name and content as context
+            args_schema=ReadDocumentToolInput,
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.SEARCH_DOCUMENTS: CustomTool(
+            name=ToolName.SEARCH_DOCUMENTS.value,
+            func=search_documents,
+            description="""Search previously saved documents. Useful for when you need to read a document who's exact name you forgot.
+Input should be a json string with one key: "query". The value of "query" should be a string.""",
+            requires_context=True,  # this tool requires document_name and content as context
+            args_schema=SearchDocumentsToolInput,
             requires_authorization=False,
             worldwide=True,
         ),

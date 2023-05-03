@@ -1,4 +1,5 @@
 import enum
+import inspect
 from enum import Enum
 from typing import Any, List, Optional
 from uuid import UUID
@@ -39,16 +40,19 @@ class CustomTool(Tool):
     def __init__(
         self,
         name: str,
-        func,
         description: str,
         requires_context: Optional[bool],
         worldwide: bool,
         requires_authorization: bool,
         tool_usage_description: str,
+        func: Optional[Any] = lambda x: x,
+        coroutine: Optional[Any] = None,
         tool_usage_summarization_prompt: Optional[PromptString] = None,
         **kwargs: Any,
     ):
-        super().__init__(name, func, description, **kwargs)
+        super().__init__(
+            name=name, func=func, description=description, coroutine=coroutine, **kwargs
+        )
 
         self.requires_context = requires_context
         self.requires_authorization = requires_authorization
@@ -57,7 +61,7 @@ class CustomTool(Tool):
         self.tool_usage_summarization_prompt = tool_usage_summarization_prompt
 
     @override
-    def run(self, agent_input: str | dict, tool_context: ToolContext) -> List[BaseTool]:
+    async def run(self, agent_input: str | dict, tool_context: ToolContext) -> Any:
         # if the tool requires context
         if self.requires_context:
             input = (
@@ -68,7 +72,11 @@ class CustomTool(Tool):
 
         else:
             input = agent_input
-        return super().run(input)
+
+        if self.coroutine:
+            return await super().arun(input)
+        else:
+            return super().run(input)
 
     async def summarize_usage(
         self,
@@ -89,7 +97,7 @@ class CustomTool(Tool):
                 },
             )
 
-            llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+            llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.1)
 
             tool_usage_reflection = await llm.get_chat_completion(
                 reaction_prompter.prompt,
@@ -164,7 +172,7 @@ def get_tools(
         ),
         ToolName.SPEAK: CustomTool(
             name="speak",
-            func=send_message,
+            coroutine=send_message,
             description=f"say something in the {location_name}. {other_agent_names} are also in the {location_name} and will hear what you say. No one else will hear you. You can say something to everyone nearby, or address a specific person at your location (one of {other_agent_names}). The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let's get this meeting started.'). Do not use a semi-colon in your message.",
             tool_usage_description="To make progress on their plans, {agent_full_name} spoke to {recipient_full_name}.",
             requires_context=True,
@@ -206,7 +214,7 @@ def get_tools(
         ),
         ToolName.SAVE_DOCUMENT: CustomTool(
             name=ToolName.SAVE_DOCUMENT.value,
-            func=save_document,
+            coroutine=save_document,
             description="""Write text to an existing document or create a new one. Useful for when you need to save a document for later use.
 Input should be a json string with two keys: "title" and "document".
 The value of "title" should be a string, and the value of "document" should be a string.""",
@@ -218,7 +226,7 @@ The value of "title" should be a string, and the value of "document" should be a
         ),
         ToolName.READ_DOCUMENT: CustomTool(
             name=ToolName.READ_DOCUMENT.value,
-            func=read_document,
+            coroutine=read_document,
             description="""Read text from an existing document. Useful for when you need to read a document that you have saved.
 Input should be a json string with one key: "title". The value of "title" should be a string.""",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} read a document.",
@@ -229,7 +237,7 @@ Input should be a json string with one key: "title". The value of "title" should
         ),
         ToolName.SEARCH_DOCUMENTS: CustomTool(
             name=ToolName.SEARCH_DOCUMENTS.value,
-            func=search_documents,
+            coroutine=search_documents,
             description="""Search previously saved documents. Useful for when you need to read a document who's exact name you forgot.
 Input should be a json string with one key: "query". The value of "query" should be a string.""",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} searched documents.",

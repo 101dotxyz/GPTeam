@@ -134,14 +134,14 @@ class PlanExecutor(BaseModel):
         self.plan = plan
         self.intermediate_steps = []
 
-    def start_or_continue_plan(
+    async def start_or_continue_plan(
         self, plan: SinglePlan, tools: list[CustomTool]
     ) -> PlanExecutorResponse:
         if not self.plan or self.plan.description != plan.description:
             self.set_plan(plan)
-        return self.execute(tools)
+        return await self.execute(tools)
 
-    def execute(self, tools: list[CustomTool]) -> str:
+    async def execute(self, tools: list[CustomTool]) -> str:
         if self.plan is None:
             raise ValueError("No plan set")
 
@@ -188,7 +188,7 @@ class PlanExecutor(BaseModel):
             context=self.context,
         )
 
-        result = tool.run(response.tool_input, tool_context)
+        result = await tool.run(response.tool_input, tool_context)
 
         print_to_console(
             f"{agent_name}: Action Response: ",

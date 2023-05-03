@@ -647,7 +647,7 @@ class Agent(BaseModel):
             },
         )
 
-        chat_llm = ChatModel(temperature=0.5, streaming=True, request_timeout=600)
+        chat_llm = ChatModel(temperature=0.3, streaming=True, request_timeout=600)
 
         # Get the plans
         response = await chat_llm.get_chat_completion(
@@ -804,7 +804,7 @@ class Agent(BaseModel):
             # Format the agent_input for the send_message function
             agent_input = f"{message.sender_name};{parsed_response.content}"
 
-            send_message(
+            await send_message(
                 agent_input, ToolContext(context=self.context, agent_id=self.id)
             )
 
@@ -851,7 +851,7 @@ class Agent(BaseModel):
         )
 
         # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
         response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Deciding how to react...",
@@ -893,6 +893,9 @@ class Agent(BaseModel):
             },
         )
 
+        # Get the reaction
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
+
         response = await llm.get_chat_completion(
             gossip_prompter.prompt,
             loading_text="🤔 Creating gossip...",
@@ -930,7 +933,7 @@ class Agent(BaseModel):
         if self.plan_executor is None:
             self.plan_executor = PlanExecutor(self.id, context=self.context)
 
-        resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(
+        resp: PlanExecutorResponse = await self.plan_executor.start_or_continue_plan(
             plan, tools=self._get_current_tools()
         )
 

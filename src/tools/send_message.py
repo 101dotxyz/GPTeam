@@ -15,7 +15,7 @@ from ..utils.discord import send_message as send_discord_message
 load_dotenv()
 
 
-def send_message(agent_input: str, tool_context: ToolContext):
+async def send_message(agent_input: str, tool_context: ToolContext):
     """Emits a message event to the Events table
     And triggers discord to send a message to the appropriate channel
     """
@@ -32,7 +32,7 @@ def send_message(agent_input: str, tool_context: ToolContext):
     tool_context.context.events_manager.add_event(event)
 
     # now time to send the message in discord
-    send_discord_message(
+    await send_discord_message(
         os.environ.get("DISCORD_TOKEN"),
         tool_context.context.get_channel_id(agent_message.location.id),
         event.description,

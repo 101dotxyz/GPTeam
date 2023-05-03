@@ -893,9 +893,7 @@ class Agent(BaseModel):
     ) -> None:
         # Make the reaction prompter
         reaction_prompter = Prompter(
-            result.tool.summarize
-            if result.tool.summarize
-            else PromptString.GOSSIP_DEFAULT,
+            PromptString.GOSSIP,
             {
                 "full_name": self.full_name,
                 "plan_description": plan.description,
@@ -967,10 +965,17 @@ class Agent(BaseModel):
             # TODO: handle plan failure with a human
 
         elif resp.status == PlanStatus.IN_PROGRESS:
+            tool_usage_summary = await resp.tool.summarize_usage(
+                plan_description=plan.description,
+                tool_input=resp.tool_input,
+                tool_result=resp.output,
+                agent_full_name=self.full_name,
+            )
+
             event = Event(
                 agent_id=self.id,
                 type=EventType.NON_MESSAGE,
-                description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}.",
+                description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}. {tool_usage_summary}",
                 location_id=self.location.id,
             )
 

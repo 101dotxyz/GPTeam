@@ -11,6 +11,7 @@ from typing_extensions import override
 
 from src.tools.context import ToolContext
 from src.tools.document import ReadDocumentToolInput, SaveDocumentToolInput, SearchDocumentsToolInput, read_document, save_document, search_documents
+from src.tools.human import ask_human, ask_human_async
 from src.world.context import WorldContext
 
 from .directory import consult_directory
@@ -131,8 +132,19 @@ def get_tools(
         ToolName.WOLFRAM_APLHA: load_built_in_tool(
             "wolfram-alpha", requires_authorization=False, worldwide=True
         ),
-        ToolName.HUMAN: load_built_in_tool(
-            "human", requires_authorization=False, worldwide=True
+        ToolName.HUMAN: CustomTool(
+            name="human",
+            func=ask_human,
+            coroutine=ask_human_async,
+            description=(
+                "You can ask a human for guidance when you think you "
+                "got stuck or you are not sure what to do next. "
+                "The input should be a question for the human."
+            ),
+            requires_context=True,
+            requires_authorization=False,
+            worldwide=True,
+            is_async=True,
         ),
         ToolName.COMPANY_DIRECTORY: CustomTool(
             name=ToolName.COMPANY_DIRECTORY.value,

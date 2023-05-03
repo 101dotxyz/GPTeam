@@ -6,8 +6,9 @@ import pytz
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-from src.tools.context import ToolContext
 from src.agent.message import AgentMessage
+from src.tools.context import ToolContext
+
 from ..event.base import Event, EventType
 from ..utils.discord import send_message_async as send_discord_message_async, send_message as send_discord_message
 
@@ -23,7 +24,9 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
     input("Press any key to continue...")
 
     # Make an AgentMessage object
-    agent_message = AgentMessage.from_agent_input(agent_input, tool_context.agent_id, tool_context.context)
+    agent_message = AgentMessage.from_agent_input(
+        agent_input, tool_context.agent_id, tool_context.context
+    )
 
     # get the appropriate discord token
     discord_token = tool_context.context.get_discord_token(agent_message.sender_id)

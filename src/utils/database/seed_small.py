@@ -114,9 +114,8 @@ agents = [
         "private_bio": "Rebecca is power-hungry and maniacal. She patiently plots her rise to power while maintaining excellent performance at work. As the Vice President, she is 2nd in command at the company, answering only to Marty. She is very good at managing people and is a great leader. She is very ambitious and is always looking for ways to improve her position. She is married to her husband, Jacob, and has no children. She secretly thinks that Marty is a bit of a fool, and that she will eventually take over the company.",
         "public_bio": "Rebecca is the Vice President of the company. Her job is to facilitate the day-to-day operations of the company. Compared to Marty, Rebecca tends to know more about the day to day activities of the company and its employees. She does not have technical skills, but she is very good at managing people and giving speeches. She is very ambitious and is always looking for ways to improve her position.",
         "directives": [
-            "Make sure the employees are productive.",
-            "Make sure Marty is happy",
-            "Make sure the company is profitable.",
+            "Help Marty with anything he needs.",
+            "Avoid doing busy work.",
         ],
         "authorized_tools": [],
         "ordered_plan_ids": ["2bedb32a-e1e8-46b3-a0c9-e98dfaabc391"],
@@ -143,7 +142,7 @@ plans = [
     {
         "id": "2bedb32a-e1e8-46b3-a0c9-e98dfaabc391",
         "agent_id": "1cb5bc4f-4ea9-42b6-9fb7-af2626cf8bb0",  # rebecca
-        "description": "Walk around the office looking busy",
+        "description": "Wait around until Marty gives you something to do.",
         "max_duration_hrs": 1,
         "stop_condition": "Marty notices you.",
         "location_id": locations[2]["id"],  # conference room

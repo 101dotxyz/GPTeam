@@ -38,6 +38,8 @@ from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
 from .message import AgentMessage, LLMMessageResponse
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, PlanType, SinglePlan
+from .message import AgentMessage, LLMMessageResponse, get_latest_messages
+from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
 
@@ -124,12 +126,12 @@ class Agent(BaseModel):
         memories = " " + "\n ".join(
             [
                 str(memory)[:100] + "..." if len(str(memory)) > 100 else str(memory)
-                for memory in self.memories
+                for memory in self.memories[-5:]
             ]
         )
         plans = " " + "\n ".join([str(plan) for plan in self.plans])
 
-        return f"{self.full_name} - {self.location.name}\nprivate_bio: {private_bio}\nDirectives: {self.directives}\n\nMemories: \n{memories}\n\nPlans: \n{plans}\n"
+        return f"{self.full_name} - {self.location.name}\nprivate_bio: {private_bio}\nDirectives: {self.directives}\n\nRecent Memories: \n{memories}\n\nPlans: \n{plans}\n"
 
     @property
     def allowed_locations(self) -> list[Location]:
@@ -316,6 +318,7 @@ class Agent(BaseModel):
         description: str,
         type: MemoryType = MemoryType.OBSERVATION,
         related_memory_ids: list[UUID] = [],
+        log: bool = True,
     ) -> SingleMemory:
         memory = SingleMemory(
             agent_id=self.id,
@@ -331,7 +334,8 @@ class Agent(BaseModel):
         # add to database
         supabase.table("Memories").insert(memory.db_dict()).execute()
 
-        self._log("New Memory", LogColor.MEMORY, f"{memory}")
+        if log:
+            self._log("New Memory", LogColor.MEMORY, f"{memory}")
 
         return memory
 
@@ -346,7 +350,7 @@ class Agent(BaseModel):
 
         return supabase.table("Agents").update(row).eq("id", str(self.id)).execute()
 
-    def _add_plan_rows(self, plans: list[SinglePlan]):
+    def _upsert_plan_rows(self, plans: list[SinglePlan]):
         for plan in plans:
             supabase.table("Plans").upsert(plan._db_dict()).execute()
 
@@ -508,28 +512,9 @@ class Agent(BaseModel):
             "Moved Location", LogColor.MOVE, f"{self.location.name} -> {location.name}"
         )
 
-        # first emit the depature event to the db
-        event = Event(
-            agent_id=self.id,
-            type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} left location: {self.location.name}",
-            location_id=self.location.id,
-        )
-
-        self.context.events_manager.add_event(event)
-
         # Update the agents to the new location
         self.location = location
         self.context.update_agent(self._db_dict())
-
-        # emit the arrival to the db
-        event = Event(
-            agent_id=self.id,
-            type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} arrived at location: {location.name}",
-            location_id=self.location.id,
-        )
-        self.context.events_manager.add_event(event)
 
         # update the agents row in the db
         self._update_agent_row()
@@ -675,7 +660,7 @@ class Agent(BaseModel):
             },
         )
 
-        chat_llm = ChatModel(temperature=0.5, streaming=True, request_timeout=600)
+        chat_llm = ChatModel(temperature=0.3, streaming=True, request_timeout=600)
 
         # Get the plans
         response = await chat_llm.get_chat_completion(
@@ -745,7 +730,7 @@ class Agent(BaseModel):
         data, count = self._update_agent_row()
 
         # add the plans to the plan table
-        self._add_plan_rows(new_plans)
+        self._upsert_plan_rows(new_plans)
 
         # Loop through each plan and print it to the console
         for index, plan in enumerate(new_plans):
@@ -757,7 +742,7 @@ class Agent(BaseModel):
 
         return new_plans
 
-    async def _respond_to_messages(self, events: list[Event]) -> None:
+    async def _plan_responses(self, events: list[Event]) -> None:
         """Respond to new messages"""
 
         # Get new relevant messages
@@ -767,14 +752,14 @@ class Agent(BaseModel):
             if event.type == EventType.MESSAGE
         ]
 
-        # Get the relevant messages, with the newest first
-        relevant_messages = [
-            message
-            for message in new_messages
-            if (message.recipient_id == self.id or message.recipient_id is None)
-            and message.sender_id != self.id
-        ]
-        relevant_messages.sort(key=lambda message: message.timestamp, reverse=True)
+        relevant_messages = get_latest_messages(
+            [
+                message
+                for message in new_messages
+                if (message.recipient_id == self.id or message.recipient_id is None)
+                and message.sender_id != self.id
+            ]
+        )
 
         if not relevant_messages:
             self._log("Inbox Empty", LogColor.MESSAGE, "No new messages.")
@@ -786,9 +771,7 @@ class Agent(BaseModel):
             f"{len(relevant_messages)} new messages in inbox.",
         )
 
-        low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0, streaming=True)
-
-        response_plans = []
+        response_plans: list[SinglePlan] = []
 
         # For each unique message.sender_id...
         unique_senders = {message.sender_id for message in relevant_messages}
@@ -811,9 +794,6 @@ class Agent(BaseModel):
             )
             response_plans.append(new_plan)
 
-        # Carry out those plans
-        for plan in response_plans:
-            await self._act(plan)
 
     async def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
@@ -823,9 +803,11 @@ class Agent(BaseModel):
             location_id=self.location.id, after=self.last_checked_events
         )
 
+        self._log("New Memories", LogColor.MEMORY, f"{len(events)} new memories.")
+
         # Store them as observations for this agent
         for event in events:
-            await self._add_memory(event.description, MemoryType.OBSERVATION)
+            await self._add_memory(event.description, MemoryType.OBSERVATION, log=False)
 
         # LLM call to decide how to react to new events
         # Make the reaction parser
@@ -856,7 +838,7 @@ class Agent(BaseModel):
         )
 
         # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
         response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Deciding how to react...",
@@ -864,9 +846,6 @@ class Agent(BaseModel):
 
         # parse the reaction response
         parsed_reaction_response: LLMReactionResponse = reaction_parser.parse(response)
-
-        # add reaction to memory
-        await self._add_memory(parsed_reaction_response.thought_process)
 
         self._log(
             "Reaction",
@@ -897,7 +876,7 @@ class Agent(BaseModel):
         )
 
         # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
         response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Creating gossip...",
@@ -921,8 +900,7 @@ class Agent(BaseModel):
     async def _act(
         self,
         plan: SinglePlan,
-        executor: PlanExecutor = None,
-    ) -> None:
+    ) -> PlanStatus:
         """Act on a plan"""
 
         # If we are not in the right location, move to the new location
@@ -932,24 +910,33 @@ class Agent(BaseModel):
         # Execute the plan
 
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
+        self._log("Scratchpad: ", LogColor.ACT, f"{plan.scratchpad}")
 
-        # TODO: Inbound messages will overwrite the previous plan executor
-        if executor is None:
-            if plan.type == PlanType.DEFAULT:
-                self.plan_executor = PlanExecutor(self.id, world_context=self.context)
-                print("plantype default")
-            elif plan.type == PlanType.RESPONSE:
-                print("plan type response: ", plan.related_message)
-                self.plan_executor = PlanExecutor(
-                    self.id,
-                    world_context=self.context,
-                    message_to_respond_to=plan.related_message,
-                )
+        if plan.type == PlanType.DEFAULT:
+            self.plan_executor = PlanExecutor(
+                self.id, 
+                world_context=self.context,
+                scratchpad=plan.scratchpad,
+            )
+        elif plan.type == PlanType.RESPONSE:
+            self.plan_executor = PlanExecutor(
+                self.id,
+                world_context=self.context,
+                message_to_respond_to=plan.related_message,
+                scratchpad=plan.scratchpad,
+            )
 
         resp: PlanExecutorResponse = await self.plan_executor.start_or_continue_plan(
             plan, tools=self._get_current_tools()
         )
 
+        # update the plan in the local agent object
+        plan.scratchpad.extend(resp.scratchpad)
+
+        # update the plan in the db
+        self._upsert_plan_rows([plan])
+
+        # IF the plan failed
         if resp.status == PlanStatus.FAILED:
             # remove all plans with the same description
             self.plans = [p for p in self.plans if p.description != plan.description]
@@ -973,11 +960,21 @@ class Agent(BaseModel):
 
             self.plan_executor = None
 
+        # If the plan is in progress
         elif resp.status == PlanStatus.IN_PROGRESS:
+            print(f"{self.full_name}'s current plan is in progress...")
+
+            tool_usage_summary = await resp.tool.summarize_usage(
+                plan_description=plan.description,
+                tool_input=resp.tool_input,
+                tool_result=resp.output,
+                agent_full_name=self.full_name,
+            )
+
             event = Event(
                 agent_id=self.id,
                 type=EventType.NON_MESSAGE,
-                description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}.",
+                description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}. {tool_usage_summary}",
                 location_id=self.location.id,
             )
 
@@ -989,6 +986,8 @@ class Agent(BaseModel):
 
         # If the plan is done, remove it from the list of plans
         elif resp.status == PlanStatus.DONE:
+            print(f"{self.full_name}'s current plan is now done!")
+
             # remove all plans with the same description
             self.plans = [p for p in self.plans if p.description != plan.description]
 
@@ -1004,6 +1003,8 @@ class Agent(BaseModel):
             self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
             self.plan_executor = None
+
+        return resp.status
 
     async def _do_first_plan(self, executor: PlanExecutor = None) -> None:
         """Do the first plan in the list"""
@@ -1021,7 +1022,7 @@ class Agent(BaseModel):
 
         current_plan = plans[0]
 
-        await self._act(current_plan, executor)
+        await self._act(current_plan)
 
     async def run_for_one_step(self):
         print(f"{self.full_name}: run_for_one_step...")  # TIMC
@@ -1036,10 +1037,8 @@ class Agent(BaseModel):
             after=self.last_checked_events,
         )
 
-        previous_executor = self.plan_executor
-
         # Respond to new messages
-        await self._respond_to_messages(events)
+        await self._plan_responses(events)
 
         # Generate a reaction to the latest events
         react_response = await self._react()
@@ -1051,7 +1050,7 @@ class Agent(BaseModel):
         self.last_checked_events = first_refresh_time
 
         # Work through the plans
-        await self._do_first_plan(previous_executor)
+        await self._do_first_plan()
 
         # Reflect, if we should
         if self._should_reflect():

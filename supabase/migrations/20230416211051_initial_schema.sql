@@ -44,7 +44,7 @@ create table "public"."Plans" (
     "max_duration_hrs" real,
     "stop_condition" text,
     "completed_at" timestamp with time zone,
-    "scratchpad" text,
+    "scratchpad" jsonb,
     "status" plan_status not null default 'todo'::plan_status,
     "type" plan_type not null default 'default'::plan_type,
     "related_event_id" uuid,

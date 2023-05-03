@@ -32,7 +32,7 @@ class SinglePlan(BaseModel):
     related_message: Optional[AgentMessage] = None
     stop_condition: str
     status: PlanStatus
-    scratchpad: Optional[str]
+    scratchpad: list[dict] = []
     completed_at: Optional[datetime] = None
 
     def __init__(
@@ -43,18 +43,21 @@ class SinglePlan(BaseModel):
         stop_condition: str,
         agent_id: UUID,
         status: PlanStatus = PlanStatus.TODO,
-        scratchpad: Optional[str] = "",
-        created_at: Optional[datetime] = None,
-        completed_at: Optional[datetime] = None,
-        id: Optional[UUID] = None,
+        scratchpad: Optional[list[dict]] = [],
+        created_at: datetime = None,
+        completed_at: datetime = None,
+        id: UUID = None,
         type: PlanType = PlanType.DEFAULT,
-        related_message: Optional[AgentMessage] = None,
+        related_message: AgentMessage = None,
     ):
         if id is None:
             id = uuid4()
 
         if created_at is None:
             created_at = datetime.now(tz=pytz.utc)
+
+        if scratchpad is None:
+            scratchpad = []
 
         super().__init__(
             id=id,
@@ -111,14 +114,15 @@ class SinglePlan(BaseModel):
         }
 
         return row
-    
-    
+     
     def make_plan_prompt(self):
         if self.type == PlanType.RESPONSE:
             return f"Do this: {self.description}\nAt this location: {self.location.name}\nStop when this happens: {self.stop_condition}\nIf do not finish within {self.max_duration_hrs} hours, stop.\n\n{self.scratchpad}"
         else:
             # "Respond to what {full_name} said to you."
             return f"{self.description}"
+
+
 
 
 class LLMSinglePlan(BaseModel):

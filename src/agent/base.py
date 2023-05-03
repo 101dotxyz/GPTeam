@@ -122,12 +122,12 @@ class Agent(BaseModel):
         memories = " " + "\n ".join(
             [
                 str(memory)[:100] + "..." if len(str(memory)) > 100 else str(memory)
-                for memory in self.memories
+                for memory in self.memories[-5:]
             ]
         )
         plans = " " + "\n ".join([str(plan) for plan in self.plans])
 
-        return f"{self.full_name} - {self.location.name}\nprivate_bio: {private_bio}\nDirectives: {self.directives}\n\nMemories: \n{memories}\n\nPlans: \n{plans}\n"
+        return f"{self.full_name} - {self.location.name}\nprivate_bio: {private_bio}\nDirectives: {self.directives}\n\nRecent Memories: \n{memories}\n\nPlans: \n{plans}\n"
 
     @property
     def allowed_locations(self) -> list[Location]:
@@ -295,6 +295,7 @@ class Agent(BaseModel):
         description: str,
         type: MemoryType = MemoryType.OBSERVATION,
         related_memory_ids: list[UUID] = [],
+        log: bool = True,
     ) -> SingleMemory:
         memory = SingleMemory(
             agent_id=self.id,
@@ -310,7 +311,8 @@ class Agent(BaseModel):
         # add to database
         supabase.table("Memories").insert(memory.db_dict()).execute()
 
-        self._log("New Memory", LogColor.MEMORY, f"{memory}")
+        if log:
+            self._log("New Memory", LogColor.MEMORY, f"{memory}")
 
         return memory
 
@@ -813,9 +815,11 @@ class Agent(BaseModel):
             location_id=self.location.id, after=self.last_checked_events
         )
 
+        self._log("New Memories", LogColor.MEMORY, f"{len(events)} new memories.")
+
         # Store them as observations for this agent
         for event in events:
-            await self._add_memory(event.description, MemoryType.OBSERVATION)
+            await self._add_memory(event.description, MemoryType.OBSERVATION, log=False)
 
         # LLM call to decide how to react to new events
         # Make the reaction parser
@@ -1002,10 +1006,6 @@ class Agent(BaseModel):
             location_id=self.location.id,
             after=self.last_checked_events,
         )
-
-        print(
-            f"\nNEW EVENTS AT {self.location.name}:\n{[event.description for event in events]}"
-        )  # TIMC
 
         # Respond to all messages
         await self._respond_to_messages(events)

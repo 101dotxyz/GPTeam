@@ -83,9 +83,7 @@ class CustomOutputParser(AgentOutputParser):
         except json.JSONDecodeError:
             action_input = action_input.strip(" ").strip('"')
         # Return the action and action input
-        return AgentAction(
-            tool=action, tool_input=action_input, log=llm_output
-        )
+        return AgentAction(tool=action, tool_input=action_input, log=llm_output)
 
 
 class PlanExecutorResponse(BaseModel):
@@ -192,7 +190,11 @@ class PlanExecutor(BaseModel):
 
         result = tool.run(response.tool_input, tool_context)
 
-        print_to_console(f"{agent_name}: Action Response: ", LogColor.THOUGHT, result)
+        print_to_console(
+            f"{agent_name}: Action Response: ",
+            LogColor.THOUGHT,
+            result[:280] + "..." if len(result) > 280 else str(result),
+        )
 
         self.intermediate_steps.append((response, result))
 

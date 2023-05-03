@@ -33,8 +33,11 @@ class Prompter(BaseModel):
     template: str
     inputs: dict
 
-    def __init__(self, template: PromptString, inputs: dict) -> None:
-        super().__init__(inputs=inputs, template=template.value)
+    def __init__(self, template: PromptString | str, inputs: dict) -> None:
+        if isinstance(template, PromptString):
+            template = template.value
+
+        super().__init__(inputs=inputs, template=template)
 
         # Find all variables in the template string
         input_names = set(re.findall(r"{(\w+)}", self.template))

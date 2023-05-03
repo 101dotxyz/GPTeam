@@ -1,7 +1,7 @@
 import json
 import os
 from ctypes import Union
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal, Optional, Type, cast
 from uu import Error
 from uuid import UUID, uuid4
@@ -16,9 +16,12 @@ from ..event.base import Event, EventsManager, EventType
 from ..location.base import Location
 from ..memory.base import MemoryType, SingleMemory
 from ..tools.base import CustomTool, get_tools
+from ..tools.context import ToolContext
 from ..tools.name import ToolName
+from ..tools.send_message import send_message
 from ..utils.colors import LogColor
 from ..utils.database.database import supabase
+from ..utils.embeddings import get_embedding
 from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
@@ -34,6 +37,7 @@ from ..utils.prompt import Prompter, PromptString
 from ..world.context import WorldContext
 from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
+from .message import AgentMessage, LLMMessageResponse
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
@@ -53,6 +57,7 @@ class Agent(BaseModel):
     private_bio: str
     public_bio: str
     directives: Optional[list[str]]
+    last_checked_events: datetime
     memories: list[SingleMemory]
     plans: list[SinglePlan]
     authorized_tools: list[ToolName]
@@ -70,6 +75,7 @@ class Agent(BaseModel):
         full_name: str,
         private_bio: str,
         public_bio: str,
+        last_checked_events: datetime,
         context: WorldContext,
         directives: list[str] = None,
         memories: list[SingleMemory] = [],
@@ -91,6 +97,7 @@ class Agent(BaseModel):
             private_bio=private_bio,
             public_bio=public_bio,
             directives=directives,
+            last_checked_events=last_checked_events,
             authorized_tools=authorized_tools,
             memories=memories,
             plans=plans,
@@ -188,6 +195,7 @@ class Agent(BaseModel):
             private_bio=agent_dict["private_bio"],
             public_bio=agent_dict["public_bio"],
             directives=agent_dict["directives"],
+            last_checked_events=agent_dict["last_checked_events"],
             world_id=agent_dict["world_id"],
             location=agent_location,
             context=context,
@@ -262,6 +270,7 @@ class Agent(BaseModel):
             private_bio=agent.get("private_bio"),
             public_bio=agent.get("public_bio"),
             directives=agent.get("directives"),
+            last_checked_events=agent.get("last_checked_events"),
             authorized_tools=authorized_tools,
             memories=[SingleMemory(**memory) for memory in memories_data[1]],
             plans=plans,
@@ -281,7 +290,7 @@ class Agent(BaseModel):
         memories = [SingleMemory(**memory) for memory in data]
         return memories
 
-    def _add_memory(
+    async def _add_memory(
         self,
         description: str,
         type: MemoryType = MemoryType.OBSERVATION,
@@ -291,7 +300,8 @@ class Agent(BaseModel):
             agent_id=self.id,
             type=type,
             description=description,
-            importance=self._calculate_importance(description),
+            importance=await self._calculate_importance(description),
+            embedding=await get_embedding(description),
             related_memory_ids=related_memory_ids,
         )
 
@@ -309,6 +319,7 @@ class Agent(BaseModel):
             "full_name": self.full_name,
             "private_bio": self.private_bio,
             "directives": self.directives,
+            "last_checked_events": self.last_checked_events.isoformat(),
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
         }
 
@@ -374,15 +385,16 @@ class Agent(BaseModel):
             "private_bio": self.private_bio,
             "public_bio": self.public_bio,
             "directives": self.directives,
+            "last_checked_events": self.last_checked_events.isoformat(),
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
             "world_id": self.world_id,
             "location_id": self.location.id,
         }
 
-    def _related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
+    async def _related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
         # Calculate relevance for each memory and store it in a list of dictionaries
         memories_with_relevance = [
-            RelatedMemory(memory=memory, relevance=memory.relevance(query))
+            RelatedMemory(memory=memory, relevance=await memory.relevance(query))
             for memory in self.memories
         ]
 
@@ -393,7 +405,7 @@ class Agent(BaseModel):
 
         return sorted_memories[:k]
 
-    def _summarize_activity(self, k: int = 20) -> str:
+    async def _summarize_activity(self, k: int = 20) -> str:
         recent_memories = sorted(
             self.memories, key=lambda memory: memory.created_at, reverse=True
         )[:k]
@@ -413,7 +425,7 @@ class Agent(BaseModel):
 
         low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
 
-        response = low_temp_llm.get_chat_completion(
+        response = await low_temp_llm.get_chat_completion(
             summary_prompter.prompt,
             loading_text="🤔 Summarizing recent activity...",
         )
@@ -425,7 +437,7 @@ class Agent(BaseModel):
     ):
         print_to_console(f"{self.full_name}: {title}", color, description)
 
-    def _calculate_importance(self, memory_description: str) -> int:
+    async def _calculate_importance(self, memory_description: str) -> int:
         # Set up a complex chat model
         complex_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
 
@@ -445,7 +457,7 @@ class Agent(BaseModel):
             },
         )
 
-        response = complex_llm.get_chat_completion(
+        response = await complex_llm.get_chat_completion(
             importance_prompter.prompt,
             loading_text="🤔 Calculating memory importance...",
         )
@@ -459,7 +471,12 @@ class Agent(BaseModel):
     def _get_current_tools(self) -> list[CustomTool]:
         location_tools = self.location.available_tools
 
-        all_tools = get_tools(location_tools, include_worldwide=True)
+        all_tools = get_tools(
+            location_tools,
+            context=self.context,
+            agent_id=self.id,
+            include_worldwide=True,
+        )
 
         authorized_tools = [
             tool
@@ -481,7 +498,7 @@ class Agent(BaseModel):
 
         # first emit the depature event to the db
         event = Event(
-            step=self.context.world.current_step,
+            agent_id=self.id,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left location: {self.location.name}",
             location_id=self.location.id,
@@ -495,7 +512,7 @@ class Agent(BaseModel):
 
         # emit the arrival to the db
         event = Event(
-            step=self.context.world.current_step,
+            agent_id=self.id,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at location: {location.name}",
             location_id=self.location.id,
@@ -505,7 +522,7 @@ class Agent(BaseModel):
         # update the agents row in the db
         self._update_agent_row()
 
-    def _reflect(self):
+    async def _reflect(self):
         recent_memories = sorted(
             self.memories,
             key=lambda memory: memory.last_accessed or memory.created_at,
@@ -536,7 +553,7 @@ class Agent(BaseModel):
         )
 
         # Get the reflection questions
-        response = chat_llm.get_chat_completion(
+        response = await chat_llm.get_chat_completion(
             questions_prompter.prompt,
             loading_text="🤔 Thinking about what to reflect on...",
         )
@@ -547,7 +564,7 @@ class Agent(BaseModel):
         # For each question in the parsed questions...
         for question in parsed_questions_response.questions:
             # Get the related memories
-            related_memories = self._related_memories(question, 20)
+            related_memories = await self._related_memories(question, 20)
 
             # Format them into a string
             memory_strings = [
@@ -574,7 +591,7 @@ class Agent(BaseModel):
             )
 
             # Get the reflection insights
-            response = chat_llm.get_chat_completion(
+            response = await chat_llm.get_chat_completion(
                 reflection_prompter.prompt,
                 loading_text="🤔 Reflecting",
             )
@@ -593,13 +610,13 @@ class Agent(BaseModel):
                 ]
 
                 # Add a new memory
-                self._add_memory(
+                await self._add_memory(
                     description=reflection_insight.insight,
                     type=MemoryType.REFLECTION,
                     related_memory_ids=related_memory_ids,
                 )
 
-    def _plan(self, thought_process: str = "") -> list[SinglePlan]:
+    async def _plan(self, thought_process: str = "") -> list[SinglePlan]:
         """Trigger the agent's planning process
 
         Args:
@@ -619,7 +636,7 @@ class Agent(BaseModel):
         )
 
         # Get a summary of the recent activity
-        recent_activity = self._summarize_activity()
+        recent_activity = await self._summarize_activity()
 
         self._log("Recent Activity Summary", LogColor.PLAN, recent_activity)
 
@@ -629,7 +646,7 @@ class Agent(BaseModel):
             {
                 "time_window": PLAN_LENGTH,
                 "allowed_location_descriptions": [
-                    f"'id: {location.id}, name: {location.name}, description: {location.description}\n"
+                    f"'uuid: {location.id}, name: {location.name}, description: {location.description}\n"
                     for location in self.allowed_locations
                 ],
                 "full_name": self.full_name,
@@ -649,7 +666,7 @@ class Agent(BaseModel):
         chat_llm = ChatModel(temperature=0.5, streaming=True, request_timeout=600)
 
         # Get the plans
-        response = chat_llm.get_chat_completion(
+        response = await chat_llm.get_chat_completion(
             plan_prompter.prompt,
             loading_text="🤔 Making plans...",
         )
@@ -668,16 +685,16 @@ class Agent(BaseModel):
             self._log(
                 "Invalid Locations in Plan",
                 LogColor.PLAN,
-                f"The following locations are not in your allowed locations: {invalid_locations}",
+                f"The following locations are invalid: {invalid_locations}",
             )
 
             # Get the plans
-            response = chat_llm.get_chat_completion(
+            response = await chat_llm.get_chat_completion(
                 plan_prompter.prompt
                 + [
                     AIMessage(content=response),
                     HumanMessage(
-                        content=f"Your response included the following invalid location_id: {invalid_locations}. Please try again."
+                        content=f"Your response included the following invalid location_ids: {invalid_locations}. Please try again."
                     ),
                 ],
                 loading_text="🤔 Correcting plans...",
@@ -699,7 +716,7 @@ class Agent(BaseModel):
                     (
                         location
                         for location in self.allowed_locations
-                        if location.id == plan.location_id
+                        if str(location.id) == str(plan.location_id)
                     ),
                     None,
                 ),
@@ -728,17 +745,94 @@ class Agent(BaseModel):
 
         return new_plans
 
-    def _react(self) -> LLMReactionResponse:
+    async def _respond_to_messages(self, events: list[Event]) -> None:
+        """Respond to new messages"""
+
+        new_message_events: list[Event] = [
+            event for event in events if event.type == EventType.MESSAGE
+        ]
+
+        new_messages_at_location = [
+            AgentMessage.from_event(event=event, context=self.context)
+            for event in new_message_events
+        ]
+
+        new_messages = [
+            message
+            for message in new_messages_at_location
+            if (message.recipient_id == self.id or message.recipient_id is None)
+            and message.sender_id != self.id
+        ]
+
+        if not new_messages:
+            self._log("Inbox Empty", LogColor.MESSAGE, "No new messages.")
+            return
+
+        self._log(
+            "New Messages",
+            LogColor.MESSAGE,
+            f"{len(new_messages)} new messages in inbox.",
+        )
+
+        low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0, streaming=True)
+
+        # Make the response parser
+        response_parser = OutputFixingParser.from_llm(
+            parser=PydanticOutputParser(
+                pydantic_object=LLMMessageResponse,
+            ),
+            llm=low_temp_llm.defaultModel,
+        )
+
+        for message in new_messages:
+            conversation_history = message.get_chat_history()
+
+            # Make the reaction prompter
+            reaction_prompter = Prompter(
+                PromptString.RESPOND,
+                {
+                    "format_instructions": response_parser.get_format_instructions(),
+                    "sender_name": message.sender_name,
+                    "full_name": self.full_name,
+                    "private_bio": self.private_bio,
+                    "directives": str(self.directives),
+                    "current_plans": [
+                        f"{index}. {plan.description}"
+                        for index, plan in enumerate(self.plans)
+                    ],
+                    "conversation_history": conversation_history,
+                    "location_context": self.context.location_context_string(self.id),
+                },
+            )
+
+            # Get the reaction
+            llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+            response = await llm.get_chat_completion(
+                reaction_prompter.prompt,
+                loading_text="🤔 Responding to message...",
+            )
+
+            # parse the LLM message response
+            parsed_response: LLMMessageResponse = response_parser.parse(response)
+
+            # Format the agent_input for the send_message function
+            agent_input = f"{message.sender_name};{parsed_response.content}"
+
+            send_message(
+                agent_input, ToolContext(context=self.context, agent_id=self.id)
+            )
+
+    async def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
 
-        # Pull in the events from the last step at this location
-        new_events = self.context.events_manager.get_events_by_location_id(
-            self.location.id, step="last"
+        # Get the recent events
+        (events, _) = self.context.events_manager.get_events(
+            location_id=self.location.id, after=self.last_checked_events
         )
 
         # Store them as observations for this agent
-        for event in new_events:
-            self._add_memory(event.description, MemoryType.OBSERVATION)
+        for event in events:
+            await self._add_memory(event.description, MemoryType.OBSERVATION)
 
         # LLM call to decide how to react to new events
         # Make the reaction parser
@@ -755,7 +849,7 @@ class Agent(BaseModel):
                 "full_name": self.full_name,
                 "private_bio": self.private_bio,
                 "directives": str(self.directives),
-                "recent_activity": self._summarize_activity(),
+                "recent_activity": await self._summarize_activity(),
                 "current_plans": [
                     f"{index}. {plan.description}"
                     for index, plan in enumerate(self.plans)
@@ -763,14 +857,14 @@ class Agent(BaseModel):
                 "location_context": self.context.location_context_string(self.id),
                 "event_descriptions": [
                     f"{index}. {event.description}"
-                    for index, event in enumerate(new_events)
+                    for index, event in enumerate(events)
                 ],
             },
         )
 
         # Get the reaction
         llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
-        response = llm.get_chat_completion(
+        response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Deciding how to react...",
         )
@@ -779,7 +873,7 @@ class Agent(BaseModel):
         parsed_reaction_response: LLMReactionResponse = reaction_parser.parse(response)
 
         # add reaction to memory
-        self._add_memory(parsed_reaction_response.thought_process)
+        await self._add_memory(parsed_reaction_response.thought_process)
 
         self._log(
             "Reaction",
@@ -787,9 +881,12 @@ class Agent(BaseModel):
             f"Decided to {parsed_reaction_response.reaction.value}: {parsed_reaction_response.thought_process}",
         )
 
+        self.context.update_agent(self._db_dict())
+        self._update_agent_row()
+
         return parsed_reaction_response
 
-    def _gossip(
+    async def _gossip(
         self,
         plan: SinglePlan,
         result: PlanExecutorResponse,
@@ -800,6 +897,7 @@ class Agent(BaseModel):
             if result.tool.summarize
             else PromptString.GOSSIP_DEFAULT,
             {
+                "full_name": self.full_name,
                 "plan_description": plan.description,
                 "tool_name": result.tool.name,
                 "tool_input": result.tool_input,
@@ -809,7 +907,7 @@ class Agent(BaseModel):
 
         # Get the reaction
         llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
-        response = llm.get_chat_completion(
+        response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Creating gossip...",
         )
@@ -821,7 +919,7 @@ class Agent(BaseModel):
         )
 
         event = Event(
-            step=self.context.world.current_step,
+            agent_id=self.id,
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} said the following: {response}",
             location_id=self.location.id,
@@ -829,7 +927,7 @@ class Agent(BaseModel):
 
         self.context.events_manager.add_event(event)
 
-    def _act(
+    async def _act(
         self,
         plan: SinglePlan,
     ) -> None:
@@ -838,14 +936,10 @@ class Agent(BaseModel):
         # If we are not in the right location, move to the new location
         if self.location.id != plan.location.id:
             self._move_to_location(plan.location)
-            return
 
         # Execute the plan
 
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
-
-        # TODO: Tools are dependent on the location
-        timeout = int(os.getenv("STEP_DURATION"))
 
         if self.plan_executor is None:
             self.plan_executor = PlanExecutor(self.id, context=self.context)
@@ -856,8 +950,8 @@ class Agent(BaseModel):
 
         if resp.status == PlanStatus.FAILED:
             event = Event(
+                agent_id=self.id,
                 timestamp=datetime.now(pytz.utc),
-                step=self.context.world.current_step,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} has failed to complete the following: {plan.description} at the location: {plan.location.name}. {self.full_name} had the following problem: {resp.output}.",
                 location_id=self.location.id,
@@ -874,7 +968,7 @@ class Agent(BaseModel):
 
         elif resp.status == PlanStatus.IN_PROGRESS:
             event = Event(
-                step=self.context.world.current_step,
+                agent_id=self.id,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}.",
                 location_id=self.location.id,
@@ -884,7 +978,7 @@ class Agent(BaseModel):
 
             self._log("Action In Progress", LogColor.ACT, f"{plan.description}")
 
-            self._gossip(plan, resp)
+            # await self._gossip(plan, resp)
 
         # If the plan is done, remove it from the list of plans
         elif resp.status == PlanStatus.DONE:
@@ -892,7 +986,7 @@ class Agent(BaseModel):
             self.plans = [p for p in self.plans if p.description != plan.description]
 
             event = Event(
-                step=self.context.world.current_step,
+                agent_id=self.id,
                 type=EventType.NON_MESSAGE,
                 description=f"{self.full_name} has just completed the following: {plan.description} at the location: {plan.location.name}. The result was: {resp.output}.",
                 location_id=self.location.id,
@@ -902,7 +996,7 @@ class Agent(BaseModel):
 
             self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
-    def _do_first_plan(self) -> None:
+    async def _do_first_plan(self) -> None:
         """Do the first plan in the list"""
 
         current_plan = None
@@ -911,26 +1005,45 @@ class Agent(BaseModel):
         # If we have no plans, make some
         if len(self.plans) == 0:
             print(f"{self.full_name} has no plans, making some...")
-            plans = self._plan()
+            plans = await self._plan()
         # Otherwise, just use the existing plans
         else:
             plans = self.plans
 
         current_plan = plans[0]
 
-        self._act(current_plan)
+        await self._act(current_plan)
 
-    def run_for_one_step(self):
+    async def run_for_one_step(self):
+        print(f"{self.full_name}: run_for_one_step...")  # TIMC
+        print(
+            f"Getting events at {self.location.name}, after {self.last_checked_events}..."
+        )  # TIMC
+
+        (events, first_refresh_time) = self.context.events_manager.get_events(
+            location_id=self.location.id,
+            after=self.last_checked_events,
+        )
+
+        print(
+            f"\nNEW EVENTS AT {self.location.name}:\n{[event.description for event in events]}"
+        )  # TIMC
+
+        # Respond to all messages
+        await self._respond_to_messages(events)
+
         # First we decide if we need to reflect
         if self._should_reflect():
-            self._reflect()
+            await self._reflect()
 
         # Generate a reaction to the latest events
-        react_response = self._react()
+        react_response = await self._react()
 
         # If the reaction calls for a new plan, make one
         if react_response.reaction == Reaction.REPLAN:
-            self._plan(react_response.thought_process)
+            await self._plan(react_response.thought_process)
+
+        self.last_checked_events = first_refresh_time
 
         # Work through the plans
-        self._do_first_plan()
+        await self._do_first_plan()

@@ -13,6 +13,7 @@ CREATE TABLE "public"."Agents" (
     "authorized_tools" text[],
     "directives" text[],
     "world_id" uuid,
+    "last_checked_events" timestamp with time zone default now(),
     "ordered_plan_ids" uuid[],
     "location_id" uuid,
     "discord_bot_token" text,
@@ -50,9 +51,9 @@ create table "public"."Plans" (
 create table "public"."Events" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
     "timestamp" timestamp with time zone default now(),
-    "step" smallint,
     "type" event_type,
     "description" text,
+    "agent_id" uuid,
     "location_id" uuid,
     "witness_ids" uuid[],
     PRIMARY KEY ("id")
@@ -72,7 +73,17 @@ create table "public"."Locations" (
 create table "public"."Worlds" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
     "name" text,
-    "current_step" smallint,
+    PRIMARY KEY ("id")
+);
+
+create table "public"."Documents" (
+    "id" uuid DEFAULT uuid_generate_v4() not null,
+    "created_at" timestamp with time zone default now(),
+    "agent_id" uuid,
+    "title" text,
+    "normalized_title" text,
+    "content" text,
+    "embedding" vector(1536),
     PRIMARY KEY ("id")
 );
 
@@ -87,3 +98,43 @@ alter table "public"."Agents" validate constraint "Agents_world_id_fkey";
 alter table "public"."Events" add constraint "Events_location_id_fkey" FOREIGN KEY (location_id) REFERENCES "Locations"(id) ON DELETE CASCADE not valid;
 
 alter table "public"."Events" validate constraint "Events_location_id_fkey";
+
+alter table "public"."Events" add constraint "Events_agent_id_fkey" FOREIGN KEY (agent_id) REFERENCES "Agents"(id) ON DELETE CASCADE not valid;
+
+alter table "public"."Events" validate constraint "Events_agent_id_fkey";
+
+alter table "public"."Documents" add constraint "Documents_agent_id_fkey" FOREIGN KEY (agent_id) REFERENCES "Agents"(id) ON DELETE CASCADE not valid;
+
+create or replace function match_documents (
+  query_embedding vector(1536),
+  match_threshold float,
+  match_count int
+)
+returns table (
+  id uuid,
+  "created_at" timestamp with time zone,
+  "agent_id" uuid,
+  "title" text,
+  "normalized_title" text,
+  content text,
+  similarity float
+)
+language plpgsql
+as $$
+begin
+  return query
+  select
+    "public"."Documents".id,
+    "public"."Documents"."created_at",
+    "public"."Documents"."agent_id",
+    "public"."Documents"."title",
+    "public"."Documents"."normalized_title",
+    "public"."Documents".content,
+    1 - ("public"."Documents".embedding <=> query_embedding) as similarity
+  from "public"."Documents"
+  where 1 - ("public"."Documents".embedding <=> query_embedding) > match_threshold
+  order by similarity desc
+  limit match_count;
+end;
+$$;
+

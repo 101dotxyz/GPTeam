@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import time
@@ -7,25 +8,19 @@ from uuid import UUID
 
 from dotenv import load_dotenv
 from langchain import LLMChain
-from langchain.agents import AgentExecutor, AgentOutputParser, LLMSingleActionAgent
-from langchain.input import get_color_mapping
-from langchain.output_parsers import OutputFixingParser
+from langchain.agents import AgentOutputParser, LLMSingleActionAgent
 from langchain.prompts import BaseChatPromptTemplate
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
 from langchain.tools import BaseTool
 from pydantic import BaseModel
-from typing_extensions import override
 
 from src.world.context import WorldContext
 
-from ..event.base import Event, EventsManager
-from ..memory.base import MemoryType
-from ..tools.base import TOOLS, CustomTool
+from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
 from ..utils.colors import LogColor
 from ..utils.formatting import print_to_console
-from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
@@ -82,9 +77,14 @@ class CustomOutputParser(AgentOutputParser):
             raise ValueError(f"Could not parse LLM output: `{llm_output}`")
         action = match.group(1).strip()
         action_input = match.group(2)
+        # try parsing action_input as json
+        try:
+            action_input = json.loads(action_input)
+        except json.JSONDecodeError:
+            action_input = action_input.strip(" ").strip('"')
         # Return the action and action input
         return AgentAction(
-            tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output
+            tool=action, tool_input=action_input, log=llm_output
         )
 
 
@@ -107,8 +107,10 @@ class PlanExecutor(BaseModel):
         super().__init__(agent_id=agent_id, context=context)
 
     def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
+        full_name = self.context.get_agent_full_name(self.agent_id)
+
         prompt = CustomPromptTemplate(
-            template=PromptString.EXECUTE_PLAN.value,
+            template=PromptString.EXECUTE_PLAN.value.replace("{full_name}", full_name),
             tools=tools,
             # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
             # This includes the `intermediate_steps` variable because that is needed
@@ -148,7 +150,7 @@ class PlanExecutor(BaseModel):
         executor = self.get_executor(tools=tools)
 
         response = executor.plan(
-            input=self.plan.description,
+            input=self.plan.make_plan_prompt(),
             intermediate_steps=self.intermediate_steps,
             location_context=self.context.location_context_string(self.agent_id),
         )
@@ -175,7 +177,11 @@ class PlanExecutor(BaseModel):
                 return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
         try:
-            tool = TOOLS[ToolName(response.tool.lower())]
+            tool = get_tools(
+                [ToolName(response.tool.lower())],
+                context=self.context,
+                agent_id=self.agent_id,
+            )[0]
         except ValueError:
             raise ValueError(f"Tool: '{response.tool}' is not found in tool list")
 
@@ -194,5 +200,5 @@ class PlanExecutor(BaseModel):
             status=PlanStatus.IN_PROGRESS,
             output=result,
             tool=tool,
-            tool_input=response.tool_input,
+            tool_input=str(response.tool_input),
         )

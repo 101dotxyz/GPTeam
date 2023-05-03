@@ -1,6 +1,7 @@
 import enum
 from enum import Enum
 from typing import Any, List, Optional
+from uuid import UUID
 
 from langchain import GoogleSearchAPIWrapper
 from langchain.agents import Tool, load_tools
@@ -8,13 +9,22 @@ from langchain.llms import OpenAI
 from langchain.tools import BaseTool
 from typing_extensions import override
 
-from src.tools.company_directory import look_up_company_directory
 from src.tools.context import ToolContext
+from src.tools.document import (
+    ReadDocumentToolInput,
+    SaveDocumentToolInput,
+    SearchDocumentsToolInput,
+    read_document,
+    save_document,
+    search_documents,
+)
 from src.utils.prompt import PromptString
+from src.world.context import WorldContext
 
 from .directory import consult_directory
 from .name import ToolName
 from .send_message import send_message
+from .wait import wait
 
 
 class CustomTool(Tool):
@@ -45,11 +55,14 @@ class CustomTool(Tool):
     def run(self, agent_input: str | dict, tool_context: ToolContext) -> List[BaseTool]:
         # if the tool requires context
         if self.requires_context:
-            input = {"agent_input": str(agent_input), "tool_context": tool_context}
+            input = (
+                {"agent_input": agent_input, "tool_context": tool_context}
+                if isinstance(agent_input, str)
+                else {**agent_input, "tool_context": tool_context}
+            )
 
         else:
-            input = str(agent_input)
-
+            input = agent_input
         return super().run(input)
 
 
@@ -75,47 +88,101 @@ def load_built_in_tool(
     )
 
 
-TOOLS: dict[ToolName, CustomTool] = {
-    ToolName.SEARCH: CustomTool(
-        name="search",
-        func=GoogleSearchAPIWrapper().run,
-        description="useful for when you need to search for information you do not know. the input to this should be a single search term.",
-        summarize="You have just searched Google with the following search input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}.",
-        requires_context=False,
-        requires_authorization=False,
-        worldwide=True,
-    ),
-    ToolName.SPEAK: CustomTool(
-        name="speak",
-        func=send_message,
-        description="useful for when you need to speak to someone at your location. the input to this should be a single message, including the name of the person you want to speak to. e.g. David Summers: Do you know the printing code?",
-        summarize="You have just said {tool_input}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}.",
-        requires_context=True,
-        requires_authorization=False,
-        worldwide=True,
-    ),
-    ToolName.WOLFRAM_APLHA: load_built_in_tool(
-        "wolfram-alpha", requires_authorization=False, worldwide=True
-    ),
-    ToolName.HUMAN: load_built_in_tool(
-        "human",
-        summarize="You have just asked a human for help by saying {tool_input}. This is what they replied: {tool_result}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}.",
-        requires_authorization=False,
-        worldwide=True,
-    ),
-    ToolName.COMPANY_DIRECTORY: CustomTool(
-        name=ToolName.COMPANY_DIRECTORY.value,
-        func=consult_directory,
-        description="A directory of all the people you can speak with, detailing their full names, roles, and current locations. Useful for when you need find out information about other people working at the company.",
-        summarize="You have just consulted the company directory and found out the following: {tool_result}. Write a single sentence with useful information to share with others in your location about how what you found out from the company directory can help you accomplish your plan: {plan_description}.",
-        requires_context=True,  # this tool requires location_id as context
-        requires_authorization=False,
-        worldwide=True,
-    ),
-}
+def get_tools(
+    tools: List[ToolName],
+    context: WorldContext,
+    agent_id: str | UUID,
+    include_worldwide=False,
+) -> List[CustomTool]:
+    location_id = context.get_agent_location_id(agent_id=agent_id)
 
+    location_name = context.get_location_name(location_id=location_id)
 
-def get_tools(tools: List[ToolName], include_worldwide=False) -> List[CustomTool]:
+    agents_at_location = context.get_agents_at_location(location_id=location_id)
+
+    other_agents = [a for a in agents_at_location if str(a["id"]) != str(agent_id)]
+
+    # names of other agents at location
+    other_agent_names = ", ".join([a["full_name"] for a in other_agents])
+
+    TOOLS: dict[ToolName, CustomTool] = {
+        ToolName.SEARCH: CustomTool(
+            name="search",
+            func=GoogleSearchAPIWrapper().run,
+            description="useful for when you need to search for information you do not know. the input to this should be a single search term.",
+            summarize="You have just searched Google with the following search input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}.",
+            requires_context=False,
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.SPEAK: CustomTool(
+            name="speak",
+            func=send_message,
+            description=f"say something in the {location_name}. {other_agent_names} are also in the {location_name} and will hear what you say. No one else will hear you. You can say something to everyone nearby, or address a specific person at your location (one of {other_agent_names}). The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let's get this meeting started.'). Do not use a semi-colon in your message.",
+            summarize="You have just said {tool_input}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}.",
+            requires_context=True,
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.WAIT: CustomTool(
+            name="wait",
+            func=wait,
+            description="Don't do anything. Useful for when you are waiting for something to happen. Takes an empty string as input.",
+            requires_context=False,
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.WOLFRAM_APLHA: load_built_in_tool(
+            "wolfram-alpha", requires_authorization=False, worldwide=True
+        ),
+        ToolName.HUMAN: load_built_in_tool(
+            "human",
+            requires_authorization=False,
+            worldwide=True,
+            summarize="You have just asked a human for help by saying {tool_input}. This is what they replied: {tool_result}. Write a single sentence with useful information to share with others in your location about how the result can help you accomplish your plan: {plan_description}.",
+        ),
+        ToolName.COMPANY_DIRECTORY: CustomTool(
+            name=ToolName.COMPANY_DIRECTORY.value,
+            func=consult_directory,
+            description="A directory of all the people you can speak with, detailing their names, roles, and current locations. Useful for when you need help from another person.",
+            summarize="You have just consulted the company directory and found out the following: {tool_result}. Write a single sentence with useful information to share with others in your location about how what you found out from the company directory can help you accomplish your plan: {plan_description}.",
+            requires_context=True,  # this tool requires location_id as context
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.SAVE_DOCUMENT: CustomTool(
+            name=ToolName.SAVE_DOCUMENT.value,
+            func=save_document,
+            description="""Write text to an existing document or create a new one. Useful for when you need to save a document for later use.
+Input should be a json string with two keys: "title" and "document".
+The value of "title" should be a string, and the value of "document" should be a string.""",
+            requires_context=True,  # this tool requires document_name and content as context
+            args_schema=SaveDocumentToolInput,
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.READ_DOCUMENT: CustomTool(
+            name=ToolName.READ_DOCUMENT.value,
+            func=read_document,
+            description="""Read text from an existing document. Useful for when you need to read a document that you have saved.
+Input should be a json string with one key: "title". The value of "title" should be a string.""",
+            requires_context=True,  # this tool requires document_name and content as context
+            args_schema=ReadDocumentToolInput,
+            requires_authorization=False,
+            worldwide=True,
+        ),
+        ToolName.SEARCH_DOCUMENTS: CustomTool(
+            name=ToolName.SEARCH_DOCUMENTS.value,
+            func=search_documents,
+            description="""Search previously saved documents. Useful for when you need to read a document who's exact name you forgot.
+Input should be a json string with one key: "query". The value of "query" should be a string.""",
+            requires_context=True,  # this tool requires document_name and content as context
+            args_schema=SearchDocumentsToolInput,
+            requires_authorization=False,
+            worldwide=True,
+        ),
+    }
+
     if not include_worldwide:
         return [TOOLS[tool] for tool in tools]
 

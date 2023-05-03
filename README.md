@@ -16,7 +16,9 @@ Then replace the SUPABASE_DEV_URL and SUPABASE_DEV_KEY in the .ev file with the 
 `supabase db reset`
 
 This will use the migration file in supabase/migrations/initial_schema to set up the tables and columns
-This will also seed the db with two dummy agents, as specified in supabase/seed.sql
+
+### To seed the db
+`poetry run db-seed-small` or `poetry run db-seed`
 
 ### To run the src/testing.py file:
 `poetry run test`

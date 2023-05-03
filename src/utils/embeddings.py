@@ -21,13 +21,3 @@ async def get_embedding(text: str, model="text-embedding-ada-002") -> np.ndarray
     embedding = response["data"][0]["embedding"]
 
     return np.array(embedding)
-
-
-def get_embedding_sync(text: str, model="text-embedding-ada-002"):
-    response: list[float] = openai.Embedding.create(
-        input=[text.replace("\n", " ")], model=model
-    )
-
-    embedding = response["data"][0]["embedding"]
-
-    return embedding

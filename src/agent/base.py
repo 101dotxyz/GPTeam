@@ -803,7 +803,7 @@ class Agent(BaseModel):
             # Format the agent_input for the send_message function
             agent_input = f"{message.sender_name};{parsed_response.content}"
 
-            send_message(
+            await send_message(
                 agent_input, ToolContext(context=self.context, agent_id=self.id)
             )
 
@@ -926,7 +926,7 @@ class Agent(BaseModel):
         if self.plan_executor is None:
             self.plan_executor = PlanExecutor(self.id, context=self.context)
 
-        resp: PlanExecutorResponse = self.plan_executor.start_or_continue_plan(
+        resp: PlanExecutorResponse = await self.plan_executor.start_or_continue_plan(
             plan, tools=self._get_current_tools()
         )
 

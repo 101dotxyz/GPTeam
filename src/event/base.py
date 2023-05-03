@@ -64,6 +64,9 @@ class Event(BaseModel):
         if witness_ids is None:
             witness_ids = []
 
+        if type == EventType.MESSAGE and agent_id is None:
+            raise ValueError("agent_id must be provided for message events")
+
         super().__init__(
             id=id,
             type=type,
@@ -84,17 +87,6 @@ class Event(BaseModel):
             "location_id": str(self.location_id),
             "witness_ids": [str(witness_id) for witness_id in self.witness_ids],
         }
-
-    # @staticmethod
-    # def from_discord_message(message: DiscordMessage, witnesses: list[UUID]) -> "Event":
-    #     # parse user provided message into an event
-    #     # witnesses are all agents who were in the same location as the message
-    #     pass
-
-    # @staticmethod
-    # def from_agent_action(action: AgentAction, witnesses: list[UUID]) -> "Event":
-    #     # parse agent action into an event
-    #     pass
 
 
 RECENT_EVENTS_BUFFER = 500
@@ -120,11 +112,12 @@ class EventsManager(BaseModel):
         )
         recent_events = [
             Event(
-                type=event["type"],
+                type=EventType(event["type"]),
                 description=event["description"],
                 location_id=event["location_id"]["id"],
                 timestamp=datetime.fromisoformat(event["timestamp"]),
                 witness_ids=event["witness_ids"],
+                agent_id=event["agent_id"],
             )
             for event in data
         ]
@@ -153,7 +146,7 @@ class EventsManager(BaseModel):
             events = [
                 Event(
                     id=event["id"],
-                    type=event["type"],
+                    type=EventType(event["type"]),
                     description=event["description"],
                     location_id=event["location_id"]["id"],
                     agent_id=event["agent_id"],
@@ -161,6 +154,10 @@ class EventsManager(BaseModel):
                     witness_ids=event["witness_ids"],
                 )
                 for event in data
+            ]
+
+            message_events = [
+                event for event in events if event.type == EventType.MESSAGE
             ]
 
             self.recent_events = events

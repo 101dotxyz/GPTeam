@@ -7,7 +7,10 @@ rest_started = False
 
 async def _send_message(token, channel_id, message, rest_client):
     async with rest_client.acquire(token, "BOT") as client:
-        message = await client.create_message(channel_id, message)
+        # message = await client.create_message(channel_id, message)
+        
+        pass #TIMC toggles discord messages
+    
     return message
 
 

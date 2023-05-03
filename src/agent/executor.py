@@ -55,6 +55,9 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         # Create a list of tool names for the tools provided
         kwargs["tool_names"] = ", ".join([tool.name for tool in self.tools])
         formatted = self.template.format(**kwargs)
+
+        print(f"CUSTOM PROMPT TEMPLATE:\n{formatted}\n\n")
+
         return [HumanMessage(content=formatted)]
 
 
@@ -268,10 +271,7 @@ class PlanExecutor(BaseModel):
             context=self.context,
         )
 
-        if tool.is_async:
-            result = await tool.arun(response.tool_input, tool_context)
-        else: 
-            result = tool.run(response.tool_input, tool_context)
+        result = await tool.run(response.tool_input, tool_context)
 
         print_to_console(
             f"{agent_name}: Action Response: ",

@@ -36,7 +36,6 @@ class CustomTool(Tool):
     requires_context: Optional[bool] = False
     requires_authorization: bool = False
     worldwide: bool = True
-    is_async: bool = False
     tool_usage_description: str = None
     tool_usage_summarization_prompt: PromptString = None
 
@@ -51,7 +50,6 @@ class CustomTool(Tool):
         func: Optional[Any] = lambda x: x,
         coroutine: Optional[Any] = None,
         tool_usage_summarization_prompt: Optional[PromptString] = None,
-        is_async: Optional[bool] = False,
         **kwargs: Any,
     ):
         super().__init__(
@@ -61,7 +59,6 @@ class CustomTool(Tool):
         self.requires_context = requires_context
         self.requires_authorization = requires_authorization
         self.worldwide = worldwide
-        self.is_async = is_async
         self.tool_usage_description = tool_usage_description
         self.tool_usage_summarization_prompt = tool_usage_summarization_prompt
 
@@ -121,17 +118,6 @@ class CustomTool(Tool):
             if self.name == ToolName.SPEAK.value
             else "",
         )
-
-    @override
-    def arun(self, agent_input: str | dict, tool_context: ToolContext) -> Awaitable:
-        # if the tool requires context
-        if self.requires_context:
-            input = {"agent_input": str(agent_input), "tool_context": tool_context}
-
-        else:
-            input = str(agent_input)
-
-        return super().arun(input)
 
 
 def load_built_in_tool(
@@ -196,7 +182,6 @@ def get_tools(
             requires_context=True,
             requires_authorization=False,
             worldwide=True,
-            is_async=True,
         ),
         ToolName.WAIT: CustomTool(
             name="wait",

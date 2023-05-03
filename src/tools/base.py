@@ -97,7 +97,7 @@ class CustomTool(Tool):
                 },
             )
 
-            llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+            llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.1)
 
             tool_usage_reflection = await llm.get_chat_completion(
                 reaction_prompter.prompt,

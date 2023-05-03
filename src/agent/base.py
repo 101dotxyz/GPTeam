@@ -646,7 +646,7 @@ class Agent(BaseModel):
             },
         )
 
-        chat_llm = ChatModel(temperature=0.5, streaming=True, request_timeout=600)
+        chat_llm = ChatModel(temperature=0.3, streaming=True, request_timeout=600)
 
         # Get the plans
         response = await chat_llm.get_chat_completion(
@@ -850,7 +850,7 @@ class Agent(BaseModel):
         )
 
         # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
         response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Deciding how to react...",
@@ -888,7 +888,7 @@ class Agent(BaseModel):
         )
 
         # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
         response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Creating gossip...",

@@ -156,13 +156,14 @@ class EventsManager(BaseModel):
                 for event in data
             ]
 
-            message_events = [
-                event for event in events if event.type == EventType.MESSAGE
-            ]
-
             self.recent_events = events
-            self.last_refresh = max(
-                datetime.fromisoformat(data[0]["timestamp"]), started_checking_events
+            self.last_refresh = (
+                max(
+                    datetime.fromisoformat(data[0]["timestamp"]),
+                    started_checking_events,
+                )
+                if len(data) > 0
+                else started_checking_events
             )
 
     def add_event(self, event: Event) -> None:

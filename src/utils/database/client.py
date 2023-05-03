@@ -51,7 +51,9 @@ class Client(SyncClient):
         timeout: int = 60,
     ) -> AsyncPostgrestClient:
         """Private helper for creating an instance of the Postgrest client."""
-        client = AsyncPostgrestClient(rest_url, headers=headers, schema=schema)
+        client = AsyncPostgrestClient(
+            rest_url, headers=headers, schema=schema, timeout=timeout
+        )
         client.auth(token=supabase_key)
         return client
 

@@ -106,10 +106,6 @@ class Agent(BaseModel):
             context=context,
         )
 
-        # if the memories are None, retrieve them
-        if memories is None or len(memories) == 0:
-            self.memories = self._get_memories()
-
         print("\n\nAGENT INITIALIZED --------------------------\n")
         print(self)
 

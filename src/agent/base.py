@@ -37,7 +37,7 @@ from ..utils.prompt import Prompter, PromptString
 from ..world.context import WorldContext
 from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
-from .message import AgentMessage, LLMMessageResponse
+from .message import AgentMessage, LLMMessageResponse, get_latest_messages
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
@@ -757,12 +757,14 @@ class Agent(BaseModel):
             for event in new_message_events
         ]
 
-        new_messages = [
-            message
-            for message in new_messages_at_location
-            if (message.recipient_id == self.id or message.recipient_id is None)
-            and message.sender_id != self.id
-        ]
+        new_messages = get_latest_messages(
+            [
+                message
+                for message in new_messages_at_location
+                if (message.recipient_id == self.id or message.recipient_id is None)
+                and message.sender_id != self.id
+            ]
+        )
 
         if not new_messages:
             self._log("Inbox Empty", LogColor.MESSAGE, "No new messages.")

@@ -172,7 +172,7 @@ class EventsManager(BaseModel):
                 location_id=event["location_id"]["id"],
                 timestamp=datetime.fromisoformat(event["timestamp"]),
                 witness_ids=event["witness_ids"],
-                metadata=event["metadata"]
+                metadata=event["metadata"],
                 agent_id=event["agent_id"],
             )
             for event in data

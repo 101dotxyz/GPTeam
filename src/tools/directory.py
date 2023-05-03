@@ -6,7 +6,10 @@ from pydantic import BaseModel, Field
 from ..tools.context import ToolContext
 
 
-def consult_directory(agent_input, tool_context: ToolContext):
+def consult_directory(
+    tool_context: ToolContext,
+    agent_input: str = None,
+):
     """Shows a list of all agents and their current locations"""
 
     # first, craft the event object
@@ -22,9 +25,11 @@ def consult_directory(agent_input, tool_context: ToolContext):
 
         location_name = tool_context.context.get_location_name(location_id)
         directory += (
-            f"{index}. {agent['full_name']}\n"
-            f"   Bio: {agent['public_bio']}\n"
-            f"   Location: {location_name}\n"
+            f"{agent['full_name']}\n"
+            f"---------------------\n"
+            f"Current Location: {location_name}\n"
+            f"Bio: {agent['public_bio']}\n"
+            f"---------------------\n\n"
         )
 
     return directory

@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from ..event.base import Event, EventType
 from ..location.base import Location
+from ..utils.general import deduplicate_list
 from ..world.context import WorldContext
 
 
@@ -151,3 +152,9 @@ class AgentMessage(BaseModel):
 class LLMMessageResponse(BaseModel):
     to: str = Field(description="The recipient of the message")
     content: str = Field(description="The content of the message")
+
+
+def get_latest_messages(messages: list[AgentMessage]) -> list[AgentMessage]:
+    messages.sort(key=lambda x: x.timestamp, reverse=True)
+
+    return deduplicate_list(messages, key=lambda x: str(x.sender_id))

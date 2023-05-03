@@ -38,6 +38,8 @@ from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
 from .message import AgentMessage, LLMMessageResponse
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, PlanType, SinglePlan
+from .message import AgentMessage, LLMMessageResponse, get_latest_messages
+from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
 
@@ -124,12 +126,12 @@ class Agent(BaseModel):
         memories = " " + "\n ".join(
             [
                 str(memory)[:100] + "..." if len(str(memory)) > 100 else str(memory)
-                for memory in self.memories
+                for memory in self.memories[-5:]
             ]
         )
         plans = " " + "\n ".join([str(plan) for plan in self.plans])
 
-        return f"{self.full_name} - {self.location.name}\nprivate_bio: {private_bio}\nDirectives: {self.directives}\n\nMemories: \n{memories}\n\nPlans: \n{plans}\n"
+        return f"{self.full_name} - {self.location.name}\nprivate_bio: {private_bio}\nDirectives: {self.directives}\n\nRecent Memories: \n{memories}\n\nPlans: \n{plans}\n"
 
     @property
     def allowed_locations(self) -> list[Location]:
@@ -316,6 +318,7 @@ class Agent(BaseModel):
         description: str,
         type: MemoryType = MemoryType.OBSERVATION,
         related_memory_ids: list[UUID] = [],
+        log: bool = True,
     ) -> SingleMemory:
         memory = SingleMemory(
             agent_id=self.id,
@@ -331,7 +334,8 @@ class Agent(BaseModel):
         # add to database
         supabase.table("Memories").insert(memory.db_dict()).execute()
 
-        self._log("New Memory", LogColor.MEMORY, f"{memory}")
+        if log:
+            self._log("New Memory", LogColor.MEMORY, f"{memory}")
 
         return memory
 
@@ -508,28 +512,9 @@ class Agent(BaseModel):
             "Moved Location", LogColor.MOVE, f"{self.location.name} -> {location.name}"
         )
 
-        # first emit the depature event to the db
-        event = Event(
-            agent_id=self.id,
-            type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} left location: {self.location.name}",
-            location_id=self.location.id,
-        )
-
-        self.context.events_manager.add_event(event)
-
         # Update the agents to the new location
         self.location = location
         self.context.update_agent(self._db_dict())
-
-        # emit the arrival to the db
-        event = Event(
-            agent_id=self.id,
-            type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} arrived at location: {location.name}",
-            location_id=self.location.id,
-        )
-        self.context.events_manager.add_event(event)
 
         # update the agents row in the db
         self._update_agent_row()
@@ -675,7 +660,7 @@ class Agent(BaseModel):
             },
         )
 
-        chat_llm = ChatModel(temperature=0.5, streaming=True, request_timeout=600)
+        chat_llm = ChatModel(temperature=0.3, streaming=True, request_timeout=600)
 
         # Get the plans
         response = await chat_llm.get_chat_completion(
@@ -767,14 +752,14 @@ class Agent(BaseModel):
             if event.type == EventType.MESSAGE
         ]
 
-        # Get the relevant messages, with the newest first
-        relevant_messages = [
-            message
-            for message in new_messages
-            if (message.recipient_id == self.id or message.recipient_id is None)
-            and message.sender_id != self.id
-        ]
-        relevant_messages.sort(key=lambda message: message.timestamp, reverse=True)
+        relevant_messages = get_latest_messages(
+            [
+                message
+                for message in new_messages
+                if (message.recipient_id == self.id or message.recipient_id is None)
+                and message.sender_id != self.id
+            ]
+        )
 
         if not relevant_messages:
             self._log("Inbox Empty", LogColor.MESSAGE, "No new messages.")
@@ -785,8 +770,6 @@ class Agent(BaseModel):
             LogColor.MESSAGE,
             f"{len(relevant_messages)} new messages in inbox.",
         )
-
-        low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0, streaming=True)
 
         response_plans: list[SinglePlan] = []
 
@@ -820,9 +803,11 @@ class Agent(BaseModel):
             location_id=self.location.id, after=self.last_checked_events
         )
 
+        self._log("New Memories", LogColor.MEMORY, f"{len(events)} new memories.")
+
         # Store them as observations for this agent
         for event in events:
-            await self._add_memory(event.description, MemoryType.OBSERVATION)
+            await self._add_memory(event.description, MemoryType.OBSERVATION, log=False)
 
         # LLM call to decide how to react to new events
         # Make the reaction parser
@@ -853,7 +838,7 @@ class Agent(BaseModel):
         )
 
         # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
         response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Deciding how to react...",
@@ -861,9 +846,6 @@ class Agent(BaseModel):
 
         # parse the reaction response
         parsed_reaction_response: LLMReactionResponse = reaction_parser.parse(response)
-
-        # add reaction to memory
-        await self._add_memory(parsed_reaction_response.thought_process)
 
         self._log(
             "Reaction",
@@ -894,7 +876,7 @@ class Agent(BaseModel):
         )
 
         # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
         response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Creating gossip...",
@@ -982,10 +964,17 @@ class Agent(BaseModel):
         elif resp.status == PlanStatus.IN_PROGRESS:
             print(f"{self.full_name}'s current plan is in progress...")
 
+            tool_usage_summary = await resp.tool.summarize_usage(
+                plan_description=plan.description,
+                tool_input=resp.tool_input,
+                tool_result=resp.output,
+                agent_full_name=self.full_name,
+            )
+
             event = Event(
                 agent_id=self.id,
                 type=EventType.NON_MESSAGE,
-                description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}.",
+                description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}. {tool_usage_summary}",
                 location_id=self.location.id,
             )
 

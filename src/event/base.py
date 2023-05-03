@@ -64,6 +64,9 @@ class Event(BaseModel):
         if witness_ids is None:
             witness_ids = []
 
+        if type == EventType.MESSAGE and agent_id is None:
+            raise ValueError("agent_id must be provided for message events")
+
         super().__init__(
             id=id,
             type=type,
@@ -142,11 +145,12 @@ class EventsManager(BaseModel):
         )
         recent_events = [
             Event(
-                type=event["type"],
+                type=EventType(event["type"]),
                 description=event["description"],
                 location_id=event["location_id"]["id"],
                 timestamp=datetime.fromisoformat(event["timestamp"]),
                 witness_ids=event["witness_ids"],
+                agent_id=event["agent_id"],
             )
             for event in data
         ]
@@ -175,7 +179,7 @@ class EventsManager(BaseModel):
             events = [
                 Event(
                     id=event["id"],
-                    type=event["type"],
+                    type=EventType(event["type"]),
                     description=event["description"],
                     location_id=event["location_id"]["id"],
                     agent_id=event["agent_id"],
@@ -186,8 +190,13 @@ class EventsManager(BaseModel):
             ]
 
             self.recent_events = events
-            self.last_refresh = max(
-                datetime.fromisoformat(data[0]["timestamp"]), started_checking_events
+            self.last_refresh = (
+                max(
+                    datetime.fromisoformat(data[0]["timestamp"]),
+                    started_checking_events,
+                )
+                if len(data) > 0
+                else started_checking_events
             )
 
     def add_event(self, event: Event) -> None:

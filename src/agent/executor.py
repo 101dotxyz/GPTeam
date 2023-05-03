@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import time
@@ -77,10 +78,13 @@ class CustomOutputParser(AgentOutputParser):
             raise ValueError(f"Could not parse LLM output: `{llm_output}`")
         action = match.group(1).strip()
         action_input = match.group(2)
+        # try parsing action_input as json
+        try:
+            action_input = json.loads(action_input)
+        except json.JSONDecodeError:
+            action_input = action_input.strip(" ").strip('"')
         # Return the action and action input
-        return AgentAction(
-            tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output
-        )
+        return AgentAction(tool=action, tool_input=action_input, log=llm_output)
 
 
 class PlanExecutorResponse(BaseModel):
@@ -269,7 +273,11 @@ class PlanExecutor(BaseModel):
         else: 
             result = tool.run(response.tool_input, tool_context)
 
-        print_to_console(f"{agent_name}: Action Response: ", LogColor.THOUGHT, result)
+        print_to_console(
+            f"{agent_name}: Action Response: ",
+            LogColor.THOUGHT,
+            result[:280] + "..." if len(result) > 280 else str(result),
+        )
 
         # Add the intermediate step to the list of intermediate steps
         self.intermediate_steps.append((response, result))
@@ -278,8 +286,8 @@ class PlanExecutor(BaseModel):
             status=PlanStatus.IN_PROGRESS,
             output=result,
             tool=tool,
-            tool_input=response.tool_input,
             scratchpad=self.intermediate_steps_to_list(self.intermediate_steps),
+            tool_input=str(response.tool_input),
         )
 
         return executor_response

@@ -8,7 +8,6 @@ from postgrest._async.request_builder import (
     AsyncRequestBuilder,
 )
 from supabase.lib.client_options import ClientOptions
-from typing_extensions import override
 
 from supabase import Client as SyncClient
 

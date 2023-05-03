@@ -4,6 +4,8 @@ rest = hikari.RESTApp()
 
 
 async def send_message(token, channel_id, message):
+    # Disable in dev
+    return None
     if not rest._client_session:
         await rest.start()
     # We acquire a client with a given token. This allows one REST app instance

@@ -385,7 +385,7 @@ class Agent(BaseModel):
             [memory.importance for memory in memories_since_last_reflection]
         )
 
-        return cumulative_importance > 100
+        return cumulative_importance > 500
 
     def _db_dict(self):
         return {
@@ -720,10 +720,10 @@ class Agent(BaseModel):
         self.plans = new_plans
 
         # update the db agent row
-        data, count = self._update_agent_row()
+        await self._update_agent_row()
 
         # add the plans to the plan table
-        data, count = self._add_plan_rows(new_plans)
+        await self._add_plan_rows(new_plans)
 
         # Loop through each plan and print it to the console
         for index, plan in enumerate(new_plans):
@@ -873,7 +873,7 @@ class Agent(BaseModel):
         )
 
         self.context.update_agent(self._db_dict())
-        self._update_agent_row()
+        await self._update_agent_row()
 
         return parsed_reaction_response
 

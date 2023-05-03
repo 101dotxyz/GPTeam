@@ -8,7 +8,6 @@ packages = [{include = "src"}]
 
 [tool.poetry.scripts]
 start = "src:run"
-cli = "src.cli:main"
 test = "src.main:main"
 db-seed = "src.utils.database.seed:main"
 db-seed-small = "src.utils.database.seed_small:main"

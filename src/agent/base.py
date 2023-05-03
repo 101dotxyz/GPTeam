@@ -496,28 +496,9 @@ class Agent(BaseModel):
             "Moved Location", LogColor.MOVE, f"{self.location.name} -> {location.name}"
         )
 
-        # first emit the depature event to the db
-        event = Event(
-            agent_id=self.id,
-            type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} left location: {self.location.name}",
-            location_id=self.location.id,
-        )
-
-        self.context.events_manager.add_event(event)
-
         # Update the agents to the new location
         self.location = location
         self.context.update_agent(self._db_dict())
-
-        # emit the arrival to the db
-        event = Event(
-            agent_id=self.id,
-            type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} arrived at location: {location.name}",
-            location_id=self.location.id,
-        )
-        self.context.events_manager.add_event(event)
 
         # update the agents row in the db
         self._update_agent_row()
@@ -873,9 +854,6 @@ class Agent(BaseModel):
 
         # parse the reaction response
         parsed_reaction_response: LLMReactionResponse = reaction_parser.parse(response)
-
-        # add reaction to memory
-        await self._add_memory(parsed_reaction_response.thought_process)
 
         self._log(
             "Reaction",

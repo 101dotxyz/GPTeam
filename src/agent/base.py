@@ -30,6 +30,7 @@ from ..utils.parameters import (
     DEFAULT_LOCATION_ID,
     DEFAULT_SMART_MODEL,
     DEFAULT_WORLD_ID,
+    GOSSIP_MEMORY_COUNT,
     PLAN_LENGTH,
     REFLECTION_MEMORY_COUNT,
 )
@@ -870,27 +871,30 @@ class Agent(BaseModel):
 
         return parsed_reaction_response
 
-    async def _gossip(
-        self,
-        plan: SinglePlan,
-        result: PlanExecutorResponse,
-    ) -> None:
+    async def _gossip(self) -> None:
+        recent_memories = sorted(
+            self.memories,
+            key=lambda memory: memory.last_accessed or memory.created_at,
+            reverse=True,
+        )[:GOSSIP_MEMORY_COUNT]
+
+        # Get the reaction
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
+
+        # Format the memories into a string
+        memory_descriptions = [memory.description for memory in recent_memories]
+
         # Make the reaction prompter
-        reaction_prompter = Prompter(
+        gossip_prompter = Prompter(
             PromptString.GOSSIP,
             {
                 "full_name": self.full_name,
-                "plan_description": plan.description,
-                "tool_name": result.tool.name,
-                "tool_input": result.tool_input,
-                "tool_result": result.output,
+                "memory_descriptions": str(memory_descriptions),
             },
         )
 
-        # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.5)
         response = await llm.get_chat_completion(
-            reaction_prompter.prompt,
+            gossip_prompter.prompt,
             loading_text="🤔 Creating gossip...",
         )
 
@@ -967,8 +971,6 @@ class Agent(BaseModel):
 
             self._log("Action In Progress", LogColor.ACT, f"{plan.description}")
 
-            # await self._gossip(plan, resp)
-
         # If the plan is done, remove it from the list of plans
         elif resp.status == PlanStatus.DONE:
             # remove all plans with the same description
@@ -1020,6 +1022,7 @@ class Agent(BaseModel):
         # First we decide if we need to reflect
         if self._should_reflect():
             await self._reflect()
+            await self._gossip()
 
         # Generate a reaction to the latest events
         react_response = await self._react()

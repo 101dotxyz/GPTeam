@@ -26,7 +26,7 @@ class PromptString(Enum):
 
     RESPOND = "You are role-playing as a character named {full_name}. Your character is currently talking with another character named{sender_name}. Given your character's personal info, current plans, location context and conversation history, decide what to say next.\n\n{format_instructions}\n\nLet's Begin!\n\nYour Bio: {private_bio}\n\nGoals: {directives}\n\nCurrent Plans: {current_plans}\n\nLocation Context: {location_context}\n\nConversation History: {conversation_history}."
 
-    GOSSIP = "You are {full_name}. You are currently working on the following plan: {plan_description}. You have just used the tool {tool_name} with the following input {tool_input} and got the following result {tool_result}. Write a single sentence of useful information to share with others in your location about what you have just found out."
+    GOSSIP = "You are {full_name}. \n{memory_descriptions}\n\nBased on the above statements, say one or two sentences that are interesting to your colleagues.\nWhen referring to others, always specify their name."
 
 
 class Prompter(BaseModel):

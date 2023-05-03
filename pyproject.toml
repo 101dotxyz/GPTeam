@@ -26,6 +26,7 @@ langchain = "^0.0.144"
 pytz = "^2023.3"
 google-api-python-client = "^2.86.0"
 hikari = "^2.0.0.dev118"
+postgrest-py = "^0.10.6"
 
 [tool.black]
 line-length = 88

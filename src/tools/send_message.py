@@ -29,7 +29,7 @@ async def send_message(agent_input: str, tool_context: ToolContext):
     event = agent_message.to_event()
 
     # now add it to the events manager
-    tool_context.context.events_manager.add_event(event)
+    await tool_context.context.events_manager.add_event(event)
 
     # now time to send the message in discord
     await send_discord_message(

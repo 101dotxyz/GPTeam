@@ -7,7 +7,7 @@ import pytz
 from pydantic import BaseModel, Field, validator
 
 from ..location.base import Location
-from ..utils.database.database import supabase
+from ..utils.database.client import supabase
 
 
 class PlanStatus(Enum):
@@ -65,22 +65,24 @@ class SinglePlan(BaseModel):
         return f"[PLAN] - {self.description} at {self.location.name}"
 
     @classmethod
-    def from_id(cls, id: UUID):
+    async def from_id(cls, id: UUID):
         (_, data), (_, count) = (
-            supabase.table("Plans").select("*").eq("id", str(id)).execute()
+            await supabase.table("Plans").select("*").eq("id", str(id)).execute()
         )
 
         if not count:
             raise ValueError(f"Plan with id {id} does not exist")
 
         plan_data = data[0]
-        plan_data["location"] = Location.from_id(plan_data["location_id"])
+        plan_data["location"] = await Location.from_id(plan_data["location_id"])
         del plan_data["location_id"]
 
         return cls(**plan_data)
 
-    def delete(self):
-        data, count = supabase.table("Plans").delete().eq("id", str(self.id)).execute()
+    async def delete(self):
+        data, count = (
+            await supabase.table("Plans").delete().eq("id", str(self.id)).execute()
+        )
         return data
 
     def make_plan_prompt(self):

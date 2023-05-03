@@ -20,15 +20,29 @@ class WorldContext(BaseModel):
         self,
         agents: dict,
         locations: dict,
+        events_manager: EventsManager,
         world: WorldData,
     ):
-        events_manager = EventsManager(world_id=world.id)
         # convert all UUIDs to strings
         for agent in agents:
             agent["id"] = str(agent["id"])
             agent["location_id"] = str(agent["location_id"])
 
         return super().__init__(
+            agents=agents,
+            locations=locations,
+            world=world,
+            events_manager=events_manager,
+        )
+
+    async def from_data(
+        agents: dict,
+        locations: dict,
+        world: WorldData,
+    ):
+        events_manager = await EventsManager.from_world_id(world.id)
+
+        return WorldContext(
             agents=agents,
             locations=locations,
             world=world,

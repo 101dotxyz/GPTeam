@@ -110,12 +110,12 @@ class AgentMessage(BaseModel):
 
         return event
 
-    def get_chat_history(self) -> str:
+    async def get_chat_history(self) -> str:
         if self.recipient_id is None:
             (
                 recent_message_events_at_location,
                 _,
-            ) = self.context.events_manager.get_events(
+            ) = await self.context.events_manager.get_events(
                 type=EventType.MESSAGE,
                 location_id=self.location.id,
             )

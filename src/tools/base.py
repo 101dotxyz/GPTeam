@@ -43,7 +43,7 @@ class CustomTool(Tool):
         self.is_async = is_async
 
     @override
-    def run(self, agent_input: str | dict, tool_context: ToolContext) -> List[BaseTool]:
+    def run(self, agent_input: str | dict, tool_context: ToolContext) -> str:
         # if the tool requires context
         if self.requires_context:
             input = {"agent_input": str(agent_input), "tool_context": tool_context}

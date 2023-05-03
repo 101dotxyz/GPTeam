@@ -38,7 +38,7 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
     await send_discord_message(
         discord_token,
         tool_context.context.get_channel_id(agent_message.location.id),
-        event.description,
+        agent_message.content
     )
 
     return event.description

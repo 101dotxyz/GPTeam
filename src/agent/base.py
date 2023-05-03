@@ -346,7 +346,7 @@ class Agent(BaseModel):
 
         return supabase.table("Agents").update(row).eq("id", str(self.id)).execute()
 
-    def _add_plan_rows(self, plans: list[SinglePlan]):
+    def _upsert_plan_rows(self, plans: list[SinglePlan]):
         for plan in plans:
             supabase.table("Plans").upsert(plan._db_dict()).execute()
 
@@ -745,7 +745,7 @@ class Agent(BaseModel):
         data, count = self._update_agent_row()
 
         # add the plans to the plan table
-        self._add_plan_rows(new_plans)
+        self._upsert_plan_rows(new_plans)
 
         # Loop through each plan and print it to the console
         for index, plan in enumerate(new_plans):
@@ -757,7 +757,7 @@ class Agent(BaseModel):
 
         return new_plans
 
-    async def _respond_to_messages(self, events: list[Event]) -> None:
+    async def _plan_responses(self, events: list[Event]) -> None:
         """Respond to new messages"""
 
         # Get new relevant messages
@@ -788,7 +788,7 @@ class Agent(BaseModel):
 
         low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0, streaming=True)
 
-        response_plans = []
+        response_plans: list[SinglePlan] = []
 
         # For each unique message.sender_id...
         unique_senders = {message.sender_id for message in relevant_messages}
@@ -811,9 +811,6 @@ class Agent(BaseModel):
             )
             response_plans.append(new_plan)
 
-        # Carry out those plans
-        for plan in response_plans:
-            await self._act(plan)
 
     async def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
@@ -921,8 +918,7 @@ class Agent(BaseModel):
     async def _act(
         self,
         plan: SinglePlan,
-        executor: PlanExecutor = None,
-    ) -> None:
+    ) -> PlanStatus:
         """Act on a plan"""
 
         # If we are not in the right location, move to the new location
@@ -932,24 +928,33 @@ class Agent(BaseModel):
         # Execute the plan
 
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
+        self._log("Scratchpad: ", LogColor.ACT, f"{plan.scratchpad}")
 
-        # TODO: Inbound messages will overwrite the previous plan executor
-        if executor is None:
-            if plan.type == PlanType.DEFAULT:
-                self.plan_executor = PlanExecutor(self.id, world_context=self.context)
-                print("plantype default")
-            elif plan.type == PlanType.RESPONSE:
-                print("plan type response: ", plan.related_message)
-                self.plan_executor = PlanExecutor(
-                    self.id,
-                    world_context=self.context,
-                    message_to_respond_to=plan.related_message,
-                )
+        if plan.type == PlanType.DEFAULT:
+            self.plan_executor = PlanExecutor(
+                self.id, 
+                world_context=self.context,
+                scratchpad=plan.scratchpad,
+            )
+        elif plan.type == PlanType.RESPONSE:
+            self.plan_executor = PlanExecutor(
+                self.id,
+                world_context=self.context,
+                message_to_respond_to=plan.related_message,
+                scratchpad=plan.scratchpad,
+            )
 
         resp: PlanExecutorResponse = await self.plan_executor.start_or_continue_plan(
             plan, tools=self._get_current_tools()
         )
 
+        # update the plan in the local agent object
+        plan.scratchpad.extend(resp.scratchpad)
+
+        # update the plan in the db
+        self._upsert_plan_rows([plan])
+
+        # IF the plan failed
         if resp.status == PlanStatus.FAILED:
             # remove all plans with the same description
             self.plans = [p for p in self.plans if p.description != plan.description]
@@ -973,7 +978,10 @@ class Agent(BaseModel):
 
             self.plan_executor = None
 
+        # If the plan is in progress
         elif resp.status == PlanStatus.IN_PROGRESS:
+            print(f"{self.full_name}'s current plan is in progress...")
+
             event = Event(
                 agent_id=self.id,
                 type=EventType.NON_MESSAGE,
@@ -989,6 +997,8 @@ class Agent(BaseModel):
 
         # If the plan is done, remove it from the list of plans
         elif resp.status == PlanStatus.DONE:
+            print(f"{self.full_name}'s current plan is now done!")
+
             # remove all plans with the same description
             self.plans = [p for p in self.plans if p.description != plan.description]
 
@@ -1004,6 +1014,8 @@ class Agent(BaseModel):
             self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
             self.plan_executor = None
+
+        return resp.status
 
     async def _do_first_plan(self, executor: PlanExecutor = None) -> None:
         """Do the first plan in the list"""
@@ -1021,7 +1033,7 @@ class Agent(BaseModel):
 
         current_plan = plans[0]
 
-        await self._act(current_plan, executor)
+        await self._act(current_plan)
 
     async def run_for_one_step(self):
         print(f"{self.full_name}: run_for_one_step...")  # TIMC
@@ -1036,10 +1048,8 @@ class Agent(BaseModel):
             after=self.last_checked_events,
         )
 
-        previous_executor = self.plan_executor
-
         # Respond to new messages
-        await self._respond_to_messages(events)
+        await self._plan_responses(events)
 
         # Generate a reaction to the latest events
         react_response = await self._react()
@@ -1051,7 +1061,7 @@ class Agent(BaseModel):
         self.last_checked_events = first_refresh_time
 
         # Work through the plans
-        await self._do_first_plan(previous_executor)
+        await self._do_first_plan()
 
         # Reflect, if we should
         if self._should_reflect():

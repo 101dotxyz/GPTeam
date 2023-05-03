@@ -88,6 +88,7 @@ class PlanExecutorResponse(BaseModel):
     output: str
     tool: Optional[CustomTool]
     tool_input: Optional[str]
+    scratchpad: List[dict] = []
 
 
 class PlanExecutor(BaseModel):
@@ -99,9 +100,25 @@ class PlanExecutor(BaseModel):
     plan: Optional[SinglePlan] = None
     intermediate_steps: List[Tuple[AgentAction, str]] = []
 
-    def __init__(self, agent_id: UUID, world_context: WorldContext, message_to_respond_to: AgentMessage = None) -> None:
-        print("Plan Executor Initialized with related message: ", message_to_respond_to) #TIMC
-        super().__init__(agent_id=agent_id, context=world_context, message_to_respond_to=message_to_respond_to)
+    def __init__(
+            self, 
+            agent_id: UUID, 
+            world_context: WorldContext, 
+            message_to_respond_to: AgentMessage = None,
+            scratchpad: Optional[List[dict]] = None,
+        ) -> None:
+
+        if scratchpad is not None:
+            intermediate_steps = self.list_to_intermediate_steps(scratchpad)
+        else:
+            intermediate_steps = []
+
+        super().__init__(
+            agent_id=agent_id, 
+            context=world_context, 
+            message_to_respond_to=message_to_respond_to,
+            intermediate_steps=intermediate_steps,
+        )
 
     def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
     
@@ -153,6 +170,27 @@ class PlanExecutor(BaseModel):
     def set_plan(self, plan: SinglePlan) -> None:
         self.plan = plan
         self.intermediate_steps = []
+    
+    def intermediate_steps_to_list(self, intermediate_steps: List[Tuple[AgentAction, str]]) -> List[dict]:
+        result = []
+        for action, observation in intermediate_steps:
+            action_dict = {
+                "tool": action.tool,
+                "tool_input": action.tool_input,
+                "log": action.log,
+            }
+            result.append({"action": action_dict, "observation": observation})
+        return result
+    
+    def list_to_intermediate_steps(self, intermediate_steps: List[dict]) -> List[Tuple[AgentAction, str]]:
+        result = []
+        for step in intermediate_steps:
+            action = AgentAction(**step["action"])
+            observation = step["observation"]
+            result.append((action, observation))
+        print(f"Converted scratchpad to intermediate steps: {result}")
+        return result
+        
 
     async def start_or_continue_plan(
         self, plan: SinglePlan, tools: list[CustomTool]
@@ -210,6 +248,8 @@ class PlanExecutor(BaseModel):
             else:
                 return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
+        # Else, the response is an AgentAction
+        
         try:
             tool = get_tools(
                 [ToolName(response.tool.lower())],
@@ -231,11 +271,16 @@ class PlanExecutor(BaseModel):
 
         print_to_console(f"{agent_name}: Action Response: ", LogColor.THOUGHT, result)
 
+        # Add the intermediate step to the list of intermediate steps
         self.intermediate_steps.append((response, result))
 
-        return PlanExecutorResponse(
+        executor_response = PlanExecutorResponse(
             status=PlanStatus.IN_PROGRESS,
             output=result,
             tool=tool,
             tool_input=response.tool_input,
+            scratchpad=self.intermediate_steps_to_list(self.intermediate_steps),
         )
+
+        return executor_response
+

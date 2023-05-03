@@ -37,7 +37,7 @@ from ..utils.prompt import Prompter, PromptString
 from ..world.context import WorldContext
 from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
-from .message import AgentMessage, LLMMessageResponse
+from .message import AgentMessage, LLMMessageResponse, get_latest_messages
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
@@ -496,28 +496,9 @@ class Agent(BaseModel):
             "Moved Location", LogColor.MOVE, f"{self.location.name} -> {location.name}"
         )
 
-        # first emit the depature event to the db
-        event = Event(
-            agent_id=self.id,
-            type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} left location: {self.location.name}",
-            location_id=self.location.id,
-        )
-
-        self.context.events_manager.add_event(event)
-
         # Update the agents to the new location
         self.location = location
         self.context.update_agent(self._db_dict())
-
-        # emit the arrival to the db
-        event = Event(
-            agent_id=self.id,
-            type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} arrived at location: {location.name}",
-            location_id=self.location.id,
-        )
-        self.context.events_manager.add_event(event)
 
         # update the agents row in the db
         self._update_agent_row()
@@ -757,12 +738,14 @@ class Agent(BaseModel):
             for event in new_message_events
         ]
 
-        new_messages = [
-            message
-            for message in new_messages_at_location
-            if (message.recipient_id == self.id or message.recipient_id is None)
-            and message.sender_id != self.id
-        ]
+        new_messages = get_latest_messages(
+            [
+                message
+                for message in new_messages_at_location
+                if (message.recipient_id == self.id or message.recipient_id is None)
+                and message.sender_id != self.id
+            ]
+        )
 
         if not new_messages:
             self._log("Inbox Empty", LogColor.MESSAGE, "No new messages.")
@@ -871,9 +854,6 @@ class Agent(BaseModel):
 
         # parse the reaction response
         parsed_reaction_response: LLMReactionResponse = reaction_parser.parse(response)
-
-        # add reaction to memory
-        await self._add_memory(parsed_reaction_response.thought_process)
 
         self._log(
             "Reaction",

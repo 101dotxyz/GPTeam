@@ -19,17 +19,19 @@ def print_to_console(
     if content:
         if isinstance(content, list):
             content = " ".join(content)
-        words = str(content).split()
-        for i, word in enumerate(words):
-            print(word, end="", flush=True)
-            if i < len(words) - 1:
-                print(" ", end="", flush=True)
-            typing_speed = random.uniform(min_typing_speed, max_typing_speed)
-            time.sleep(typing_speed)
-            # type faster after each word
-            min_typing_speed = min_typing_speed * 0.97
-            max_typing_speed = max_typing_speed * 0.97
-    print()
+        lines = str(content).split("\n")
+        for line in lines:
+            words = line.split()
+            for i, word in enumerate(words):
+                print(word, end="", flush=True)
+                if i < len(words) - 1:
+                    print(" ", end="", flush=True)
+                typing_speed = random.uniform(min_typing_speed, max_typing_speed)
+                time.sleep(typing_speed)
+                # type faster after each word
+                min_typing_speed = min_typing_speed * 0.97
+                max_typing_speed = max_typing_speed * 0.97
+            print()
 
 
 def parse_array(s: str) -> np.ndarray:

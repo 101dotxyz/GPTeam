@@ -182,6 +182,9 @@ class PlanExecutor(BaseModel):
         return await self.execute(tools)
 
     async def execute(self, tools: list[CustomTool]) -> str:
+        # Refresh the events
+        self.context.events_manager.refresh_events()
+
         if self.plan is None:
             raise ValueError("No plan set")
 
@@ -256,13 +259,13 @@ class PlanExecutor(BaseModel):
         )
 
         # Add the intermediate step to the list of intermediate steps
-        # But if this is the second wait in a row, skip it
+        # But if this is the second wait in a row, replace it
         if (
             intermediate_steps 
             and intermediate_steps[-1][0].tool.strip() == ToolName.WAIT.value 
             and response.tool.strip() == ToolName.WAIT.value
         ):
-            pass
+            intermediate_steps[-1] = (response, result)
         else:
             intermediate_steps.append((response, result))
 

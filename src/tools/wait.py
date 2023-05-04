@@ -40,7 +40,7 @@ async def wait_async(agent_input: str, tool_context: ToolContext) -> str:
     )
 
     # Get the response
-    response = await quick_llm.get_chat_completion(
+    response = await llm.get_chat_completion(
         prompter.prompt,
         loading_text="Checking if event has happened...",
     )

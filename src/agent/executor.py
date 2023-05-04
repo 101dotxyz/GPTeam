@@ -255,7 +255,8 @@ class PlanExecutor(BaseModel):
 
         # Add the intermediate step to the list of intermediate steps
         # We can skip the wait tool, since it doesnt add to the understanding at all
-        if response.tool.lower() is not 'wait':
+        if response.tool is not ToolName.WAIT.value:
+            print("Response.tool is...", response.tool)
             intermediate_steps.append((response, result))
 
         executor_response = PlanExecutorResponse(

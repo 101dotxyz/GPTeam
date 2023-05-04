@@ -92,18 +92,7 @@ class AgentMessage(BaseModel):
         if event.type != EventType.MESSAGE:
             raise ValueError("Event must be of type message")
 
-        pattern = (
-            r"(?P<sender>[\w\s]+) said to (?P<recipient>[\w\s]+): [\"'](?P<message>.*)[\"']"
-        )
-        sender_name, recipient, content = re.findall(pattern, event.description)[0]
-
-        if "everyone" in recipient:
-            recipient_name = None
-            recipient_id = None
-        else:
-            recipient_name = recipient.strip()
-            recipient_id = context.get_agent_id_from_name(recipient_name)
-
+        # get the location object
         location = [
             Location(**loc)
             for loc in context.locations
@@ -114,7 +103,7 @@ class AgentMessage(BaseModel):
 
         if event.subtype == MessageEventSubtype.AGENT_TO_AGENT:
             pattern = (
-                r"(?P<sender>[\w\s]+) said to (?P<recipient>[\w\s]+): '(?P<message>[^']*)'"
+                r"(?P<sender>[\w\s]+) said to (?P<recipient>[\w\s]+): [\"'](?P<message>.*)[\"']"
             )
             sender_name, recipient, content = re.findall(pattern, event.description)[0]
 
@@ -138,10 +127,13 @@ class AgentMessage(BaseModel):
                 type=event.subtype,
                 discord_id=discord_id,
             )
+        
         elif event.subtype == MessageEventSubtype.HUMAN_AGENT_REPLY:
+
             recipient_id = event.metadata["referenced_agent_id"]
             recipient_name = context.get_agent_full_name(recipient_id)
             content = event.description.split(": ")[-1]
+
             return cls(
                 content=content,
                 sender_name="Human",
@@ -155,11 +147,15 @@ class AgentMessage(BaseModel):
                 type=event.subtype,
                 discord_id=discord_id,
             )
+        
         elif event.subtype == MessageEventSubtype.AGENT_TO_HUMAN:
+
             pattern = (
-                r"(?P<sender>[\w\s]+) asked the humans: '(?P<message>[^']*)'"
+                r"(?P<sender>[\w\s]+) asked the humans: [\"'](?P<message>.*)[\"']"
             )
+
             sender_name, content = re.findall(pattern, event.description)[0]
+
             return cls(
                 content=content,
                 sender_id=str(event.agent_id),
@@ -171,7 +167,9 @@ class AgentMessage(BaseModel):
                 type=event.subtype,
                 discord_id=discord_id,
             )
+        
         sender_name = context.get_agent_full_name(event.agent_id)
+        
         return cls(
             content=event.description,
             sender_id=str(event.agent_id),

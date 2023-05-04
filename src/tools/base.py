@@ -215,7 +215,6 @@ def get_tools(
             requires_context=True,
             requires_authorization=False,
             worldwide=True,
-            is_async=True,
         ),
         ToolName.COMPANY_DIRECTORY: CustomTool(
             name=ToolName.COMPANY_DIRECTORY.value,

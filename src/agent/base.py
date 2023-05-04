@@ -440,7 +440,7 @@ class Agent(BaseModel):
             {
                 "full_name": self.full_name,
                 "memory_descriptions": str(
-                    [memory.description for memory in recent_memories]
+                    [memory.verbose_description for memory in recent_memories]
                 ),
             },
         )
@@ -543,14 +543,11 @@ class Agent(BaseModel):
             llm=chat_llm.defaultModel,
         )
 
-        # Get memory descriptions
-        memory_descriptions = [memory.description for memory in recent_memories]
-
         # Create questions Prompter
         questions_prompter = Prompter(
             PromptString.REFLECTION_QUESTIONS,
             {
-                "memory_descriptions": str(memory_descriptions),
+                "memory_descriptions": str([memory.verbose_description for memory in recent_memories]),
                 "format_instructions": question_parser.get_format_instructions(),
             },
         )

@@ -15,7 +15,7 @@ from ..world.context import WorldContext
 
 class AgentMessage(BaseModel):
     content: str
-    sender_id: UUID
+    sender_id: Optional[UUID] = None
     sender_name: str
     type: MessageEventSubtype = MessageEventSubtype.AGENT_TO_AGENT
     recipient_id: Optional[UUID] = None
@@ -130,7 +130,7 @@ class AgentMessage(BaseModel):
             return cls(
                 content=content,
                 sender_name="Human",
-                sender_id="",
+                sender_id=None,
                 location=location,
                 recipient_id=recipient_id,
                 recipient_name=recipient_name,

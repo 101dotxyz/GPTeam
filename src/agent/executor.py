@@ -105,12 +105,12 @@ class PlanExecutor(BaseModel):
     intermediate_steps: List[Tuple[AgentAction, str]] = []
 
     def __init__(
-            self, 
-            agent_id: UUID, 
-            world_context: WorldContext, 
-            message_to_respond_to: AgentMessage = None,
-            scratchpad: Optional[List[dict]] = None,
-        ) -> None:
+        self,
+        agent_id: UUID,
+        world_context: WorldContext,
+        message_to_respond_to: AgentMessage = None,
+        scratchpad: Optional[List[dict]] = None,
+    ) -> None:
 
         if scratchpad is not None:
             intermediate_steps = self.list_to_intermediate_steps(scratchpad)
@@ -118,35 +118,33 @@ class PlanExecutor(BaseModel):
             intermediate_steps = []
 
         super().__init__(
-            agent_id=agent_id, 
-            context=world_context, 
+            agent_id=agent_id,
+            context=world_context,
             message_to_respond_to=message_to_respond_to,
             intermediate_steps=intermediate_steps,
         )
 
     def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
-    
-        if self.plan.type == PlanType.RESPONSE:
-            template=PromptString.EXECUTE_RESPONSE_PLAN.value
-            input_variables=["input",
-                "intermediate_steps", 
-                "your_name",
-                "correspondent_name",
-                "your_private_bio",
-                "location_context",
-                "correspondent_public_bio",
-                "conversation_history",
-            ]
 
+        if self.plan.type == PlanType.RESPONSE:
+            template = PromptString.EXECUTE_RESPONSE_PLAN.value
+            input_variables = ["input",
+                               "intermediate_steps",
+                               "your_name",
+                               "correspondent_name",
+                               "your_private_bio",
+                               "location_context",
+                               "correspondent_public_bio",
+                               "conversation_history",
+                               ]
 
         elif self.plan.type == PlanType.DEFAULT:
-            template=PromptString.EXECUTE_PLAN.value
-            input_variables=["input",
-                "intermediate_steps", 
-                "your_name",
-                "location_context",
-            ]
-
+            template = PromptString.EXECUTE_PLAN.value
+            input_variables = ["input",
+                               "intermediate_steps",
+                               "your_name",
+                               "location_context",
+                               ]
 
         prompt = CustomPromptTemplate(
             template=template,
@@ -174,7 +172,7 @@ class PlanExecutor(BaseModel):
     def set_plan(self, plan: SinglePlan) -> None:
         self.plan = plan
         self.intermediate_steps = []
-    
+
     def intermediate_steps_to_list(self, intermediate_steps: List[Tuple[AgentAction, str]]) -> List[dict]:
         result = []
         for action, observation in intermediate_steps:
@@ -185,7 +183,7 @@ class PlanExecutor(BaseModel):
             }
             result.append({"action": action_dict, "observation": observation})
         return result
-    
+
     def list_to_intermediate_steps(self, intermediate_steps: List[dict]) -> List[Tuple[AgentAction, str]]:
         result = []
         for step in intermediate_steps:
@@ -194,7 +192,6 @@ class PlanExecutor(BaseModel):
             result.append((action, observation))
         print(f"Converted scratchpad to intermediate steps: {result}")
         return result
-        
 
     async def start_or_continue_plan(
         self, plan: SinglePlan, tools: list[CustomTool]
@@ -253,7 +250,7 @@ class PlanExecutor(BaseModel):
                 return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
         # Else, the response is an AgentAction
-        
+
         try:
             tool = get_tools(
                 [ToolName(response.tool.lower())],
@@ -270,8 +267,8 @@ class PlanExecutor(BaseModel):
 
         if tool.is_async:
             result = await tool.arun(response.tool_input, tool_context)
-        else: 
-            result = tool.run(response.tool_input, tool_context)
+        else:
+            result = await tool.run(response.tool_input, tool_context)
 
         print_to_console(
             f"{agent_name}: Action Response: ",
@@ -291,4 +288,3 @@ class PlanExecutor(BaseModel):
         )
 
         return executor_response
-

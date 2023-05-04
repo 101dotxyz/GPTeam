@@ -79,7 +79,8 @@ class Event(BaseModel):
         if witness_ids is None:
             witness_ids = []
 
-        if type == EventType.MESSAGE and agent_id is None:
+        subtype = Subtype(subtype) if subtype is not None else None
+        if type == EventType.MESSAGE and subtype != MessageEventSubtype.HUMAN_AGENT_REPLY and agent_id is None:
             raise ValueError("agent_id must be provided for message events")
 
         super().__init__(

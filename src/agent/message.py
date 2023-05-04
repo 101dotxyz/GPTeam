@@ -45,7 +45,10 @@ class AgentMessage(BaseModel):
             recipient_name = None
             recipient_id = None
         else:
-            recipient_id = context.get_agent_id_from_name(recipient_name)
+            try: 
+                recipient_id = context.get_agent_id_from_name(recipient_name)
+            except Exception as e:
+                raise Exception(e)
 
         return cls(
             content=content,
@@ -64,7 +67,7 @@ class AgentMessage(BaseModel):
             raise ValueError("Event must be of type message")
 
         pattern = (
-            r"(?P<sender>[\w\s]+) said to (?P<recipient>[\w\s]+): '(?P<message>[^']*)'"
+            r"(?P<sender>[\w\s]+) said to (?P<recipient>[\w\s]+): [\"'](?P<message>.*)[\"']"
         )
         sender_name, recipient, content = re.findall(pattern, event.description)[0]
 
@@ -135,6 +138,9 @@ class AgentMessage(BaseModel):
             AgentMessage.from_event(event, self.context)
             for event in recent_message_events_at_location
         ]
+
+        # sort the messages by timestamp, with the newest messages last
+        messages.sort(key=lambda x: x.timestamp)
 
         formatted_messages = [
             f"{m.sender_name}: {m.content} @ {m.timestamp}" for m in messages

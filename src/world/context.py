@@ -65,9 +65,9 @@ class WorldContext(BaseModel):
         ][0]
 
         return (
-            "Current Location: \n"
-            + f"{location['name']}: {location['description']}"
-            + "\n\nAgents in this location, with whom you can speak: \n- "
+            "Your current location: \n"
+            + f"{location['name']}: {location['description']}\n"
+            + "Nearby people: \n- "
             + "- ".join(
                 [
                     f"{agent['full_name']}: {agent['public_bio']}\n"

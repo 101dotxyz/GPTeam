@@ -24,9 +24,13 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
     input("Press any key to continue...")
 
     # Make an AgentMessage object
-    agent_message = AgentMessage.from_agent_input(
-        agent_input, tool_context.agent_id, tool_context.context
-    )
+    try:
+        agent_message = AgentMessage.from_agent_input(
+            agent_input, tool_context.agent_id, tool_context.context
+        )
+    except Exception as e:
+        if "Could not find agent" in str(e):
+            return "Could not find agent with that name. Try checking the directory."
 
     # Covert the AgentMessage to an event
     event = agent_message.to_event()

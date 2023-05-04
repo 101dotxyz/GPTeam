@@ -137,16 +137,14 @@ plans = [
         "max_duration_hrs": 1,
         "stop_condition": "You have decided what to do next",
         "location_id": locations[2]["id"],  # conference room
-        "type": "default"
     },
     {
         "id": "2bedb32a-e1e8-46b3-a0c9-e98dfaabc391",
         "agent_id": "1cb5bc4f-4ea9-42b6-9fb7-af2626cf8bb0",  # rebecca
-        "description": "Wait around until Marty gives you something to do.",
+        "description": "Wait around.",
         "max_duration_hrs": 1,
-        "stop_condition": "Marty notices you.",
+        "stop_condition": "Marty gives you something to do",
         "location_id": locations[2]["id"],  # conference room
-        "type": "default"
     },
 ]
 

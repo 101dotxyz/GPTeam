@@ -37,7 +37,7 @@ from ..world.context import WorldContext
 from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
 from .message import AgentMessage, LLMMessageResponse
-from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, PlanType, SinglePlan
+from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .message import AgentMessage, LLMMessageResponse, get_latest_messages
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
@@ -354,6 +354,12 @@ class Agent(BaseModel):
         for plan in plans:
             supabase.table("Plans").upsert(plan._db_dict()).execute()
 
+    def update_plan(self, new_plan: SinglePlan):
+        old_plan = [p for p in self.plans if (p.id == new_plan.id or p.description == new_plan.description)][0]
+        self.plans = [
+            plan if plan.id is not old_plan.id else new_plan for plan in self.plans
+        ]
+        
     def _get_memories_since(self, date: datetime):
         data, count = (
             supabase.table("Memories")
@@ -766,9 +772,9 @@ class Agent(BaseModel):
             return
 
         self._log(
-            "New Messages",
+            "New Conversations",
             LogColor.MESSAGE,
-            f"{len(relevant_messages)} new messages in inbox.",
+            f"{len(relevant_messages)} convos to respond to.",
         )
 
         response_plans: list[SinglePlan] = []
@@ -785,7 +791,6 @@ class Agent(BaseModel):
                 max_duration_hrs=1,
                 agent_id=self.id,
                 stop_condition="When the conversation is over.",
-                type=PlanType.RESPONSE,
                 related_message=[
                     relevant_messages
                     for relevant_messages in relevant_messages
@@ -794,6 +799,11 @@ class Agent(BaseModel):
             )
             response_plans.append(new_plan)
 
+        # These new plans are the priority
+        # Update local and db objects
+        self._upsert_plan_rows(response_plans)
+        self.plans = response_plans + self.plans
+        self._update_agent_row()
 
     async def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
@@ -910,34 +920,27 @@ class Agent(BaseModel):
         # Execute the plan
 
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
-        self._log("Scratchpad: ", LogColor.ACT, f"{plan.scratchpad}")
 
-        if plan.type == PlanType.DEFAULT:
-            self.plan_executor = PlanExecutor(
-                self.id, 
-                world_context=self.context,
-                scratchpad=plan.scratchpad,
-            )
-        elif plan.type == PlanType.RESPONSE:
-            self.plan_executor = PlanExecutor(
-                self.id,
-                world_context=self.context,
-                message_to_respond_to=plan.related_message,
-                scratchpad=plan.scratchpad,
-            )
+        self.plan_executor = PlanExecutor(
+            self.id,
+            world_context=self.context,
+            message_to_respond_to=plan.related_message
+        )
 
         resp: PlanExecutorResponse = await self.plan_executor.start_or_continue_plan(
             plan, tools=self._get_current_tools()
         )
 
-        # update the plan in the local agent object
-        plan.scratchpad.extend(resp.scratchpad)
-
-        # update the plan in the db
-        self._upsert_plan_rows([plan])
-
         # IF the plan failed
         if resp.status == PlanStatus.FAILED:
+            # update the plan in the local agent object
+            plan.scratchpad = resp.scratchpad
+            plan.status = resp.status
+            self.update_plan(plan)
+
+            # update the plan in the db
+            self._upsert_plan_rows([plan])
+
             # remove all plans with the same description
             self.plans = [p for p in self.plans if p.description != plan.description]
 
@@ -958,11 +961,17 @@ class Agent(BaseModel):
             )
             # TODO: handle plan failure with a human
 
-            self.plan_executor = None
-
         # If the plan is in progress
         elif resp.status == PlanStatus.IN_PROGRESS:
             print(f"{self.full_name}'s current plan is in progress...")
+
+            # update the plan in the local agent object
+            plan.scratchpad = resp.scratchpad
+            plan.status = resp.status
+            self.update_plan(plan)
+
+            # update the plan in the db
+            self._upsert_plan_rows([plan])
 
             tool_usage_summary = await resp.tool.summarize_usage(
                 plan_description=plan.description,
@@ -988,6 +997,15 @@ class Agent(BaseModel):
         elif resp.status == PlanStatus.DONE:
             print(f"{self.full_name}'s current plan is now done!")
 
+            # update the plan in the local agent object
+            plan.completed_at = datetime.now(pytz.utc)
+            plan.scratchpad = resp.scratchpad
+            plan.status = resp.status
+            self.update_plan(plan)
+
+            # update the plan in the db
+            self._upsert_plan_rows([plan])
+
             # remove all plans with the same description
             self.plans = [p for p in self.plans if p.description != plan.description]
 
@@ -1002,11 +1020,9 @@ class Agent(BaseModel):
 
             self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
-            self.plan_executor = None
-
         return resp.status
 
-    async def _do_first_plan(self, executor: PlanExecutor = None) -> None:
+    async def _do_first_plan(self) -> None:
         """Do the first plan in the list"""
 
         current_plan = None

@@ -17,14 +17,9 @@ class PlanStatus(Enum):
     DONE = "done"
     FAILED = "failed"
 
-class PlanType(Enum):
-    DEFAULT = "default"
-    RESPONSE = "response"
-
 class SinglePlan(BaseModel):
     id: UUID
     description: str
-    type: PlanType = PlanType.DEFAULT
     location: Location
     max_duration_hrs: float
     created_at: datetime
@@ -47,7 +42,6 @@ class SinglePlan(BaseModel):
         created_at: datetime = None,
         completed_at: datetime = None,
         id: UUID = None,
-        type: PlanType = PlanType.DEFAULT,
         related_message: AgentMessage = None,
     ):
         if id is None:
@@ -101,7 +95,6 @@ class SinglePlan(BaseModel):
         row = {
             "id": str(self.id),
             "description": self.description,
-            "type": self.type.value,
             "location_id": str(self.location.id),
             "max_duration_hrs": self.max_duration_hrs,
             "created_at": self.created_at.isoformat(),
@@ -116,11 +109,7 @@ class SinglePlan(BaseModel):
         return row
      
     def make_plan_prompt(self):
-        if self.type == PlanType.RESPONSE:
-            return f"Do this: {self.description}\nAt this location: {self.location.name}\nStop when this happens: {self.stop_condition}\nIf do not finish within {self.max_duration_hrs} hours, stop.\n\n{self.scratchpad}"
-        else:
-            # "Respond to what {full_name} said to you."
-            return f"{self.description}"
+        return f"\nDo this: {self.description}\nAt this location: {self.location.name}\nStop when this happens: {self.stop_condition}\nIf do not finish within {self.max_duration_hrs} hours, stop."
 
 
 

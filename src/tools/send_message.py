@@ -52,6 +52,14 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
     # now add it to the events manager
     tool_context.context.events_manager.add_event(event)
 
+    # Check that the recipient is in the room
+    if agent_message.recipient_id is not None:
+        recipient_location_id = tool_context.context.get_agent_location_id(
+            agent_message.recipient_id
+        )
+        if recipient_location_id != agent_message.location.id:
+            return f"{event.description} but {agent_message.recipient_name} is not in the room to hear it."
+
     return event.description
 
 

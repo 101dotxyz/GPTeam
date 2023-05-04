@@ -26,7 +26,7 @@ from ..utils.parameters import DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
 from ..world.context import WorldContext
 from .plans import PlanStatus, SinglePlan
-from .message import AgentMessage
+from .message import AgentMessage, get_conversation_history
 
 load_dotenv()
 
@@ -154,8 +154,7 @@ class PlanExecutor(BaseModel):
             stop=["\nObservation:"],
         )
         return executor
-
-    
+   
     def intermediate_steps_to_list(self, intermediate_steps: List[Tuple[AgentAction, str]]) -> List[dict]:
         result = []
         for action, observation in intermediate_steps:
@@ -194,14 +193,17 @@ class PlanExecutor(BaseModel):
         else:
             intermediate_steps = []
 
-        if self.message_to_respond_to is None:
-            conversation_history = ""
-        else:
-            conversation_history = self.message_to_respond_to.get_chat_history()
+        # Make the conversation history
+        conversation_history = get_conversation_history(
+            self.context.get_agent_location_id(self.agent_id),
+            self.context,
+            self.message_to_respond_to,
+        )
 
         response = executor.plan(
             input = self.plan.make_plan_prompt(),
             intermediate_steps = intermediate_steps,
+
             your_name = self.context.get_agent_full_name(self.agent_id),
             your_private_bio = self.context.get_agent_private_bio(self.agent_id),
             location_context = self.context.location_context_string(self.agent_id),
@@ -254,9 +256,8 @@ class PlanExecutor(BaseModel):
         )
 
         # Add the intermediate step to the list of intermediate steps
-        # We can skip the wait tool, since it doesnt add to the understanding at all
-        if response.tool is not ToolName.WAIT.value:
-            print("Response.tool is...", response.tool)
+        # We can skip the wait tool, since it doesnt add to the understanding at all and just takes up context space
+        if response.tool.strip() != ToolName.WAIT.value:
             intermediate_steps.append((response, result))
 
         executor_response = PlanExecutorResponse(

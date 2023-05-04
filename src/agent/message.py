@@ -201,14 +201,9 @@ class AgentMessage(BaseModel):
 
     # Given a message, get the relevant chat history
     def get_chat_history(self) -> str:
-        if self.recipient_id is None:
-            (
-                recent_message_events_at_location,
-                _,
-            ) = self.context.events_manager.get_events(
-                type=EventType.MESSAGE,
-                location_id=self.location.id,
-            )
+        """ Gets the relevant chat history for a particular message. 
+        
+        """
 
         # get all the messages sent at the location
         (recent_message_events_at_location, _) = self.context.events_manager.get_events(
@@ -246,3 +241,39 @@ def get_latest_messages(messages: list[AgentMessage]) -> list[AgentMessage]:
     messages.sort(key=lambda x: x.timestamp, reverse=True)
 
     return deduplicate_list(messages, key=lambda x: str(x.sender_id))
+
+def get_conversation_history(location_id: UUID | str, context: WorldContext, message: Optional[AgentMessage] = None) -> str:
+    """ Gets up to 20 messages from the location. If a message is provided, only gets messages from that agent.
+    """
+    if isinstance(location_id, str):
+        location_id = UUID(location_id)
+
+    # get all the messages sent at the location
+    (message_events, _) = context.events_manager.get_events(
+        type=EventType.MESSAGE,
+        location_id=location_id,
+    )
+
+    # if there's an agent message, we only care about that agent's messages 
+    if message is not None:
+        message_events = [
+            event for event in message_events if event.agent_id == message.sender_id
+        ]
+
+    messages = [
+        AgentMessage.from_event(event, context)
+        for event in message_events
+    ]
+
+    # sort the messages by timestamp, with the newest messages last
+    messages.sort(key=lambda x: x.timestamp)
+
+    # limit the messages to 20
+    messages = messages[-20:]
+    
+
+    formatted_messages = [
+        f"{m.sender_name}: {m.content} @ {m.timestamp}" for m in messages
+    ]
+
+    return "\n".join(formatted_messages)

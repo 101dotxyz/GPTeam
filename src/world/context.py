@@ -49,7 +49,24 @@ class WorldContext(BaseModel):
     def get_agents_at_location(self, location_id: str):
         return [a for a in self.agents if str(a["location_id"]) == str(location_id)]
 
-    def location_context_string(self, agent_id: UUID | str):
+    def get_location_from_agent_id(self, agent_id: UUID | str) -> dict:
+        agent = self.get_agent_dict_from_id(agent_id)
+        try:
+            location = [location for location in self.locations if str(location["id"]) == str(agent["location_id"])][0]
+        except IndexError:
+            raise Exception(f"Could not find location with id {agent['location_id']}")
+        
+        return location
+    
+    def get_location_from_location_id(self, location_id: UUID | str) -> dict:
+        try:
+            location = [location for location in self.locations if str(location["id"]) == str(location_id)][0]
+        except IndexError:
+            raise Exception(f"Could not find location with id {location_id}")
+        
+        return location
+
+    def location_context_string(self, agent_id: UUID | str) -> str:
         if isinstance(agent_id, UUID):
             agent_id = str(agent_id)
 
@@ -60,9 +77,7 @@ class WorldContext(BaseModel):
 
         # get other agents in this location
         other_agents = [a for a in agents_at_location if a["id"] != agent_id]
-        location = [
-            loc for loc in self.locations if str(loc["id"]) == str(agent["location_id"])
-        ][0]
+        location = self.get_location_from_agent_id(agent_id)
 
         return (
             "Your current location: \n"
@@ -77,19 +92,7 @@ class WorldContext(BaseModel):
         )
 
     def get_location_name(self, location_id: UUID | str):
-        if isinstance(location_id, UUID):
-            location_id = str(location_id)
-
-        try:
-            location = [
-                location
-                for location in self.locations
-                if str(location["id"]) == str(location_id)
-            ][0]
-        except IndexError:
-            raise Exception(f"Could not find location with id {location_id}")
-
-        return location["name"]
+        return self.get_location_from_location_id(location_id)["name"]
 
     def get_channel_id(self, location_id: UUID | str):
         # get location

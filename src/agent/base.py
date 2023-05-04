@@ -359,7 +359,10 @@ class Agent(BaseModel):
         self.plans = [
             plan if plan.id is not old_plan.id else new_plan for plan in self.plans
         ]
-        
+
+    def get_recent_memories(self, count: int = 5) -> list[SingleMemory]:
+        return self.memories[-count:]
+
     def _get_memories_since(self, date: datetime):
         data, count = (
             supabase.table("Memories")

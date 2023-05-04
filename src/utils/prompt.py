@@ -28,6 +28,7 @@ class PromptString(Enum):
 
     GOSSIP = "You are {full_name}. You are currently working on the following plan: {plan_description}. You have just used the tool {tool_name} with the following input {tool_input} and got the following result {tool_result}. Write a single sentence of useful information to share with others in your location about what you have just found out."
 
+    HAS_HAPPENED = "Given the following character's observations and a description of what they are waiting for, state whether or not the event has been witnessed by the character.\n{format_instructions}\n\nExample:\n\nObservations:\nJoe walked into the office @ 2023-05-04 08:00:00+00:00\nJoe said hi to Sally @ 2023-05-04 08:05:00+00:00\nSally said hello to Joe @ 2023-05-04 08:05:30+00:00\nRebecca started doing work @ 2023-05-04 08:10:00+00:00\nJoe made some breakfast @ 2023-05-04 08:15:00+00:00\n\nWaiting For: Sally responded to Joe\n\n Your Response: '{{\"has_happened\": true, \"date_occured\": 2023-05-04 08:05:30+00:00}}'\n\nLet's Begin!\n\nObservations:\n{memory_descriptions}\n\nWaiting For: {event_description}\n"
 
 class Prompter(BaseModel):
     template: str

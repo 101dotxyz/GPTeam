@@ -254,11 +254,10 @@ def get_conversation_history(location_id: UUID | str, context: WorldContext, mes
         location_id=location_id,
     )
 
-    # if there's an agent message, we only care about that agent's messages 
-    if message is not None:
-        message_events = [
-            event for event in message_events if event.agent_id == message.sender_id
-        ]
+    # if message is not None:
+    #     message_events = [
+    #         event for event in message_events if (event.agent_id == message.sender_id or event.agent_id == message.recipient_id)
+    #     ]
 
     messages = [
         AgentMessage.from_event(event, context)

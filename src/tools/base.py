@@ -31,7 +31,7 @@ from src.world.context import WorldContext
 from .directory import consult_directory
 from .name import ToolName
 from .send_message import send_message_async, send_message_sync
-from .wait import wait
+from .wait import wait_async, wait_sync
 
 
 class CustomTool(Tool):
@@ -187,10 +187,11 @@ def get_tools(
         ),
         ToolName.WAIT: CustomTool(
             name="wait",
-            func=wait,
-            description="Don't do anything. Useful for when you are waiting for something to happen. Takes an empty string as input.",
+            func=wait_sync,
+            coroutine=wait_async,
+            description="Useful for when you are waiting for something to happen. Input a very detailed description of what exactly you are waiting for. Start your input with 'I am waiting for...' (e.g. I am waiting for any type of meeting to start in the conference room).",
             tool_usage_description="{agent_full_name} is waiting.",
-            requires_context=False,
+            requires_context=True,
             requires_authorization=False,
             worldwide=True,
         ),
@@ -229,9 +230,7 @@ def get_tools(
         ToolName.SAVE_DOCUMENT: CustomTool(
             name=ToolName.SAVE_DOCUMENT.value,
             coroutine=save_document,
-            description="""Write text to an existing document or create a new one. Useful for when you need to save a document for later use.
-Input should be a json string with two keys: "title" and "document".
-The value of "title" should be a string, and the value of "document" should be a string.""",
+            description="""Write text to an existing document or create a new one. Useful for when you need to save a document for later use. Input should be a json string with two keys: "title" and "document". The value of "title" should be a string, and the value of "document" should be a string.""",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} saved a document.",
             requires_context=True,  # this tool requires document_name and content as context
             args_schema=SaveDocumentToolInput,

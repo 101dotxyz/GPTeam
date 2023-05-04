@@ -249,7 +249,7 @@ def get_latest_messages(messages: list[AgentMessage]) -> list[AgentMessage]:
     return deduplicate_list(messages, key=lambda x: str(x.sender_id))
 
 
-def get_conversation_history(
+async def get_conversation_history(
     location_id: UUID | str,
     context: WorldContext,
     message: Optional[AgentMessage] = None,
@@ -259,9 +259,10 @@ def get_conversation_history(
         location_id = UUID(location_id)
 
     # get all the messages sent at the location
-    (message_events, _) = context.events_manager.get_events(
+    (message_events, _) = await context.events_manager.get_events(
         type=EventType.MESSAGE,
         location_id=location_id,
+        agent_id=message.sender_id if message is not None else None,
     )
 
     # if message is not None:

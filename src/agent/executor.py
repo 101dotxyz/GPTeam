@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from typing_extensions import override
 
 from src.world.context import WorldContext
+
 from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
@@ -25,8 +26,8 @@ from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
 from ..world.context import WorldContext
-from .plans import PlanStatus, SinglePlan
 from .message import AgentMessage, get_conversation_history
+from .plans import PlanStatus, SinglePlan
 
 load_dotenv()
 
@@ -59,7 +60,9 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
 
         formatted = self.template.format(**kwargs)
 
-        print(f"CUSTOM PROMPT TEMPLATE:\n\n---------------------\n{formatted}\n-----------------------\n\n")
+        print(
+            f"CUSTOM PROMPT TEMPLATE:\n\n---------------------\n{formatted}\n-----------------------\n\n"
+        )
 
         return [HumanMessage(content=formatted)]
 
@@ -110,12 +113,11 @@ class PlanExecutor(BaseModel):
     plan: Optional[SinglePlan] = None
 
     def __init__(
-            self, 
-            agent_id: UUID, 
-            world_context: WorldContext, 
-            message_to_respond_to: AgentMessage = None,
-        ) -> None:
-
+        self,
+        agent_id: UUID,
+        world_context: WorldContext,
+        message_to_respond_to: AgentMessage = None,
+    ) -> None:
         super().__init__(
             agent_id=agent_id,
             context=world_context,
@@ -123,7 +125,6 @@ class PlanExecutor(BaseModel):
         )
 
     def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
-    
         prompt = CustomPromptTemplate(
             template=PromptString.EXECUTE_PLAN.value,
             tools=tools,
@@ -132,12 +133,11 @@ class PlanExecutor(BaseModel):
             input_variables=[
                 "input",
                 "intermediate_steps",
-
                 "your_name",
                 "your_private_bio",
                 "location_context",
                 "conversation_history",
-            ]
+            ],
         )
 
         # set up a simple completion llm
@@ -154,8 +154,10 @@ class PlanExecutor(BaseModel):
             stop=["\nObservation:"],
         )
         return executor
-   
-    def intermediate_steps_to_list(self, intermediate_steps: List[Tuple[AgentAction, str]]) -> List[dict]:
+
+    def intermediate_steps_to_list(
+        self, intermediate_steps: List[Tuple[AgentAction, str]]
+    ) -> List[dict]:
         result = []
         for action, observation in intermediate_steps:
             action_dict = {
@@ -166,7 +168,9 @@ class PlanExecutor(BaseModel):
             result.append({"action": action_dict, "observation": observation})
         return result
 
-    def list_to_intermediate_steps(self, intermediate_steps: List[dict]) -> List[Tuple[AgentAction, str]]:
+    def list_to_intermediate_steps(
+        self, intermediate_steps: List[dict]
+    ) -> List[Tuple[AgentAction, str]]:
         result = []
         for step in intermediate_steps:
             action = AgentAction(**step["action"])
@@ -194,22 +198,20 @@ class PlanExecutor(BaseModel):
             intermediate_steps = []
 
         # Make the conversation history
-        conversation_history = get_conversation_history(
+        conversation_history = await get_conversation_history(
             self.context.get_agent_location_id(self.agent_id),
             self.context,
             self.message_to_respond_to,
         )
 
         response = executor.plan(
-            input = self.plan.make_plan_prompt(),
-            intermediate_steps = intermediate_steps,
-
-            your_name = self.context.get_agent_full_name(self.agent_id),
-            your_private_bio = self.context.get_agent_private_bio(self.agent_id),
-            location_context = self.context.location_context_string(self.agent_id),
-            conversation_history = conversation_history
+            input=self.plan.make_plan_prompt(),
+            intermediate_steps=intermediate_steps,
+            your_name=self.context.get_agent_full_name(self.agent_id),
+            your_private_bio=self.context.get_agent_private_bio(self.agent_id),
+            location_context=self.context.location_context_string(self.agent_id),
+            conversation_history=conversation_history,
         )
-
 
         agent_name = self.context.get_agent_full_name(self.agent_id)
 
@@ -258,8 +260,8 @@ class PlanExecutor(BaseModel):
         # Add the intermediate step to the list of intermediate steps
         # But if this is the second wait in a row, skip it
         if (
-            intermediate_steps 
-            and intermediate_steps[-1][0].tool.strip() == ToolName.WAIT.value 
+            intermediate_steps
+            and intermediate_steps[-1][0].tool.strip() == ToolName.WAIT.value
             and response.tool.strip() == ToolName.WAIT.value
         ):
             pass

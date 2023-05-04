@@ -233,13 +233,17 @@ plans = [
 ]
 
 
-async def seed():
-    print("🌱 seeding the db")
+async def seed(small=False):
+    print(f"🌱 seeding the db - {'small' if small else 'normal'}")
     await supabase.table("Worlds").upsert(worlds).execute()
     await supabase.table("Locations").upsert(locations).execute()
-    await supabase.table("Agents").upsert(agents).execute()
-    await supabase.table("Plans").upsert(plans).execute()
+    await supabase.table("Agents").upsert(agents[:2] if small else agents).execute()
+    await supabase.table("Plans").upsert(plans[:2] if small else plans).execute()
 
 
 def main():
-    asyncio.run(seed())
+    asyncio.run(seed(small=False))
+
+
+def main_small():
+    asyncio.run(seed(small=True))

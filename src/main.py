@@ -11,7 +11,11 @@ load_dotenv()
 init_logging()
 
 
-def main():
-    world = World.from_name("AI Discord Server")
+async def run_world():
+    world = await World.from_name("AI Discord Server")
 
-    asyncio.run(world.run())
+    await world.run()
+
+
+def main():
+    asyncio.run(run_world())

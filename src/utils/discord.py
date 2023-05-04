@@ -1,4 +1,5 @@
 import asyncio
+
 import hikari
 
 rest = hikari.RESTApp()
@@ -11,9 +12,9 @@ async def _send_message(token, channel_id, message, rest_client: hikari.RESTApp)
     # with one internal connection pool to be reused.
     async with rest_client.acquire(token, "BOT") as client:
         # message = await client.create_message(channel_id, message)
-        
-        pass #TIMC toggles discord messages
-    
+
+        pass  # TIMC toggles discord messages
+
     return message
 
 
@@ -27,7 +28,9 @@ async def send_message_async(token, channel_id, message):
 
 
 def send_message(token, channel_id, message):
-    return event_loop.run_until_complete(_send_message(token, channel_id, message, rest))
+    return event_loop.run_until_complete(
+        _send_message(token, channel_id, message, rest)
+    )
 
 
 async def close_rest_app():

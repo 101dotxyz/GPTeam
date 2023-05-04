@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import desc
 
 from ..utils.colors import LogColor
-from ..utils.database.database import supabase
+from ..utils.database.client import supabase
 from ..utils.formatting import print_to_console
 from ..utils.parameters import DEFAULT_WORLD_ID
 
@@ -80,7 +80,11 @@ class Event(BaseModel):
             witness_ids = []
 
         subtype = Subtype(subtype) if subtype is not None else None
-        if type == EventType.MESSAGE and subtype != MessageEventSubtype.HUMAN_AGENT_REPLY and agent_id is None:
+        if (
+            type == EventType.MESSAGE
+            and subtype != MessageEventSubtype.HUMAN_AGENT_REPLY
+            and agent_id is None
+        ):
             raise ValueError("agent_id must be provided for message events")
 
         super().__init__(
@@ -92,7 +96,7 @@ class Event(BaseModel):
             agent_id=agent_id,
             location_id=location_id,
             witness_ids=witness_ids,
-            metadata=metadata
+            metadata=metadata,
         )
 
     def db_dict(self):
@@ -105,13 +109,13 @@ class Event(BaseModel):
             "description": self.description,
             "location_id": str(self.location_id),
             "witness_ids": [str(witness_id) for witness_id in self.witness_ids],
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
     @classmethod
-    def from_id(cls, event_id: UUID) -> "Event":
+    async def from_id(cls, event_id: UUID) -> "Event":
         (_, data), _ = (
-            supabase.table("Events")
+            await supabase.table("Events")
             .select("*, location_id(*)")
             .eq("id", str(event_id))
             .limit(1)
@@ -129,7 +133,7 @@ class Event(BaseModel):
             agent_id=event["agent_id"],
             timestamp=datetime.fromisoformat(event["timestamp"]),
             witness_ids=event["witness_ids"],
-            metadata=event["metadata"]
+            metadata=event["metadata"],
         )
 
     # @staticmethod
@@ -155,10 +159,20 @@ class EventsManager(BaseModel):
     last_refresh: datetime
     refresh_lock: Any
 
-    def __init__(self, world_id: str):
+    def __init__(self, world_id: str, recent_events: list[Event]):
         last_refresh = datetime.now(pytz.utc)
+
+        super().__init__(
+            recent_events=recent_events,
+            world_id=world_id,
+            last_refresh=last_refresh,
+            refresh_lock=threading.Lock(),
+        )
+
+    @classmethod
+    async def from_world_id(cls, world_id: str):
         (_, data), _ = (
-            supabase.table("Events")
+            await supabase.table("Events")
             .select("*, location_id(*)")
             .eq("location_id.world_id", world_id)
             .order("timestamp", desc=True)
@@ -178,21 +192,18 @@ class EventsManager(BaseModel):
             )
             for event in data
         ]
-
-        super().__init__(
-            recent_events=recent_events,
+        return cls(
             world_id=world_id,
-            last_refresh=last_refresh,
-            refresh_lock=threading.Lock(),
+            recent_events=recent_events,
         )
 
-    def refresh_events(self) -> None:
+    async def refresh_events(self) -> None:
         started_checking_events = datetime.now(pytz.utc)
 
         with self.refresh_lock:
             print("Refreshing events...")
             (_, data), _ = (
-                supabase.table("Events")
+                await supabase.table("Events")
                 .select("*, location_id(*)")
                 .eq("location_id.world_id", self.world_id)
                 .order("timestamp", desc=True)
@@ -225,12 +236,12 @@ class EventsManager(BaseModel):
                 else started_checking_events
             )
 
-    def add_event(self, event: Event) -> None:
+    async def add_event(self, event: Event) -> None:
         """Adds an event in the current step to the DB and local object"""
 
         # get the witnesses
         (_, witness_data), count = (
-            supabase.table("Agents")
+            await supabase.table("Agents")
             .select("id")
             .eq("location_id", event.location_id)
             .execute()
@@ -238,12 +249,12 @@ class EventsManager(BaseModel):
 
         event.witness_ids = [witness["id"] for witness in witness_data]
 
-        supabase.table("Events").insert(event.db_dict()).execute()
+        await supabase.table("Events").insert(event.db_dict()).execute()
 
         # add event to local events list
         self.recent_events.append(event)
 
-    def get_events(
+    async def get_events(
         self,
         agent_id: Optional[UUID] = None,
         location_id: Optional[UUID] = None,
@@ -257,7 +268,7 @@ class EventsManager(BaseModel):
             (datetime.now(pytz.utc) - self.last_refresh).seconds
             > REFRESH_INTERVAL_SECONDS
         ) or force_refresh:
-            self.refresh_events()
+            await self.refresh_events()
 
         filtered_events = self.recent_events
 

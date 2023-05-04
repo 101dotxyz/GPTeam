@@ -20,15 +20,29 @@ class WorldContext(BaseModel):
         self,
         agents: dict,
         locations: dict,
+        events_manager: EventsManager,
         world: WorldData,
     ):
-        events_manager = EventsManager(world_id=world.id)
         # convert all UUIDs to strings
         for agent in agents:
             agent["id"] = str(agent["id"])
             agent["location_id"] = str(agent["location_id"])
 
         return super().__init__(
+            agents=agents,
+            locations=locations,
+            world=world,
+            events_manager=events_manager,
+        )
+
+    async def from_data(
+        agents: dict,
+        locations: dict,
+        world: WorldData,
+    ):
+        events_manager = await EventsManager.from_world_id(world.id)
+
+        return WorldContext(
             agents=agents,
             locations=locations,
             world=world,
@@ -52,18 +66,26 @@ class WorldContext(BaseModel):
     def get_location_from_agent_id(self, agent_id: UUID | str) -> dict:
         agent = self.get_agent_dict_from_id(agent_id)
         try:
-            location = [location for location in self.locations if str(location["id"]) == str(agent["location_id"])][0]
+            location = [
+                location
+                for location in self.locations
+                if str(location["id"]) == str(agent["location_id"])
+            ][0]
         except IndexError:
             raise Exception(f"Could not find location with id {agent['location_id']}")
-        
+
         return location
-    
+
     def get_location_from_location_id(self, location_id: UUID | str) -> dict:
         try:
-            location = [location for location in self.locations if str(location["id"]) == str(location_id)][0]
+            location = [
+                location
+                for location in self.locations
+                if str(location["id"]) == str(location_id)
+            ][0]
         except IndexError:
             raise Exception(f"Could not find location with id {location_id}")
-        
+
         return location
 
     def location_context_string(self, agent_id: UUID | str) -> str:
@@ -126,7 +148,7 @@ class WorldContext(BaseModel):
 
     def get_agent_public_bio(self, agent_id: UUID | str) -> str:
         return self.get_agent_dict_from_id(agent_id)["public_bio"]
-    
+
     def get_agent_private_bio(self, agent_id: UUID | str) -> str:
         return self.get_agent_dict_from_id(agent_id)["private_bio"]
 

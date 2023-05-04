@@ -12,7 +12,7 @@ from src.event.base import EventsManager
 
 from ..agent.base import Agent
 from ..location.base import Location
-from ..utils.database.database import supabase
+from ..utils.database.client import supabase
 from .context import WorldContext, WorldData
 
 
@@ -27,31 +27,16 @@ class World(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def __init__(self, name: str, id: Optional[UUID] = None):
+    def __init__(
+        self,
+        name: str,
+        context: WorldContext,
+        locations=list[Location],
+        agents=list[Agent],
+        id: Optional[UUID] = None,
+    ):
         if id is None:
             id = uuid4()
-
-        # get all locations
-        (_, locations), count = (
-            supabase.table("Locations").select("*").eq("world_id", id).execute()
-        )
-
-        # get all agents
-        (_, agents), count = (
-            supabase.table("Agents").select("*").eq("world_id", id).execute()
-        )
-
-        context = WorldContext(
-            world=WorldData(id=id, name=name),
-            agents=agents,
-            locations=locations,
-        )
-
-        locations = [Location(**location) for location in locations]
-        agents = [
-            Agent.from_db_dict(agent_dict, locations, context=context)
-            for agent_dict in agents
-        ]
 
         queue = asyncio.Queue()
 
@@ -69,20 +54,43 @@ class World(BaseModel):
         )
 
     @classmethod
-    def from_id(cls, id: UUID):
-        data, count = supabase.table("Worlds").select("*").eq("id", str(id)).execute()
-        return cls(**data[1][0])
+    async def from_id(cls, id: UUID):
+        data = (
+            await supabase.table("Worlds").select("*").eq("id", str(id)).execute()
+        ).data
+
+        # get all locations
+        (_, locations), count = (
+            await supabase.table("Locations").select("*").eq("world_id", id).execute()
+        )
+
+        # get all agents
+        (_, agents), count = (
+            await supabase.table("Agents").select("*").eq("world_id", id).execute()
+        )
+
+        context = await WorldContext.from_data(
+            agents=agents, locations=locations, world=WorldData(**data[0])
+        )
+
+        locations = [Location(**location) for location in locations]
+        agents = [
+            await Agent.from_db_dict(agent_dict, locations, context=context)
+            for agent_dict in agents
+        ]
+
+        return cls(locations=locations, agents=agents, context=context, **data[0])
 
     @classmethod
-    def from_name(cls, name: str):
+    async def from_name(cls, name: str):
         (_, worlds), count = (
-            supabase.table("Worlds").select("*").eq("name", name).execute()
+            await supabase.table("Worlds").select("*").eq("name", name).execute()
         )
 
         if not worlds:
             raise ValueError(f"World with name {name} not found")
 
-        return cls(**worlds[0])
+        return await World.from_id(worlds[0]["id"])
 
     async def run_step(self):
         # Run agents asynchronously
@@ -102,8 +110,3 @@ class World(BaseModel):
         concurrency = min(os.cpu_count(), len(self.agents))
         tasks = [self.run_agent_loop() for _ in range(concurrency)]
         await asyncio.gather(*tasks)
-
-
-def get_worlds():
-    data, count = supabase.table("Worlds").select("*").execute()
-    return [World(**world) for world in data[1]]

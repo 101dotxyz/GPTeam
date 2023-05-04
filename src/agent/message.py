@@ -1,11 +1,10 @@
-from enum import Enum
 import re
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-
 
 from ..event.base import Event, EventType, MessageEventSubtype
 from ..location.base import Location
@@ -38,7 +37,13 @@ class AgentMessage(BaseModel):
         return event_message
 
     @classmethod
-    def from_agent_input(cls, agent_input: str, agent_id: UUID, context: WorldContext, type: MessageEventSubtype = MessageEventSubtype.AGENT_TO_AGENT):
+    def from_agent_input(
+        cls,
+        agent_input: str,
+        agent_id: UUID,
+        context: WorldContext,
+        type: MessageEventSubtype = MessageEventSubtype.AGENT_TO_AGENT,
+    ):
         # get the agent name and location id
         agent_name = context.get_agent_full_name(agent_id)
         agent_location_id = context.get_agent_location_id(agent_id)
@@ -61,7 +66,7 @@ class AgentMessage(BaseModel):
             recipient_name = None
             recipient_id = None
         else:
-            try: 
+            try:
                 recipient_id = context.get_agent_id_from_name(recipient_name)
             except Exception as e:
                 raise Exception(e)
@@ -99,12 +104,14 @@ class AgentMessage(BaseModel):
             if str(loc["id"]) == str(event.location_id)
         ][0]
 
-        discord_id = event.metadata["discord_id"] if event.metadata is not None and "discord_id" in event.metadata else None
+        discord_id = (
+            event.metadata["discord_id"]
+            if event.metadata is not None and "discord_id" in event.metadata
+            else None
+        )
 
         if event.subtype == MessageEventSubtype.AGENT_TO_AGENT:
-            pattern = (
-                r"(?P<sender>[\w\s]+) said to (?P<recipient>[\w\s]+): [\"'](?P<message>.*)[\"']"
-            )
+            pattern = r"(?P<sender>[\w\s]+) said to (?P<recipient>[\w\s]+): [\"'](?P<message>.*)[\"']"
             sender_name, recipient, content = re.findall(pattern, event.description)[0]
 
             if "everyone" in recipient:
@@ -127,9 +134,8 @@ class AgentMessage(BaseModel):
                 type=event.subtype,
                 discord_id=discord_id,
             )
-        
-        elif event.subtype == MessageEventSubtype.HUMAN_AGENT_REPLY:
 
+        elif event.subtype == MessageEventSubtype.HUMAN_AGENT_REPLY:
             recipient_id = event.metadata["referenced_agent_id"]
             recipient_name = context.get_agent_full_name(recipient_id)
             content = event.description.split(": ")[-1]
@@ -147,12 +153,9 @@ class AgentMessage(BaseModel):
                 type=event.subtype,
                 discord_id=discord_id,
             )
-        
-        elif event.subtype == MessageEventSubtype.AGENT_TO_HUMAN:
 
-            pattern = (
-                r"(?P<sender>[\w\s]+) asked the humans: [\"'](?P<message>.*)[\"']"
-            )
+        elif event.subtype == MessageEventSubtype.AGENT_TO_HUMAN:
+            pattern = r"(?P<sender>[\w\s]+) asked the humans: [\"'](?P<message>.*)[\"']"
 
             sender_name, content = re.findall(pattern, event.description)[0]
 
@@ -167,9 +170,9 @@ class AgentMessage(BaseModel):
                 type=event.subtype,
                 discord_id=discord_id,
             )
-        
+
         sender_name = context.get_agent_full_name(event.agent_id)
-        
+
         return cls(
             content=event.description,
             sender_id=str(event.agent_id),
@@ -192,7 +195,9 @@ class AgentMessage(BaseModel):
             subtype=self.type,
             description=event_message,
             location_id=self.location.id,
-            metadata={"discord_id": self.discord_id} if self.discord_id is not None else None,
+            metadata={"discord_id": self.discord_id}
+            if self.discord_id is not None
+            else None,
         )
 
         self.event_id = event.id
@@ -200,13 +205,14 @@ class AgentMessage(BaseModel):
         return event
 
     # Given a message, get the relevant chat history
-    def get_chat_history(self) -> str:
-        """ Gets the relevant chat history for a particular message. 
-        
-        """
+    async def get_chat_history(self) -> str:
+        """Gets the relevant chat history for a particular message."""
 
         # get all the messages sent at the location
-        (recent_message_events_at_location, _) = self.context.events_manager.get_events(
+        (
+            recent_message_events_at_location,
+            _,
+        ) = await self.context.events_manager.get_events(
             type=EventType.MESSAGE,
             location_id=self.location.id,
         )
@@ -242,16 +248,21 @@ def get_latest_messages(messages: list[AgentMessage]) -> list[AgentMessage]:
 
     return deduplicate_list(messages, key=lambda x: str(x.sender_id))
 
-def get_conversation_history(location_id: UUID | str, context: WorldContext, message: Optional[AgentMessage] = None) -> str:
-    """ Gets up to 20 messages from the location. If a message is provided, only gets messages from that agent.
-    """
+
+async def get_conversation_history(
+    location_id: UUID | str,
+    context: WorldContext,
+    message: Optional[AgentMessage] = None,
+) -> str:
+    """Gets up to 20 messages from the location. If a message is provided, only gets messages from that agent."""
     if isinstance(location_id, str):
         location_id = UUID(location_id)
 
     # get all the messages sent at the location
-    (message_events, _) = context.events_manager.get_events(
+    (message_events, _) = await context.events_manager.get_events(
         type=EventType.MESSAGE,
         location_id=location_id,
+        agent_id=message.sender_id if message is not None else None,
     )
 
     # if message is not None:
@@ -259,17 +270,13 @@ def get_conversation_history(location_id: UUID | str, context: WorldContext, mes
     #         event for event in message_events if (event.agent_id == message.sender_id or event.agent_id == message.recipient_id)
     #     ]
 
-    messages = [
-        AgentMessage.from_event(event, context)
-        for event in message_events
-    ]
+    messages = [AgentMessage.from_event(event, context) for event in message_events]
 
     # sort the messages by timestamp, with the newest messages last
     messages.sort(key=lambda x: x.timestamp)
 
     # limit the messages to 20
     messages = messages[-20:]
-    
 
     formatted_messages = [
         f"{m.sender_name}: {m.content} @ {m.timestamp}" for m in messages

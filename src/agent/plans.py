@@ -7,8 +7,8 @@ import pytz
 from pydantic import BaseModel, Field, validator
 
 from ..location.base import Location
+from ..utils.database.client import supabase
 from .message import AgentMessage
-from ..utils.database.database import supabase
 
 
 class PlanStatus(Enum):
@@ -16,6 +16,7 @@ class PlanStatus(Enum):
     TODO = "todo"
     DONE = "done"
     FAILED = "failed"
+
 
 class SinglePlan(BaseModel):
     id: UUID
@@ -72,26 +73,27 @@ class SinglePlan(BaseModel):
         return f"[PLAN] - {self.description} at {self.location.name}"
 
     @classmethod
-    def from_id(cls, id: UUID):
+    async def from_id(cls, id: UUID):
         (_, data), (_, count) = (
-            supabase.table("Plans").select("*").eq("id", str(id)).execute()
+            await supabase.table("Plans").select("*").eq("id", str(id)).execute()
         )
 
         if not count:
             raise ValueError(f"Plan with id {id} does not exist")
 
         plan_data = data[0]
-        plan_data["location"] = Location.from_id(plan_data["location_id"])
+        plan_data["location"] = await Location.from_id(plan_data["location_id"])
         del plan_data["location_id"]
 
         return cls(**plan_data)
 
-    def delete(self):
-        data, count = supabase.table("Plans").delete().eq("id", str(self.id)).execute()
+    async def delete(self):
+        data, count = (
+            await supabase.table("Plans").delete().eq("id", str(self.id)).execute()
+        )
         return data
 
     def _db_dict(self):
-
         row = {
             "id": str(self.id),
             "description": self.description,
@@ -99,19 +101,21 @@ class SinglePlan(BaseModel):
             "max_duration_hrs": self.max_duration_hrs,
             "created_at": self.created_at.isoformat(),
             "agent_id": str(self.id),
-            "related_event_id": str(self.related_message.event_id) if self.related_message else None,
+            "related_event_id": str(self.related_message.event_id)
+            if self.related_message
+            else None,
             "stop_condition": self.stop_condition,
             "status": self.status.value,
             "scratchpad": self.scratchpad,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "completed_at": self.completed_at.isoformat()
+            if self.completed_at
+            else None,
         }
 
         return row
-     
+
     def make_plan_prompt(self):
         return f"\nDo this: {self.description}\nAt this location: {self.location.name}\nStop when this happens: {self.stop_condition}\nIf do not finish within {self.max_duration_hrs} hours, stop."
-
-
 
 
 class LLMSinglePlan(BaseModel):

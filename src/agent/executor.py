@@ -9,24 +9,26 @@ from uuid import UUID
 from dotenv import load_dotenv
 from langchain import LLMChain
 from langchain.agents import AgentOutputParser, LLMSingleActionAgent
+from langchain.output_parsers import OutputFixingParser
 from langchain.prompts import BaseChatPromptTemplate
-from langchain.schema import AgentAction, AgentFinish, HumanMessage
+from langchain.schema import AgentAction, AgentFinish, HumanMessage, SystemMessage
 from langchain.tools import BaseTool
 from pydantic import BaseModel
 from typing_extensions import override
 
 from src.world.context import WorldContext
+
 from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
 from ..utils.colors import LogColor
 from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel
-from ..utils.parameters import DEFAULT_SMART_MODEL
+from ..utils.parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
 from ..world.context import WorldContext
-from .plans import PlanStatus, SinglePlan
 from .message import AgentMessage, get_conversation_history
+from .plans import PlanStatus, SinglePlan
 
 load_dotenv()
 
@@ -59,13 +61,22 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
 
         formatted = self.template.format(**kwargs)
 
-        print(f"CUSTOM PROMPT TEMPLATE:\n\n---------------------\n{formatted}\n-----------------------\n\n")
+        print(
+            f"CUSTOM PROMPT TEMPLATE:\n\n---------------------\n{formatted}\n-----------------------\n\n"
+        )
 
         return [HumanMessage(content=formatted)]
 
 
 # set up the output parser
 class CustomOutputParser(AgentOutputParser):
+    tools: List[BaseTool]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.tools = kwargs.pop("tools")
+
     def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
         # Check if agent should finish
         if "Final Response:" in llm_output:
@@ -81,7 +92,21 @@ class CustomOutputParser(AgentOutputParser):
         regex = r"Action\s*\d*\s*:(.*?)\nAction\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         match = re.search(regex, llm_output, re.DOTALL)
         if not match:
-            raise ValueError(f"Could not parse LLM output: `{llm_output}`")
+            llm = ChatModel(DEFAULT_FAST_MODEL)
+
+            formatting_correction = f"Could not parse the LLM output: `{llm_output}`\n\n Reformat the output to correspond to the following format: {self.get_format_instructions()} so that the result can be extracted using the regex: `{regex}`"
+
+            retry = llm.get_chat_completion_sync(
+                [SystemMessage(content=formatting_correction)]
+            )
+
+            match = re.search(regex, retry, re.DOTALL)
+
+            if not match:
+                raise ValueError(
+                    f"Could not parse LLM output after retrying: `{retry}`. First attempt: `{retry}`"
+                )
+
         action = match.group(1).strip()
         action_input = match.group(2)
         # try parsing action_input as json
@@ -91,6 +116,10 @@ class CustomOutputParser(AgentOutputParser):
             action_input = action_input.strip(" ").strip('"')
         # Return the action and action input
         return AgentAction(tool=action, tool_input=action_input, log=llm_output)
+
+    def get_format_instructions(self) -> str:
+        tool_names = ", ".join([tool.name for tool in self.tools])
+        return f"Your response should use the following format:\n\nTask: the task you must complete\nThought: your thoughts about what you should do\nAction: the action to take, which must be one of these words: [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeated N times)\nThought: 'I have completed the task'\nFinal Response: the final response to the task\n\nIf you are not ready with a final response, then you must take an action.\n\nIf you determine that you are incapable of completing the task with the tools you have been given, return 'Final Response: Need Help', however, if you are in dialog with another character, responses such as 'I don't know' are valid responses. When in dialog, you should never, under any circumstance, break character, or admit that you are an AI.\nIf the task is complete and no specific response is needed, return 'Final Response: Done'"
 
 
 class PlanExecutorResponse(BaseModel):
@@ -110,12 +139,11 @@ class PlanExecutor(BaseModel):
     plan: Optional[SinglePlan] = None
 
     def __init__(
-            self, 
-            agent_id: UUID, 
-            world_context: WorldContext, 
-            message_to_respond_to: AgentMessage = None,
-        ) -> None:
-
+        self,
+        agent_id: UUID,
+        world_context: WorldContext,
+        message_to_respond_to: AgentMessage = None,
+    ) -> None:
         super().__init__(
             agent_id=agent_id,
             context=world_context,
@@ -123,7 +151,6 @@ class PlanExecutor(BaseModel):
         )
 
     def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
-    
         prompt = CustomPromptTemplate(
             template=PromptString.EXECUTE_PLAN.value,
             tools=tools,
@@ -132,12 +159,11 @@ class PlanExecutor(BaseModel):
             input_variables=[
                 "input",
                 "intermediate_steps",
-
                 "your_name",
                 "your_private_bio",
                 "location_context",
                 "conversation_history",
-            ]
+            ],
         )
 
         # set up a simple completion llm
@@ -146,7 +172,7 @@ class PlanExecutor(BaseModel):
         # LLM chain consisting of the LLM and a prompt
         llm_chain = LLMChain(llm=llm, prompt=prompt)
 
-        output_parser = CustomOutputParser()
+        output_parser = CustomOutputParser(tools=tools)
 
         executor = LLMSingleActionAgent(
             llm_chain=llm_chain,
@@ -154,8 +180,10 @@ class PlanExecutor(BaseModel):
             stop=["\nObservation:"],
         )
         return executor
-   
-    def intermediate_steps_to_list(self, intermediate_steps: List[Tuple[AgentAction, str]]) -> List[dict]:
+
+    def intermediate_steps_to_list(
+        self, intermediate_steps: List[Tuple[AgentAction, str]]
+    ) -> List[dict]:
         result = []
         for action, observation in intermediate_steps:
             action_dict = {
@@ -166,7 +194,9 @@ class PlanExecutor(BaseModel):
             result.append({"action": action_dict, "observation": observation})
         return result
 
-    def list_to_intermediate_steps(self, intermediate_steps: List[dict]) -> List[Tuple[AgentAction, str]]:
+    def list_to_intermediate_steps(
+        self, intermediate_steps: List[dict]
+    ) -> List[Tuple[AgentAction, str]]:
         result = []
         for step in intermediate_steps:
             action = AgentAction(**step["action"])
@@ -194,22 +224,20 @@ class PlanExecutor(BaseModel):
             intermediate_steps = []
 
         # Make the conversation history
-        conversation_history = get_conversation_history(
+        conversation_history = await get_conversation_history(
             self.context.get_agent_location_id(self.agent_id),
             self.context,
             self.message_to_respond_to,
         )
 
         response = executor.plan(
-            input = self.plan.make_plan_prompt(),
-            intermediate_steps = intermediate_steps,
-
-            your_name = self.context.get_agent_full_name(self.agent_id),
-            your_private_bio = self.context.get_agent_private_bio(self.agent_id),
-            location_context = self.context.location_context_string(self.agent_id),
-            conversation_history = conversation_history
+            input=self.plan.make_plan_prompt(),
+            intermediate_steps=intermediate_steps,
+            your_name=self.context.get_agent_full_name(self.agent_id),
+            your_private_bio=self.context.get_agent_private_bio(self.agent_id),
+            location_context=self.context.location_context_string(self.agent_id),
+            conversation_history=conversation_history,
         )
-
 
         agent_name = self.context.get_agent_full_name(self.agent_id)
 
@@ -258,8 +286,8 @@ class PlanExecutor(BaseModel):
         # Add the intermediate step to the list of intermediate steps
         # But if this is the second wait in a row, skip it
         if (
-            intermediate_steps 
-            and intermediate_steps[-1][0].tool.strip() == ToolName.WAIT.value 
+            intermediate_steps
+            and intermediate_steps[-1][0].tool.strip() == ToolName.WAIT.value
             and response.tool.strip() == ToolName.WAIT.value
         ):
             pass

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from ..tools.name import ToolName
 
 # from ..agent.base import Agent
-from ..utils.database.database import supabase
+from ..utils.database.client import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
 
 
@@ -70,9 +70,9 @@ class Location(BaseModel):
         }
 
     @classmethod
-    def from_id(cls, id: UUID):
+    async def from_id(cls, id: UUID):
         (_, data), _ = (
-            supabase.table("Locations").select("*").eq("id", str(id)).execute()
+            await supabase.table("Locations").select("*").eq("id", str(id)).execute()
         )
 
         if len(data) == 0:

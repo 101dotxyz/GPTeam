@@ -1,10 +1,9 @@
+import asyncio
 import enum
-from typing import Any, Awaitable, Callable, Optional, Type, Union, Optional, List
 import inspect
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any, Awaitable, Callable, List, Optional, Type, Union
 from uuid import UUID
-import asyncio
 
 from langchain import GoogleSearchAPIWrapper
 from langchain.agents import Tool, load_tools
@@ -13,8 +12,6 @@ from langchain.tools import BaseTool
 from typing_extensions import override
 
 from src.tools.context import ToolContext
-from src.tools.document import ReadDocumentToolInput, SaveDocumentToolInput, SearchDocumentsToolInput, read_document, save_document, search_documents
-from src.tools.human import ask_human, ask_human_async
 from src.tools.document import (
     ReadDocumentToolInput,
     SaveDocumentToolInput,
@@ -23,6 +20,7 @@ from src.tools.document import (
     save_document,
     search_documents,
 )
+from src.tools.human import ask_human, ask_human_async
 from src.utils.models import ChatModel
 from src.utils.parameters import DEFAULT_SMART_MODEL
 from src.utils.prompt import Prompter, PromptString
@@ -143,7 +141,6 @@ def load_built_in_tool(
         tool_usage_description=tool_usage_description,
         tool_usage_summarization_prompt=tool_usage_summarization_prompt,
         requires_context=False,
-
     )
 
 
@@ -179,7 +176,7 @@ def get_tools(
             name="speak",
             func=send_message_sync,
             coroutine=send_message_async,
-            description=f"say something in the {location_name}. The following people are also in the {location_name} and are the only people who will hear what you say: [{other_agent_names}] You can say something to everyone in the {location_name}, or address a specific person at your location. The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let\'s get this meeting started.'). Do not use a semi-colon in your message.",
+            description=f"say something in the {location_name}. The following people are also in the {location_name} and are the only people who will hear what you say: [{other_agent_names}] You can say something to everyone in the {location_name}, or address a specific person at your location. The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let's get this meeting started.'). Do not use a semi-colon in your message.",
             tool_usage_description="To make progress on their plans, {agent_full_name} spoke to {recipient_full_name}.",
             requires_context=True,
             requires_authorization=False,

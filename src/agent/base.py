@@ -176,8 +176,9 @@ class Agent(BaseModel):
                 for location in locations
                 if str(location.id) == plan["location_id"]
             ][0]
+
             related_event = (
-                Event.from_id(plan["related_event_id"])
+                await Event.from_id(plan["related_event_id"])
                 if plan["related_event_id"] is not None
                 else None
             )
@@ -775,13 +776,17 @@ class Agent(BaseModel):
         )
 
         if not relevant_messages:
-            self._log("Inbox Empty", LogColor.MESSAGE, "No new messages.")
+            self._log(
+                "No Conversations",
+                LogColor.MESSAGE,
+                "No new conversations to respond to.",
+            )
             return
 
         self._log(
             "New Conversations",
             LogColor.MESSAGE,
-            f"{len(relevant_messages)} convos to respond to.",
+            f"{len(relevant_messages)} conversations to respond to.",
         )
 
         response_plans: list[SinglePlan] = []
@@ -810,9 +815,9 @@ class Agent(BaseModel):
 
         # These new plans are the priority
         # Update local and db objects
-        self._upsert_plan_rows(response_plans)
+        await self._upsert_plan_rows(response_plans)
         self.plans = response_plans + self.plans
-        self._update_agent_row()
+        await self._update_agent_row()
 
     async def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
@@ -980,7 +985,7 @@ class Agent(BaseModel):
             self.update_plan(plan)
 
             # update the plan in the db
-            self._upsert_plan_rows([plan])
+            await self._upsert_plan_rows([plan])
 
             tool_usage_summary = await resp.tool.summarize_usage(
                 plan_description=plan.description,
@@ -1078,5 +1083,5 @@ class Agent(BaseModel):
         await self._do_first_plan()
 
         # Reflect, if we should
-        if self._should_reflect():
+        if await self._should_reflect():
             await self._reflect()

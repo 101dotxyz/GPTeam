@@ -80,7 +80,11 @@ class Event(BaseModel):
             witness_ids = []
 
         subtype = Subtype(subtype) if subtype is not None else None
-        if type == EventType.MESSAGE and subtype != MessageEventSubtype.HUMAN_AGENT_REPLY and agent_id is None:
+        if (
+            type == EventType.MESSAGE
+            and subtype != MessageEventSubtype.HUMAN_AGENT_REPLY
+            and agent_id is None
+        ):
             raise ValueError("agent_id must be provided for message events")
 
         super().__init__(
@@ -92,7 +96,7 @@ class Event(BaseModel):
             agent_id=agent_id,
             location_id=location_id,
             witness_ids=witness_ids,
-            metadata=metadata
+            metadata=metadata,
         )
 
     def db_dict(self):
@@ -105,13 +109,13 @@ class Event(BaseModel):
             "description": self.description,
             "location_id": str(self.location_id),
             "witness_ids": [str(witness_id) for witness_id in self.witness_ids],
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
     @classmethod
-    def from_id(cls, event_id: UUID) -> "Event":
+    async def from_id(cls, event_id: UUID) -> "Event":
         (_, data), _ = (
-            supabase.table("Events")
+            await supabase.table("Events")
             .select("*, location_id(*)")
             .eq("id", str(event_id))
             .limit(1)
@@ -129,7 +133,7 @@ class Event(BaseModel):
             agent_id=event["agent_id"],
             timestamp=datetime.fromisoformat(event["timestamp"]),
             witness_ids=event["witness_ids"],
-            metadata=event["metadata"]
+            metadata=event["metadata"],
         )
 
     # @staticmethod

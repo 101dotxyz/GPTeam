@@ -53,10 +53,12 @@ create table "public"."Events" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
     "timestamp" timestamp with time zone default now(),
     "type" event_type,
+    "subtype" text,
     "description" text,
     "agent_id" uuid,
     "location_id" uuid,
     "witness_ids" uuid[],
+    "metadata" jsonb,
     PRIMARY KEY ("id")
 );
 

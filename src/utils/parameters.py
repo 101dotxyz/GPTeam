@@ -4,6 +4,12 @@ from enum import Enum
 
 from .model_name import ChatModelName
 
+
+class HumanMode(Enum):
+    DISCORD = "discord"
+    STDIN = "stdin"
+
+
 TIME_SPEED_MULTIPLIER = 1000
 # Memory
 RECENCY_WEIGHT = 1
@@ -19,6 +25,7 @@ DEFAULT_SMART_MODEL = (
     ChatModelName.GPT4
 )  # Change to ChatModelName.GPT4 in production, this is just for testing
 DEFAULT_FAST_MODEL = ChatModelName.TURBO
+HUMAN_MODE = HumanMode.DISCORD
 
 
 ## DISCORD CHANNEL IDS

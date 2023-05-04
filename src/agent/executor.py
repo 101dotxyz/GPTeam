@@ -117,8 +117,8 @@ class PlanExecutor(BaseModel):
         ) -> None:
 
         super().__init__(
-            agent_id=agent_id, 
-            context=world_context, 
+            agent_id=agent_id,
+            context=world_context,
             message_to_respond_to=message_to_respond_to,
         )
 
@@ -166,7 +166,7 @@ class PlanExecutor(BaseModel):
             }
             result.append({"action": action_dict, "observation": observation})
         return result
-    
+
     def list_to_intermediate_steps(self, intermediate_steps: List[dict]) -> List[Tuple[AgentAction, str]]:
         result = []
         for step in intermediate_steps:
@@ -174,7 +174,6 @@ class PlanExecutor(BaseModel):
             observation = step["observation"]
             result.append((action, observation))
         return result
-        
 
     async def start_or_continue_plan(
         self, plan: SinglePlan, tools: list[CustomTool]
@@ -231,7 +230,7 @@ class PlanExecutor(BaseModel):
                 return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
         # Else, the response is an AgentAction
-        
+
         try:
             tool = get_tools(
                 [ToolName(response.tool.lower())],
@@ -268,4 +267,3 @@ class PlanExecutor(BaseModel):
         )
 
         return executor_response
-

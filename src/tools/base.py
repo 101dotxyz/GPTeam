@@ -13,6 +13,8 @@ from langchain.tools import BaseTool
 from typing_extensions import override
 
 from src.tools.context import ToolContext
+from src.tools.document import ReadDocumentToolInput, SaveDocumentToolInput, SearchDocumentsToolInput, read_document, save_document, search_documents
+from src.tools.human import ask_human, ask_human_async
 from src.tools.document import (
     ReadDocumentToolInput,
     SaveDocumentToolInput,
@@ -199,12 +201,21 @@ def get_tools(
             tool_usage_summarization_prompt="You have just used Wolphram Alpha with the following input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} used Wolphram Alpha and realised the following: {tool_usage_reflection}.",
         ),
-        ToolName.HUMAN: load_built_in_tool(
-            "human",
-            requires_authorization=False,
-            worldwide=True,
+        ToolName.HUMAN: CustomTool(
+            name="human",
+            func=ask_human,
+            coroutine=ask_human_async,
+            description=(
+                "You can ask a human for guidance when you think you "
+                "got stuck or you are not sure what to do next. "
+                "The input should be a question for the human."
+            ),
             tool_usage_summarization_prompt="You have just asked a human for help by saying {tool_input}. This is what they replied: {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} spoke to a human.",
+            requires_context=True,
+            requires_authorization=False,
+            worldwide=True,
+            is_async=True,
         ),
         ToolName.COMPANY_DIRECTORY: CustomTool(
             name=ToolName.COMPANY_DIRECTORY.value,

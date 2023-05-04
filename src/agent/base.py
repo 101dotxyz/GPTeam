@@ -784,7 +784,7 @@ class Agent(BaseModel):
 
         # Make a plan to respond
         for sender_id in unique_senders:
-            sender_name = self.context.get_agent_full_name(sender_id)
+            sender_name = self.context.get_agent_full_name(sender_id) if sender_id else "Human"
             new_plan = SinglePlan(
                 description=f"Respond to what {sender_name} said to me.",
                 location=self.location,

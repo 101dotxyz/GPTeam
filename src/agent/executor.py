@@ -9,8 +9,9 @@ from uuid import UUID
 from dotenv import load_dotenv
 from langchain import LLMChain
 from langchain.agents import AgentOutputParser, LLMSingleActionAgent
+from langchain.output_parsers import OutputFixingParser
 from langchain.prompts import BaseChatPromptTemplate
-from langchain.schema import AgentAction, AgentFinish, HumanMessage
+from langchain.schema import AgentAction, AgentFinish, HumanMessage, SystemMessage
 from langchain.tools import BaseTool
 from pydantic import BaseModel
 from typing_extensions import override
@@ -23,7 +24,7 @@ from ..tools.name import ToolName
 from ..utils.colors import LogColor
 from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel
-from ..utils.parameters import DEFAULT_SMART_MODEL
+from ..utils.parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
 from ..world.context import WorldContext
 from .message import AgentMessage, get_conversation_history
@@ -69,6 +70,13 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
 
 # set up the output parser
 class CustomOutputParser(AgentOutputParser):
+    tools: List[BaseTool]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.tools = kwargs.pop("tools")
+
     def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
         # Check if agent should finish
         if "Final Response:" in llm_output:
@@ -84,7 +92,21 @@ class CustomOutputParser(AgentOutputParser):
         regex = r"Action\s*\d*\s*:(.*?)\nAction\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         match = re.search(regex, llm_output, re.DOTALL)
         if not match:
-            raise ValueError(f"Could not parse LLM output: `{llm_output}`")
+            llm = ChatModel(DEFAULT_FAST_MODEL)
+
+            formatting_correction = f"Could not parse the LLM output: `{llm_output}`\n\n Reformat the output to correspond to the following format: {self.get_format_instructions()} so that the result can be extracted using the regex: `{regex}`"
+
+            retry = llm.get_chat_completion_sync(
+                [SystemMessage(content=formatting_correction)]
+            )
+
+            match = re.search(regex, retry, re.DOTALL)
+
+            if not match:
+                raise ValueError(
+                    f"Could not parse LLM output after retrying: `{retry}`. First attempt: `{retry}`"
+                )
+
         action = match.group(1).strip()
         action_input = match.group(2)
         # try parsing action_input as json
@@ -94,6 +116,10 @@ class CustomOutputParser(AgentOutputParser):
             action_input = action_input.strip(" ").strip('"')
         # Return the action and action input
         return AgentAction(tool=action, tool_input=action_input, log=llm_output)
+
+    def get_format_instructions(self) -> str:
+        tool_names = ", ".join([tool.name for tool in self.tools])
+        return f"Your response should use the following format:\n\nTask: the task you must complete\nThought: your thoughts about what you should do\nAction: the action to take, which must be one of these words: [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeated N times)\nThought: 'I have completed the task'\nFinal Response: the final response to the task\n\nIf you are not ready with a final response, then you must take an action.\n\nIf you determine that you are incapable of completing the task with the tools you have been given, return 'Final Response: Need Help', however, if you are in dialog with another character, responses such as 'I don't know' are valid responses. When in dialog, you should never, under any circumstance, break character, or admit that you are an AI.\nIf the task is complete and no specific response is needed, return 'Final Response: Done'"
 
 
 class PlanExecutorResponse(BaseModel):
@@ -146,7 +172,7 @@ class PlanExecutor(BaseModel):
         # LLM chain consisting of the LLM and a prompt
         llm_chain = LLMChain(llm=llm, prompt=prompt)
 
-        output_parser = CustomOutputParser()
+        output_parser = CustomOutputParser(tools=tools)
 
         executor = LLMSingleActionAgent(
             llm_chain=llm_chain,

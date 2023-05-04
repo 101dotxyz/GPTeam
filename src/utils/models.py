@@ -48,3 +48,11 @@ class ChatModel:
             resp = await self.backupModel.agenerate([messages])
 
         return resp.generations[0][0].text
+
+    def get_chat_completion_sync(self, messages: list[BaseMessage], **kwargs) -> str:
+        try:
+            resp = self.defaultModel.generate([messages])
+        except Exception:
+            resp = self.backupModel.generate([messages])
+
+        return resp.generations[0][0].text

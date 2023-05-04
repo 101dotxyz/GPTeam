@@ -28,6 +28,7 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
         agent_message = AgentMessage.from_agent_input(
             agent_input, tool_context.agent_id, tool_context.context
         )
+        print("made a new agent message with content: ",  agent_message.content)
     except Exception as e:
         if "Could not find agent" in str(e):
             return "Could not find agent with that name. Try checking the directory."
@@ -53,12 +54,14 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
     tool_context.context.events_manager.add_event(event)
 
     # Check that the recipient is in the room
-    if agent_message.recipient_id is not None:
-        recipient_location_id = tool_context.context.get_agent_location_id(
-            agent_message.recipient_id
-        )
-        if recipient_location_id != agent_message.location.id:
-            return f"{event.description} but {agent_message.recipient_name} is not in the room to hear it."
+    # TODO: for some reason this wasn't working as expected
+    
+    # if agent_message.recipient_id is not None:
+    #     recipient_location_id = tool_context.context.get_agent_location_id(
+    #         agent_message.recipient_id
+    #     )
+    #     if recipient_location_id != agent_message.location.id:
+    #         return f"{event.description} but {agent_message.recipient_name} is not in the room to hear it."
 
     return event.description
 

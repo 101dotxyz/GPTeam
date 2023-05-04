@@ -256,8 +256,14 @@ class PlanExecutor(BaseModel):
         )
 
         # Add the intermediate step to the list of intermediate steps
-        # We can skip the wait tool, since it doesnt add to the understanding at all and just takes up context space
-        if response.tool.strip() != ToolName.WAIT.value:
+        # But if this is the second wait in a row, skip it
+        if (
+            intermediate_steps 
+            and intermediate_steps[-1][0].tool.strip() == ToolName.WAIT.value 
+            and response.tool.strip() == ToolName.WAIT.value
+        ):
+            pass
+        else:
             intermediate_steps.append((response, result))
 
         executor_response = PlanExecutorResponse(

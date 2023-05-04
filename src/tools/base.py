@@ -179,7 +179,7 @@ def get_tools(
             name="speak",
             func=send_message_sync,
             coroutine=send_message_async,
-            description=f"say something in the {location_name}. {other_agent_names} are also in the {location_name} and will hear what you say. No one else will hear you. You can say something to everyone nearby, or address a specific person at your location (one of {other_agent_names}). The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let\'s get this meeting started.'). Do not use a semi-colon in your message.",
+            description=f"say something in the {location_name}. The following people are also in the {location_name} and are the only people who will hear what you say: [{other_agent_names}] You can say something to everyone in the {location_name}, or address a specific person at your location. The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let\'s get this meeting started.'). Do not use a semi-colon in your message.",
             tool_usage_description="To make progress on their plans, {agent_full_name} spoke to {recipient_full_name}.",
             requires_context=True,
             requires_authorization=False,
@@ -219,7 +219,7 @@ def get_tools(
         ToolName.COMPANY_DIRECTORY: CustomTool(
             name=ToolName.COMPANY_DIRECTORY.value,
             func=consult_directory,
-            description="A directory of all the people you can speak with, detailing their names, roles, and current locations. Useful for when you need help from another person. Takes an empty string as input.",
+            description="A directory of all the people you can speak with, detailing their names and bios. Useful for when you need help from another person. Takes an empty string as input.",
             tool_usage_summarization_prompt="You have just consulted the company directory and found out the following: {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} consulted the company directory and realised the following: {tool_usage_reflection}.",
             requires_context=True,  # this tool requires location_id as context

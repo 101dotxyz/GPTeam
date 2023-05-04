@@ -778,7 +778,7 @@ class Agent(BaseModel):
 
         # Make a plan to respond
         for sender_id in unique_senders:
-            sender_name = self.context.get_agent_full_name(sender_id)
+            sender_name = self.context.get_agent_full_name(sender_id) if sender_id else "Human"
             new_plan = SinglePlan(
                 description=f"Respond to what {sender_name} said to me.",
                 location=self.location,
@@ -793,7 +793,6 @@ class Agent(BaseModel):
                 ][0],
             )
             response_plans.append(new_plan)
-
 
     async def _react(self) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
@@ -914,7 +913,7 @@ class Agent(BaseModel):
 
         if plan.type == PlanType.DEFAULT:
             self.plan_executor = PlanExecutor(
-                self.id, 
+                self.id,
                 world_context=self.context,
                 scratchpad=plan.scratchpad,
             )

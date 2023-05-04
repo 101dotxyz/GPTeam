@@ -1,3 +1,4 @@
+import json
 import threading
 from datetime import datetime
 from enum import Enum
@@ -29,14 +30,26 @@ class EventType(Enum):
     MESSAGE = "message"
 
 
+class MessageEventSubtype(Enum):
+    AGENT_TO_AGENT = "agent-to-agent"
+    AGENT_TO_HUMAN = "agent-to-human"
+    HUMAN_AGENT_REPLY = "human-agent-reply"
+    HUMAN_IN_CHANNEL = "human-in-channel"
+
+
+Subtype = MessageEventSubtype
+
+
 class Event(BaseModel):
     id: UUID
     timestamp: datetime
     type: EventType
+    subtype: Optional[Subtype] = None
     agent_id: Optional[UUID] = None
     description: str
     location_id: UUID
     witness_ids: list[UUID] = []
+    metadata: Optional[Any]
 
     def __init__(
         self,
@@ -47,6 +60,8 @@ class Event(BaseModel):
         witness_ids: list[UUID] = [],
         agent_id: Optional[UUID | str] = None,
         id: Optional[UUID] = None,
+        subtype: Optional[Subtype] = None,
+        metadata: Optional[Any] = None,
         **kwargs: Any,
     ):
         if id is None:
@@ -64,17 +79,20 @@ class Event(BaseModel):
         if witness_ids is None:
             witness_ids = []
 
-        if type == EventType.MESSAGE and agent_id is None:
+        subtype = Subtype(subtype) if subtype is not None else None
+        if type == EventType.MESSAGE and subtype != MessageEventSubtype.HUMAN_AGENT_REPLY and agent_id is None:
             raise ValueError("agent_id must be provided for message events")
 
         super().__init__(
             id=id,
             type=type,
+            subtype=subtype,
             description=description,
             timestamp=timestamp,
             agent_id=agent_id,
             location_id=location_id,
             witness_ids=witness_ids,
+            metadata=metadata
         )
 
     def db_dict(self):
@@ -82,10 +100,12 @@ class Event(BaseModel):
             "id": str(self.id),
             "timestamp": str(self.timestamp),
             "type": self.type.value,
+            "subtype": self.subtype.value if self.subtype is not None else None,
             "agent_id": str(self.agent_id),
             "description": self.description,
             "location_id": str(self.location_id),
             "witness_ids": [str(witness_id) for witness_id in self.witness_ids],
+            "metadata": self.metadata
         }
 
     @classmethod
@@ -103,11 +123,13 @@ class Event(BaseModel):
         return cls(
             id=event["id"],
             type=event["type"],
+            subtype=event["subtype"],
             description=event["description"],
             location_id=event["location_id"]["id"],
             agent_id=event["agent_id"],
             timestamp=datetime.fromisoformat(event["timestamp"]),
             witness_ids=event["witness_ids"],
+            metadata=event["metadata"]
         )
 
     # @staticmethod
@@ -146,10 +168,12 @@ class EventsManager(BaseModel):
         recent_events = [
             Event(
                 type=EventType(event["type"]),
+                subtype=event["subtype"],
                 description=event["description"],
                 location_id=event["location_id"]["id"],
                 timestamp=datetime.fromisoformat(event["timestamp"]),
                 witness_ids=event["witness_ids"],
+                metadata=event["metadata"],
                 agent_id=event["agent_id"],
             )
             for event in data
@@ -180,11 +204,13 @@ class EventsManager(BaseModel):
                 Event(
                     id=event["id"],
                     type=EventType(event["type"]),
+                    subtype=event["subtype"],
                     description=event["description"],
                     location_id=event["location_id"]["id"],
                     agent_id=event["agent_id"],
                     timestamp=datetime.fromisoformat(event["timestamp"]),
                     witness_ids=event["witness_ids"],
+                    metadata=event["metadata"],
                 )
                 for event in data
             ]
@@ -246,7 +272,7 @@ class EventsManager(BaseModel):
                 for event in filtered_events
                 if str(event.location_id) == str(location_id)
             ]
-        
+
         if agent_id is not None:
             filtered_events = [
                 event

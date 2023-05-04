@@ -1,8 +1,10 @@
 import enum
+from typing import Any, Awaitable, Callable, Optional, Type, Union, Optional, List
 import inspect
 from enum import Enum
 from typing import Any, List, Optional
 from uuid import UUID
+import asyncio
 
 from langchain import GoogleSearchAPIWrapper
 from langchain.agents import Tool, load_tools
@@ -11,6 +13,8 @@ from langchain.tools import BaseTool
 from typing_extensions import override
 
 from src.tools.context import ToolContext
+from src.tools.document import ReadDocumentToolInput, SaveDocumentToolInput, SearchDocumentsToolInput, read_document, save_document, search_documents
+from src.tools.human import ask_human, ask_human_async
 from src.tools.document import (
     ReadDocumentToolInput,
     SaveDocumentToolInput,
@@ -26,8 +30,8 @@ from src.world.context import WorldContext
 
 from .directory import consult_directory
 from .name import ToolName
-from .send_message import send_message
-from .wait import wait
+from .send_message import send_message_async, send_message_sync
+from .wait import wait_async, wait_sync
 
 
 class CustomTool(Tool):
@@ -139,6 +143,7 @@ def load_built_in_tool(
         tool_usage_description=tool_usage_description,
         tool_usage_summarization_prompt=tool_usage_summarization_prompt,
         requires_context=False,
+
     )
 
 
@@ -172,8 +177,9 @@ def get_tools(
         ),
         ToolName.SPEAK: CustomTool(
             name="speak",
-            coroutine=send_message,
-            description=f"say something in the {location_name}. {other_agent_names} are also in the {location_name} and will hear what you say. No one else will hear you. You can say something to everyone nearby, or address a specific person at your location (one of {other_agent_names}). The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let's get this meeting started.'). Do not use a semi-colon in your message.",
+            func=send_message_sync,
+            coroutine=send_message_async,
+            description=f"say something in the {location_name}. The following people are also in the {location_name} and are the only people who will hear what you say: [{other_agent_names}] You can say something to everyone in the {location_name}, or address a specific person at your location. The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let\'s get this meeting started.'). Do not use a semi-colon in your message.",
             tool_usage_description="To make progress on their plans, {agent_full_name} spoke to {recipient_full_name}.",
             requires_context=True,
             requires_authorization=False,
@@ -181,10 +187,11 @@ def get_tools(
         ),
         ToolName.WAIT: CustomTool(
             name="wait",
-            func=wait,
-            description="Don't do anything. Useful for when you are waiting for something to happen. Takes an empty string as input.",
+            func=wait_sync,
+            coroutine=wait_async,
+            description="Useful for when you are waiting for something to happen. Input a very detailed description of what exactly you are waiting for. Start your input with 'I am waiting for...' (e.g. I am waiting for any type of meeting to start in the conference room).",
             tool_usage_description="{agent_full_name} is waiting.",
-            requires_context=False,
+            requires_context=True,
             requires_authorization=False,
             worldwide=True,
         ),
@@ -195,17 +202,25 @@ def get_tools(
             tool_usage_summarization_prompt="You have just used Wolphram Alpha with the following input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} used Wolphram Alpha and realised the following: {tool_usage_reflection}.",
         ),
-        ToolName.HUMAN: load_built_in_tool(
-            "human",
-            requires_authorization=False,
-            worldwide=True,
+        ToolName.HUMAN: CustomTool(
+            name="human",
+            func=ask_human,
+            coroutine=ask_human_async,
+            description=(
+                "You can ask a human for guidance when you think you "
+                "got stuck or you are not sure what to do next. "
+                "The input should be a question for the human."
+            ),
             tool_usage_summarization_prompt="You have just asked a human for help by saying {tool_input}. This is what they replied: {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} spoke to a human.",
+            requires_context=True,
+            requires_authorization=False,
+            worldwide=True,
         ),
         ToolName.COMPANY_DIRECTORY: CustomTool(
             name=ToolName.COMPANY_DIRECTORY.value,
             func=consult_directory,
-            description="A directory of all the people you can speak with, detailing their names, roles, and current locations. Useful for when you need help from another person. Takes an empty string as input.",
+            description="A directory of all the people you can speak with, detailing their names and bios. Useful for when you need help from another person. Takes an empty string as input.",
             tool_usage_summarization_prompt="You have just consulted the company directory and found out the following: {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} consulted the company directory and realised the following: {tool_usage_reflection}.",
             requires_context=True,  # this tool requires location_id as context
@@ -215,9 +230,7 @@ def get_tools(
         ToolName.SAVE_DOCUMENT: CustomTool(
             name=ToolName.SAVE_DOCUMENT.value,
             coroutine=save_document,
-            description="""Write text to an existing document or create a new one. Useful for when you need to save a document for later use.
-Input should be a json string with two keys: "title" and "document".
-The value of "title" should be a string, and the value of "document" should be a string.""",
+            description="""Write text to an existing document or create a new one. Useful for when you need to save a document for later use. Input should be a json string with two keys: "title" and "document". The value of "title" should be a string, and the value of "document" should be a string.""",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} saved a document.",
             requires_context=True,  # this tool requires document_name and content as context
             args_schema=SaveDocumentToolInput,

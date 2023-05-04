@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, validator
 
 from ..location.base import Location
 from ..utils.database.client import supabase
+from .message import AgentMessage
 
 
 class PlanStatus(Enum):
@@ -24,9 +25,10 @@ class SinglePlan(BaseModel):
     max_duration_hrs: float
     created_at: datetime
     agent_id: UUID
+    related_message: Optional[AgentMessage] = None
     stop_condition: str
     status: PlanStatus
-    scratchpad: Optional[str]
+    scratchpad: list[dict] = []
     completed_at: Optional[datetime] = None
 
     def __init__(
@@ -37,16 +39,20 @@ class SinglePlan(BaseModel):
         stop_condition: str,
         agent_id: UUID,
         status: PlanStatus = PlanStatus.TODO,
-        scratchpad: Optional[str] = "",
-        created_at: Optional[datetime] = None,
-        completed_at: Optional[datetime] = None,
-        id: Optional[UUID] = None,
+        scratchpad: Optional[list[dict]] = [],
+        created_at: datetime = None,
+        completed_at: datetime = None,
+        id: UUID = None,
+        related_message: AgentMessage = None,
     ):
         if id is None:
             id = uuid4()
 
         if created_at is None:
             created_at = datetime.now(tz=pytz.utc)
+
+        if scratchpad is None:
+            scratchpad = []
 
         super().__init__(
             id=id,
@@ -59,6 +65,8 @@ class SinglePlan(BaseModel):
             completed_at=completed_at,
             status=status,
             scratchpad=scratchpad,
+            type=type,
+            related_message=related_message,
         )
 
     def __str__(self):
@@ -85,8 +93,29 @@ class SinglePlan(BaseModel):
         )
         return data
 
+    def _db_dict(self):
+        row = {
+            "id": str(self.id),
+            "description": self.description,
+            "location_id": str(self.location.id),
+            "max_duration_hrs": self.max_duration_hrs,
+            "created_at": self.created_at.isoformat(),
+            "agent_id": str(self.id),
+            "related_event_id": str(self.related_message.event_id)
+            if self.related_message
+            else None,
+            "stop_condition": self.stop_condition,
+            "status": self.status.value,
+            "scratchpad": self.scratchpad,
+            "completed_at": self.completed_at.isoformat()
+            if self.completed_at
+            else None,
+        }
+
+        return row
+
     def make_plan_prompt(self):
-        return f"Do this: {self.description}\nAt this location: {self.location.name}\nStop when this happens: {self.stop_condition}\nIf do not finish within {self.max_duration_hrs} hours, stop."
+        return f"\nDo this: {self.description}\nAt this location: {self.location.name}\nStop when this happens: {self.stop_condition}\nIf do not finish within {self.max_duration_hrs} hours, stop."
 
 
 class LLMSinglePlan(BaseModel):

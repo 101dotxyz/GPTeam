@@ -43,8 +43,9 @@ create table "public"."Plans" (
     "max_duration_hrs" real,
     "stop_condition" text,
     "completed_at" timestamp with time zone,
-    "scratchpad" text,
+    "scratchpad" jsonb,
     "status" plan_status not null default 'todo'::plan_status,
+    "related_event_id" uuid,
     PRIMARY KEY ("id")
 );
 
@@ -52,10 +53,12 @@ create table "public"."Events" (
     "id" uuid DEFAULT uuid_generate_v4() not null,
     "timestamp" timestamp with time zone default now(),
     "type" event_type,
+    "subtype" text,
     "description" text,
     "agent_id" uuid,
     "location_id" uuid,
     "witness_ids" uuid[],
+    "metadata" jsonb,
     PRIMARY KEY ("id")
 );
 

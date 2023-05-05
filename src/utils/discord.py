@@ -11,9 +11,9 @@ async def _send_message(token, channel_id, message, rest_client: hikari.RESTApp)
     # We acquire a client with a given token. This allows one REST app instance
     # with one internal connection pool to be reused.
     async with rest_client.acquire(token, "BOT") as client:
-        # message = await client.create_message(channel_id, message)
+        message = await client.create_message(channel_id, message)
 
-        pass  # TIMC toggles discord messages
+        # pass  # TIMC toggles discord messages
 
     return message
 

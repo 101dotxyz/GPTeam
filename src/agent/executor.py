@@ -8,6 +8,8 @@ from uuid import UUID
 
 from dotenv import load_dotenv
 from langchain import LLMChain
+from langchain.llms import OpenAI
+from langchain.schema import OutputParserException
 from langchain.agents import AgentOutputParser, LLMSingleActionAgent
 from langchain.prompts import BaseChatPromptTemplate
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
@@ -66,6 +68,8 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
 
 # set up the output parser
 class CustomOutputParser(AgentOutputParser):
+
+    @override
     def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
         # Check if agent should finish
         if "Final Response:" in llm_output:
@@ -81,7 +85,7 @@ class CustomOutputParser(AgentOutputParser):
         regex = r"Action\s*\d*\s*:(.*?)\nAction\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         match = re.search(regex, llm_output, re.DOTALL)
         if not match:
-            raise ValueError(f"Could not parse LLM output: `{llm_output}`")
+            raise OutputParserException(f"Could not parse LLM output: `{llm_output}`")
         action = match.group(1).strip()
         action_input = match.group(2)
         # try parsing action_input as json
@@ -100,6 +104,23 @@ class PlanExecutorResponse(BaseModel):
     tool_input: Optional[str]
     scratchpad: List[dict] = []
 
+class CustomSingleActionAgent(LLMSingleActionAgent):
+
+    @override
+    def plan(self, *args, **kwargs) -> Union[AgentAction, AgentFinish]:
+
+        try:
+            result = super().plan(*args, **kwargs)
+
+        # If there's an output parsing error, try again, with a reminder about the output format
+        except OutputParserException as e:
+            print("OutputParserException", e)
+
+            if 'input' in kwargs:
+                kwargs['input'] = kwargs['input'] + PromptString.OUTPUT_FORMAT.value
+            result = super().plan(*args, **kwargs)
+
+        return result
 
 class PlanExecutor(BaseModel):
     """Executes plans for an agent."""
@@ -122,7 +143,7 @@ class PlanExecutor(BaseModel):
             message_to_respond_to=message_to_respond_to,
         )
 
-    def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
+    def get_executor(self, tools: list[CustomTool]) -> CustomSingleActionAgent:
     
         prompt = CustomPromptTemplate(
             template=PromptString.EXECUTE_PLAN.value,
@@ -141,14 +162,15 @@ class PlanExecutor(BaseModel):
         )
 
         # set up a simple completion llm
-        llm = ChatModel(model_name=DEFAULT_SMART_MODEL, temperature=0).defaultModel
+        llm = ChatModel(model_name=DEFAULT_SMART_MODEL, temperature=0.2).defaultModel
+
 
         # LLM chain consisting of the LLM and a prompt
         llm_chain = LLMChain(llm=llm, prompt=prompt)
 
         output_parser = CustomOutputParser()
 
-        executor = LLMSingleActionAgent(
+        executor = CustomSingleActionAgent(
             llm_chain=llm_chain,
             output_parser=output_parser,
             stop=["\nObservation:"],
@@ -235,7 +257,6 @@ class PlanExecutor(BaseModel):
                 return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
         # Else, the response is an AgentAction
-
         try:
             tool = get_tools(
                 [ToolName(response.tool.lower())],

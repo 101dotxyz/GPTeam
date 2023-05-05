@@ -15,6 +15,17 @@ def is_poetry_installed():
         return False
 
 
+def is_docker_installed():
+    try:
+        subprocess.run(["docker", "--version"], capture_output=True, check=True)
+        print("✅ Docker is installed")
+        return True
+    except FileNotFoundError:
+        return False
+    except subprocess.CalledProcessError:
+        return False
+
+
 def install_poetry():
     install_cmd = "curl -sSL https://install.python-poetry.org | python3 -"
     os.system(install_cmd)
@@ -36,7 +47,7 @@ def is_supabase_cli_installed():
         return False
 
 
-def install_supabase_cli():
+def install_or_update_supabase_cli():
     # if is_supabase_cli_installed():
     #     print("Supabase CLI is already installed.")
     #     return
@@ -75,19 +86,6 @@ def install_supabase_cli():
         return
 
 
-def setup_db():
-    install_supabase_cli()
-
-    print("Starting supabase...")
-    subprocess.run(["supabase", "start"], check=True)
-
-    print("Resetting the database...")
-    subprocess.run(["supabase", "db", "reset"], check=True)
-
-    print("🌱 Seeding database with agents...")
-    subprocess.run(["poetry", "run", "db-seed"], check=True)
-
-
 if __name__ == "__main__":
     os_type = platform.system()
 
@@ -95,6 +93,12 @@ if __name__ == "__main__":
         print(
             "⚠️ This setup script does not support Windows yet. Please follow the instructions in the README to set up the project."
         )
+
+    if not is_docker_installed():
+        print(
+            "⚠️ Docker is not installed. Please install Docker and try again. See https://docs.docker.com/get-docker/ for instructions."
+        )
+        exit(1)
 
     if is_poetry_installed():
         print("✅ Poetry is already installed.")
@@ -105,4 +109,13 @@ if __name__ == "__main__":
     print("🎁 Installing dependencies... (this may take a while)")
     subprocess.run(["poetry", "install"], check=True)
 
-    setup_db()
+    install_or_update_supabase_cli()
+
+    print("Starting supabase...")
+    subprocess.run(["supabase", "start"], check=True)
+
+    print("Resetting the database...")
+    subprocess.run(["supabase", "db", "reset"], check=True)
+
+    print("🌱 Seeding database with agents...")
+    subprocess.run(["poetry", "run", "db-seed"], check=True)

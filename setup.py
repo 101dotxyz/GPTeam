@@ -92,6 +92,13 @@ def setup_db():
 
 
 if __name__ == "__main__":
+    os_type = platform.system()
+
+    if os_type == "Windows":
+        print(
+            "⚠️ This setup script does not support Windows yet. Please follow the instructions in the README to set up the project."
+        )
+
     if is_poetry_installed():
         print("✅ Poetry is already installed.")
     else:

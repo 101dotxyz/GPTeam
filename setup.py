@@ -112,7 +112,7 @@ if __name__ == "__main__":
     install_or_update_supabase_cli()
 
     print("Starting supabase...")
-    subprocess.run(["supabase", "start"], check=True)
+    subprocess.run(["supabase", "start", "--debug"], check=True)
 
     print("Resetting the database...")
     subprocess.run(["supabase", "db", "reset"], check=True)

@@ -28,6 +28,7 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
     agent_message = None
 
     try:
+        print("agent_input: ", agent_input)
         agent_message = AgentMessage.from_agent_input(
             agent_input, tool_context.agent_id, tool_context.context
         )
@@ -39,18 +40,18 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
             raise e
 
     # TIMC
-    # # get the appropriate discord token
-    # discord_token = tool_context.context.get_discord_token(agent_message.sender_id)
+    # get the appropriate discord token
+    discord_token = tool_context.context.get_discord_token(agent_message.sender_id)
 
-    # # now time to send the message in discord
-    # discord_message = await send_discord_message_async(
-    #     discord_token,
-    #     tool_context.context.get_channel_id(agent_message.location.id),
-    #     agent_message.get_event_message(),
-    # )
+    # now time to send the message in discord
+    discord_message = await send_discord_message_async(
+        discord_token,
+        tool_context.context.get_channel_id(agent_message.location.id),
+        agent_message.get_event_message(),
+    )
 
     # # add the discord id to the agent message
-    # agent_message.discord_id = str(discord_message.id)
+    agent_message.discord_id = str(discord_message.id)
 
     # Covert the AgentMessage to an event
     event = agent_message.to_event()
@@ -61,12 +62,12 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
     # Check that the recipient is in the room
     # TODO: for some reason this wasn't working as expected
 
-    # if agent_message.recipient_id is not None:
-    #     recipient_location_id = tool_context.context.get_agent_location_id(
-    #         agent_message.recipient_id
-    #     )
-    #     if recipient_location_id != agent_message.location.id:
-    #         return f"{event.description} but {agent_message.recipient_name} is not in the room to hear it."
+    if agent_message.recipient_id is not None:
+        recipient_location_id = tool_context.context.get_agent_location_id(
+            agent_message.recipient_id
+        )
+        if recipient_location_id != agent_message.location.id:
+            return f"{event.description} but {agent_message.recipient_name} is not in the room to hear it."
 
     return event.description
 

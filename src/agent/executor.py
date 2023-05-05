@@ -8,6 +8,8 @@ from uuid import UUID
 
 from dotenv import load_dotenv
 from langchain import LLMChain
+from langchain.llms import OpenAI
+from langchain.schema import OutputParserException
 from langchain.agents import AgentOutputParser, LLMSingleActionAgent
 from langchain.output_parsers import OutputFixingParser
 from langchain.prompts import BaseChatPromptTemplate
@@ -103,7 +105,7 @@ class CustomOutputParser(AgentOutputParser):
             match = re.search(regex, retry, re.DOTALL)
 
             if not match:
-                raise ValueError(
+                raise OutputParserException(
                     f"Could not parse LLM output after retrying: `{retry}`. First attempt: `{retry}`"
                 )
 
@@ -129,6 +131,23 @@ class PlanExecutorResponse(BaseModel):
     tool_input: Optional[str]
     scratchpad: List[dict] = []
 
+class CustomSingleActionAgent(LLMSingleActionAgent):
+
+    @override
+    def plan(self, *args, **kwargs) -> Union[AgentAction, AgentFinish]:
+
+        try:
+            result = super().plan(*args, **kwargs)
+
+        # If there's an output parsing error, try again, with a reminder about the output format
+        except OutputParserException as e:
+            print("OutputParserException", e)
+
+            if 'input' in kwargs:
+                kwargs['input'] = kwargs['input'] + PromptString.OUTPUT_FORMAT.value
+            result = super().plan(*args, **kwargs)
+
+        return result
 
 class PlanExecutor(BaseModel):
     """Executes plans for an agent."""
@@ -150,7 +169,7 @@ class PlanExecutor(BaseModel):
             message_to_respond_to=message_to_respond_to,
         )
 
-    def get_executor(self, tools: list[CustomTool]) -> LLMSingleActionAgent:
+    def get_executor(self, tools: list[CustomTool]) -> CustomSingleActionAgent:
         prompt = CustomPromptTemplate(
             template=PromptString.EXECUTE_PLAN.value,
             tools=tools,
@@ -167,14 +186,15 @@ class PlanExecutor(BaseModel):
         )
 
         # set up a simple completion llm
-        llm = ChatModel(model_name=DEFAULT_SMART_MODEL, temperature=0).defaultModel
+        llm = ChatModel(model_name=DEFAULT_SMART_MODEL, temperature=0.2).defaultModel
+
 
         # LLM chain consisting of the LLM and a prompt
         llm_chain = LLMChain(llm=llm, prompt=prompt)
 
         output_parser = CustomOutputParser(tools=tools)
 
-        executor = LLMSingleActionAgent(
+        executor = CustomSingleActionAgent(
             llm_chain=llm_chain,
             output_parser=output_parser,
             stop=["\nObservation:"],
@@ -212,6 +232,9 @@ class PlanExecutor(BaseModel):
         return await self.execute(tools)
 
     async def execute(self, tools: list[CustomTool]) -> str:
+        # Refresh the events
+        self.context.events_manager.refresh_events()
+
         if self.plan is None:
             raise ValueError("No plan set")
 
@@ -260,7 +283,6 @@ class PlanExecutor(BaseModel):
                 return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
         # Else, the response is an AgentAction
-
         try:
             tool = get_tools(
                 [ToolName(response.tool.lower())],
@@ -284,13 +306,13 @@ class PlanExecutor(BaseModel):
         )
 
         # Add the intermediate step to the list of intermediate steps
-        # But if this is the second wait in a row, skip it
+        # But if this is the second wait in a row, replace it
         if (
             intermediate_steps
             and intermediate_steps[-1][0].tool.strip() == ToolName.WAIT.value
             and response.tool.strip() == ToolName.WAIT.value
         ):
-            pass
+            intermediate_steps[-1] = (response, result)
         else:
             intermediate_steps.append((response, result))
 

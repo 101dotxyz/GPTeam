@@ -1,3 +1,4 @@
+import asyncio
 import json
 import threading
 from datetime import datetime
@@ -166,7 +167,7 @@ class EventsManager(BaseModel):
             recent_events=recent_events,
             world_id=world_id,
             last_refresh=last_refresh,
-            refresh_lock=threading.Lock(),
+            refresh_lock=asyncio.Lock(),
         )
 
     @classmethod
@@ -200,7 +201,7 @@ class EventsManager(BaseModel):
     async def refresh_events(self) -> None:
         started_checking_events = datetime.now(pytz.utc)
 
-        with self.refresh_lock:
+        async with self.refresh_lock:
             print("Refreshing events...")
             (_, data), _ = (
                 await supabase.table("Events")

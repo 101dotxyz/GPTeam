@@ -21,8 +21,8 @@ DEFAULT_LOCATION_ID = os.getenv("DEFAULT_LOCATION_ID")
 DEFAULT_WORLD_ID = os.getenv("DEFAULT_WORLD_ID")
 
 DEFAULT_SMART_MODEL = (
-    ChatModelName.TURBO
-    # ChatModelName.GPT4
+    # ChatModelName.TURBO
+    ChatModelName.GPT4
 )
 DEFAULT_FAST_MODEL = ChatModelName.TURBO
 HUMAN_MODE = HumanMode.DISCORD

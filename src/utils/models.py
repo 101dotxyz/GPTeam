@@ -14,7 +14,7 @@ from .spinner import Spinner
 load_dotenv()
 
 
-def get_chat_model(name: ChatModelName, **kwargs):
+def get_chat_model(name: ChatModelName, **kwargs) -> BaseChatModel:
     if "model_name" in kwargs:
         del kwargs["model_name"]
     if "model" in kwargs:
@@ -31,6 +31,10 @@ def get_chat_model(name: ChatModelName, **kwargs):
 
 
 class ChatModel:
+    """Wrapper around the ChatModel class."""
+    defaultModel: BaseChatModel
+    backupModel: BaseChatModel
+
     def __init__(
         self,
         default_model_name: ChatModelName = DEFAULT_SMART_MODEL,

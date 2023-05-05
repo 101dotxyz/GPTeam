@@ -30,6 +30,8 @@ class PromptString(Enum):
 
     HAS_HAPPENED = "Given the following character's observations and a description of what they are waiting for, state whether or not the event has been witnessed by the character.\n{format_instructions}\n\nExample:\n\nObservations:\nJoe walked into the office @ 2023-05-04 08:00:00+00:00\nJoe said hi to Sally @ 2023-05-04 08:05:00+00:00\nSally said hello to Joe @ 2023-05-04 08:05:30+00:00\nRebecca started doing work @ 2023-05-04 08:10:00+00:00\nJoe made some breakfast @ 2023-05-04 08:15:00+00:00\n\nWaiting For: Sally responded to Joe\n\n Your Response: '{{\"has_happened\": true, \"date_occured\": 2023-05-04 08:05:30+00:00}}'\n\nLet's Begin!\n\nObservations:\n{memory_descriptions}\n\nWaiting For: {event_description}\n"
 
+    OUTPUT_FORMAT = "\n\n(Remember! Make sure your output always conforms to one of the following two formats:\n\nA. If you are done with the task:\nThought: 'I have completed the task'\nFinal Response: <str>\n\nB. If you are not done with the task:\nThought: <str>\nAction: <str>\nAction Input: <str>\nObservation: <str>)\n"
+
 class Prompter(BaseModel):
     template: str
     inputs: dict

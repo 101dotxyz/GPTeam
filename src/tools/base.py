@@ -176,7 +176,7 @@ def get_tools(
             name="speak",
             func=send_message_sync,
             coroutine=send_message_async,
-            description=f"say something in the {location_name}. The following people are also in the {location_name} and are the only people who will hear what you say: [{other_agent_names}] You can say something to everyone in the {location_name}, or address a specific person at your location. The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let's get this meeting started.'). Do not use a semi-colon in your message.",
+            description=f"say something in the {location_name}. The following people are also in the {location_name} and are the only people who will hear what you say: [{other_agent_names}] You can say something to everyone in the {location_name}, or address a specific person at your location. The input should be of the format <recipient's full name> OR everyone;'<message>' (e.g. David Summers;'Hi David! How are you doing today?') (e.g. everyone;'Let's get this meeting started.'). Do not use a semi-colon in your message. What you say is guaranteed to be heard by the recipient(s), there is no need to repeat yourself. If you are waiting for a response, just keep using the 'wait' tool.",
             tool_usage_description="To make progress on their plans, {agent_full_name} spoke to {recipient_full_name}.",
             requires_context=True,
             requires_authorization=False,

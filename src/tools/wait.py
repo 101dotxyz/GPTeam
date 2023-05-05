@@ -47,7 +47,7 @@ async def wait_async(agent_input: str, tool_context: ToolContext) -> str:
     # Set up a complex chat model
     quick_llm = ChatModel(DEFAULT_FAST_MODEL, temperature=0)
     # Get the response
-    response = await quick_llm.get_chat_completion(
+    response = await llm.get_chat_completion(
         prompter.prompt,
         loading_text="Checking if event has happened...",
     )

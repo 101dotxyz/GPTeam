@@ -1,6 +1,7 @@
 import asyncio
 import enum
 import inspect
+import os
 from enum import Enum
 from typing import Any, Awaitable, Callable, List, Optional, Type, Union
 from uuid import UUID
@@ -144,6 +145,10 @@ def load_built_in_tool(
     )
 
 
+SERPAPI_KEY = os.environ.get("SERPAPI_KEY")
+WOLFRAM_ALPHA_APPID = os.environ.get("WOLFRAM_ALPHA_APPID")
+
+
 def get_tools(
     tools: List[ToolName],
     context: WorldContext,
@@ -259,6 +264,10 @@ Input should be a json string with one key: "query". The value of "query" should
     }
 
     if not include_worldwide:
-        return [TOOLS[tool] for tool in tools]
+        return [TOOLS[tool] for tool in tools if tool.enabled]
 
-    return [tool for tool in TOOLS.values() if (tool.name in tools or tool.worldwide)]
+    return [
+        tool
+        for tool in TOOLS.values()
+        if (tool.name in tools or tool.worldwide) and tool.enabled
+    ]

@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+env:
+  CI: true
+
 jobs:
   test_script:
     runs-on: ${{ matrix.os }}

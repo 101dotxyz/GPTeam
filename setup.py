@@ -89,6 +89,12 @@ def install_or_update_supabase_cli():
 if __name__ == "__main__":
     os_type = platform.system()
 
+    if os.environ.get("CI") == "true":
+        # Skip user prompts when running in CI environment
+        prompt = False
+    else:
+        prompt = True
+
     if os_type == "Windows":
         print(
             "⚠️ This setup script does not support Windows yet. Please follow the instructions in the README to set up the project."
@@ -103,16 +109,32 @@ if __name__ == "__main__":
     if is_poetry_installed():
         print("✅ Poetry is already installed.")
     else:
-        print("⏳ Poetry not found, installing...")
+        if prompt:
+            answer = input(
+                "⚠️ Poetry not found. Would you like to install it now? (y/n): "
+            )
+            if answer.lower() != "y":
+                exit(1)
+
+        print("🚀 Installing Poetry...")
         install_poetry()
 
     print("🎁 Installing dependencies... (this may take a while)")
     subprocess.run(["poetry", "install"], check=True)
 
+if not is_supabase_cli_installed():
+    if prompt:
+        answer = input(
+            "⚠️ Supabase CLI not found. Would you like to install it now? (y/n): "
+        )
+        if answer.lower() != "y":
+            exit(1)
+
+    print("🚀 Installing Supabase CLI...")
     install_or_update_supabase_cli()
 
     print("Starting supabase...")
-    subprocess.run(["supabase", "start", "--debug"], check=True)
+    subprocess.run(["supabase", "start"], check=True)
 
     print("Resetting the database...")
     subprocess.run(["supabase", "db", "reset"], check=True)

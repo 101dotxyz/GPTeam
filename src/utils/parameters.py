@@ -31,6 +31,10 @@ DEFAULT_FAST_MODEL = ChatModelName.TURBO
 HUMAN_MODE = HumanMode.DISCORD
 
 
+# Tools
+DISCORD_ENABLED = bool(os.getenv("DISCORD_TOKEN"))
+
+
 ## DISCORD CHANNEL IDS
 class DiscordChannelId(Enum):
     LOBBY = 1097591240733753365

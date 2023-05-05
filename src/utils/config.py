@@ -10,7 +10,6 @@ from .general import seed_uuid
 class LocationConfig(BaseModel):
     name: str
     description: str
-    channel_id: Optional[str] = None
 
 
 class AgentConfig(BaseModel):

@@ -1,12 +1,13 @@
 import asyncio
 import hashlib
 import json
+import os
 import random
 from uuid import UUID
 
 from ..config import load_config
 from ..general import seed_uuid
-from ..parameters import DiscordChannelId
+from ..parameters import DISCORD_ENABLED, DiscordChannelId
 from .client import supabase
 
 config = load_config()
@@ -16,6 +17,15 @@ DEFAULT_WORLD = {
     "name": config.world_name,
 }
 
+
+def get_channel_id(location_name: str):
+    location_name = location_name.upper().replace(" ", "_")
+    try:
+        return DiscordChannelId[location_name].value
+    except KeyError:
+        return None
+
+
 worlds = [DEFAULT_WORLD]
 
 locations = [
@@ -24,7 +34,7 @@ locations = [
         "world_id": config.default_world_id,
         "name": location.name,
         "description": location.description,
-        "channel_id": location.channel_id,
+        "channel_id": get_channel_id(location.name) if DISCORD_ENABLED else None,
         "allowed_agent_ids": [],
         "available_tools": [],
     }

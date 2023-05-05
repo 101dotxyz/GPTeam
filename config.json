@@ -3,38 +3,31 @@
     "locations": [
         {
             "name": "Lobby",
-            "description": "The entrance to the company's office. Features a reception desk, a sign-in sheet for visitors, and brochures about the company.",
-            "channel_id": null
+            "description": "The entrance to the company's office. Features a reception desk, a sign-in sheet for visitors, and brochures about the company."
         },
         {
             "name": "Water Cooler",
-            "description": "A place where employees gather to chat and exchange gossip. Features a bulletin board for posting company announcements.",
-            "channel_id": null
+            "description": "A place where employees gather to chat and exchange gossip. Features a bulletin board for posting company announcements."
         },
         {
             "name": "Conference Room",
-            "description": "A room for holding meetings and presentations. Features video conference equipment, a whiteboard, and a projector.",
-            "channel_id": null
+            "description": "A room for holding meetings and presentations. Features video conference equipment, a whiteboard, and a projector."
         },
         {
             "name": "Break Room",
-            "description": "A place for employees to take a break and grab a snack. Features a fridge, a microwave, a coffee maker, and a snack vending machine.",
-            "channel_id": null
+            "description": "A place for employees to take a break and grab a snack. Features a fridge, a microwave, a coffee maker, and a snack vending machine."
         },
         {
             "name": "Copy Room",
-            "description": "A room for making copies and other document-related tasks. Features a copy machine, a scanner, a fax machine, and a paper shredder.",
-            "channel_id": null
+            "description": "A room for making copies and other document-related tasks. Features a copy machine, a scanner, a fax machine, and a paper shredder."
         },
         {
             "name": "Executive Suite",
-            "description": "An exclusive area for the company's executives. Features a PA system, a personal secretary, a mini-fridge, and executive lounge chairs.",
-            "channel_id": null
+            "description": "An exclusive area for the company's executives. Features a PA system, a personal secretary, a mini-fridge, and executive lounge chairs."
         },
         {
             "name": "Work Zone",
-            "description": "An open area for employees to work. Features cubicles, desks, and a printer.",
-            "channel_id": null
+            "description": "An open area for employees to work. Features cubicles, desks, and a printer."
         }
     ],
     "agents": [

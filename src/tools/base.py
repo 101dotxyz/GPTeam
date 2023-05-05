@@ -23,7 +23,7 @@ from src.tools.document import (
 )
 from src.tools.human import ask_human, ask_human_async
 from src.utils.models import ChatModel
-from src.utils.parameters import DEFAULT_SMART_MODEL
+from src.utils.parameters import DEFAULT_SMART_MODEL, DISCORD_ENABLED
 from src.utils.prompt import Prompter, PromptString
 from src.world.context import WorldContext
 
@@ -39,6 +39,7 @@ class CustomTool(Tool):
     worldwide: bool = True
     tool_usage_description: str = None
     tool_usage_summarization_prompt: PromptString = None
+    enabled: bool = True
 
     def __init__(
         self,
@@ -48,6 +49,7 @@ class CustomTool(Tool):
         worldwide: bool,
         requires_authorization: bool,
         tool_usage_description: str,
+        enabled: bool = True,
         func: Optional[Any] = lambda x: x,
         coroutine: Optional[Any] = None,
         tool_usage_summarization_prompt: Optional[PromptString] = None,
@@ -62,6 +64,7 @@ class CustomTool(Tool):
         self.worldwide = worldwide
         self.tool_usage_description = tool_usage_description
         self.tool_usage_summarization_prompt = tool_usage_summarization_prompt
+        self.enabled = enabled
 
     @override
     async def run(self, agent_input: str | dict, tool_context: ToolContext) -> Any:
@@ -127,6 +130,7 @@ def load_built_in_tool(
     worldwide=True,
     requires_authorization=False,
     tool_usage_summarization_prompt: Optional[PromptString] = None,
+    enabled=True,
 ) -> CustomTool:
     tools = load_tools(tool_names=[tool], llm=OpenAI())
 
@@ -142,6 +146,7 @@ def load_built_in_tool(
         tool_usage_description=tool_usage_description,
         tool_usage_summarization_prompt=tool_usage_summarization_prompt,
         requires_context=False,
+        enabled=enabled,
     )
 
 
@@ -176,6 +181,7 @@ def get_tools(
             requires_context=False,
             requires_authorization=False,
             worldwide=True,
+            enabled=bool(os.getenv("SERPAPI_KEY")),
         ),
         ToolName.SPEAK: CustomTool(
             name="speak",
@@ -203,6 +209,7 @@ def get_tools(
             worldwide=True,
             tool_usage_summarization_prompt="You have just used Wolphram Alpha with the following input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} used Wolphram Alpha and realised the following: {tool_usage_reflection}.",
+            enabled=bool(os.getenv("WOLFRAM_ALPHA_APPID")),
         ),
         ToolName.HUMAN: CustomTool(
             name="human",
@@ -263,11 +270,9 @@ Input should be a json string with one key: "query". The value of "query" should
         ),
     }
 
-    if not include_worldwide:
-        return [TOOLS[tool] for tool in tools if tool.enabled]
-
     return [
         tool
         for tool in TOOLS.values()
-        if (tool.name in tools or tool.worldwide) and tool.enabled
+        if (tool.name in tools or (tool.worldwide and include_worldwide))
+        and tool.enabled
     ]

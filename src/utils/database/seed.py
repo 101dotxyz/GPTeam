@@ -1,82 +1,36 @@
 import asyncio
+import hashlib
+import json
 import random
-import uuid
+from uuid import UUID
 
+from ..config import load_config
+from ..general import seed_uuid
 from ..parameters import DiscordChannelId
 from .client import supabase
 
+config = load_config()
+
 DEFAULT_WORLD = {
     "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
-    "name": "AI Discord Server",
+    "name": config.world_name,
 }
 
 worlds = [DEFAULT_WORLD]
 
 locations = [
     {
-        "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14",
+        "id": seed_uuid(f"location-{location['name']}"),
         "world_id": DEFAULT_WORLD["id"],
-        "name": "Lobby",
-        "description": "The entrance to the company's office. Features a reception desk, a sign-in sheet for visitors, and brochures about the company.",
-        "channel_id": DiscordChannelId.LOBBY.value,
+        "name": location["name"],
+        "description": location["description"],
+        "channel_id": location["channel_id"],
         "allowed_agent_ids": [],
         "available_tools": [],
-    },
-    {
-        "id": "ccbeeac9-b55e-44be-a29a-2b7eea045ad3",
-        "world_id": DEFAULT_WORLD["id"],
-        "name": "Water Cooler",
-        "description": "A place where employees gather to chat and exchange gossip. Features a bulletin board for posting company announcements.",
-        "channel_id": DiscordChannelId.WATER_COOLER.value,
-        "allowed_agent_ids": [],
-        "available_tools": [],
-    },
-    {
-        "id": "9f270d2e-319b-428c-8629-a9dcf16e5197",
-        "world_id": DEFAULT_WORLD["id"],
-        "name": "Conference Room",
-        "description": "A room for holding meetings and presentations. Features video conference equipment, a whiteboard, and a projector.",
-        "channel_id": DiscordChannelId.CONFERENCE_ROOM.value,
-        "allowed_agent_ids": [],
-        "available_tools": [],
-    },
-    {
-        "id": "0451d316-86ff-49e8-a8d8-1302c897f9f8",
-        "world_id": DEFAULT_WORLD["id"],
-        "name": "Break Room",
-        "description": "A place for employees to take a break and grab a snack. Features a fridge, a microwave, a coffee maker, and a snack vending machine.",
-        "channel_id": DiscordChannelId.BREAK_ROOM.value,
-        "allowed_agent_ids": [],
-        "available_tools": [],
-    },
-    {
-        "id": "d428a641-28e9-4d11-9da9-6428732f3fff",
-        "world_id": DEFAULT_WORLD["id"],
-        "name": "Copy Room",
-        "description": "A room for making copies and other document-related tasks. Features a copy machine, a scanner, a fax machine, and a paper shredder.",
-        "channel_id": DiscordChannelId.COPY_ROOM.value,
-        "allowed_agent_ids": [],
-        "available_tools": [],
-    },
-    {
-        "id": "8775fe7c-e496-444d-8419-aeb48bee6964",
-        "world_id": DEFAULT_WORLD["id"],
-        "name": "Executive Suite",
-        "description": "An exclusive area for the company's executives. Features a PA system, a personal secretary, a mini-fridge, and executive lounge chairs.",
-        "channel_id": DiscordChannelId.EXECUTIVE_SUITE.value,
-        "allowed_agent_ids": [],
-        "available_tools": [],
-    },
-    {
-        "id": "63bee739-4cde-46b5-9d3e-0d6a9d98c961",
-        "world_id": DEFAULT_WORLD["id"],
-        "name": "Work Zone",
-        "description": "An open area for employees to work. Features cubicles, desks, and a printer.",
-        "channel_id": DiscordChannelId.WORK_ZONE.value,
-        "allowed_agent_ids": [],
-        "available_tools": [],
-    },
+    }
+    for location in config.locations
 ]
+
 
 agents = [
     {

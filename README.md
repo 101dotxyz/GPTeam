@@ -6,14 +6,19 @@ Multi-Agent GPT is a collaborative project that uses GPT models to generate text
 
 ---
 
+## Requirements
+
+To run the world you will need [Docker](https://docs.docker.com/get-started/) installed on your machine.
+
 ## Getting started
 
 To get started with Multi-Agent GPT, you can follow these steps:
 
 1. Clone the project repository to your local machine
-2. Install the required dependencies by running `pip install -r requirements.txt`
-3. Set your OpenAI API key as an environment variable called `OPENAI_API_KEY`
-4. Run the project by running `python main.py`
+2. Fill in the agent
+3. Run `python setup.py`. This will check if you have your environment setup correctly and if not help you get it set up.
+4. Fill in the environment variables in `.env` with your API Keys. You will need an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys).
+5. Run the project by running `poetry run world`
 
 By default, the project will generate a dialogue between two agents, Agent A and Agent B. You can modify the dialogue by changing the prompts that are passed to each agent.
 

@@ -42,7 +42,6 @@ def install_supabase_cli():
     #     return
 
     os_type = platform.system()
-    arch_type = platform.machine()
 
     try:
         if os_type == "Windows":
@@ -65,13 +64,7 @@ def install_supabase_cli():
 
         elif os_type == "Darwin" or os_type == "Linux":
             print("Installing Supabase CLI for Mac/Linux...")
-            if os_type == "Darwin" and arch_type == "arm64":
-                subprocess.run(
-                    ["arch", "-arm64", "brew", "install", "supabase/tap/supabase"],
-                    check=True,
-                )
-            else:
-                subprocess.run(["brew", "install", "supabase/tap/supabase"], check=True)
+            subprocess.run(["brew", "install", "supabase/tap/supabase"], check=True)
             print("Supabase CLI installed successfully.")
 
         else:

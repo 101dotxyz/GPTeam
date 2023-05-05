@@ -16,7 +16,14 @@ from ..utils.discord import send_message_async as send_discord_message_async
 load_dotenv()
 
 
-async def send_message_async(agent_input: str, tool_context: ToolContext):
+class SpeakToolInput(BaseModel):
+    """Input for the document tool."""
+
+    recipient: str = Field(..., description="recipient of message")
+    message: str = Field(..., description="content of message")
+
+
+async def send_message_async(recipient: str, message: str, tool_context: ToolContext):
     """Emits a message event to the Events table
     And triggers discord to send a message to the appropriate channel
     """
@@ -28,9 +35,8 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
     agent_message = None
 
     try:
-        print("agent_input: ", agent_input)
         agent_message = AgentMessage.from_agent_input(
-            agent_input, tool_context.agent_id, tool_context.context
+            f"{recipient}; {message}", tool_context.agent_id, tool_context.context
         )
         print("made a new agent message with content: ", agent_message.content)
     except Exception as e:
@@ -72,7 +78,7 @@ async def send_message_async(agent_input: str, tool_context: ToolContext):
     return event.description
 
 
-def send_message_sync(agent_input: str, tool_context: ToolContext):
+def send_message_sync(recipient: str, message: str, tool_context: ToolContext):
     """Emits a message event to the Events table
     And triggers discord to send a message to the appropriate channel
     """
@@ -82,7 +88,7 @@ def send_message_sync(agent_input: str, tool_context: ToolContext):
 
     # Make an AgentMessage object
     agent_message = AgentMessage.from_agent_input(
-        agent_input, tool_context.agent_id, tool_context.context
+        f"{recipient}; {message}", tool_context.agent_id, tool_context.context
     )
 
     # get the appropriate discord token

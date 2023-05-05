@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 from src.tools.context import ToolContext
-from src.utils.database.database import supabase
+from src.utils.database.client import supabase
 from src.utils.embeddings import get_embedding
 
 # pydantic model for the document tool
@@ -20,7 +20,7 @@ async def save_document(title: str, document: str, tool_context: ToolContext):
         f"""{title} ({normalized_title})
 {document}"""
     )
-    supabase.table("Documents").insert(
+    await supabase.table("Documents").insert(
         {
             "title": title,
             "normalized_title": normalized_title,
@@ -42,7 +42,7 @@ async def read_document(title: str, tool_context: ToolContext):
     normalized_title = title.lower().strip().replace(" ", "_")
     try:
         document = (
-            supabase.table("Documents")
+            await supabase.table("Documents")
             .select("*")
             .eq("normalized_title", normalized_title)
             .execute()

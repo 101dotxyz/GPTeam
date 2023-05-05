@@ -21,13 +21,9 @@ def consult_directory(
         if agent["id"] == tool_context.agent_id:
             continue
 
-        location_id = tool_context.context.get_agent_location_id(agent["id"])
-
-        location_name = tool_context.context.get_location_name(location_id)
         directory += (
             f"{agent['full_name']}\n"
             f"---------------------\n"
-            f"Current Location: {location_name}\n"
             f"Bio: {agent['public_bio']}\n"
             f"---------------------\n\n"
         )

@@ -2,7 +2,7 @@ from uuid import UUID, uuid4
 
 from .agent.base import Agent
 from .location.base import Location
-from .utils.database.database import supabase
+from .utils.database.client import supabase
 
 
 def create_world(name: str):

@@ -43,6 +43,10 @@ class SingleMemory(BaseModel):
         decay_factor = 0.99
         return math.pow(decay_factor, last_retrieved_hours_ago)
 
+    @property
+    def verbose_description(self) -> str:
+        return f"{self.description} @ {self.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+
     class Config:
         arbitrary_types_allowed = True
 
@@ -97,6 +101,8 @@ class SingleMemory(BaseModel):
                 str(related_memory_id) for related_memory_id in self.related_memory_ids
             ],
         }
+
+
 
     # Customize the printing behavior
     def __str__(self):

@@ -15,9 +15,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest] # windows-latest
         python-version: [3.11]
-        include:
-          - os: macos-latest
-            arch: arm64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -32,12 +29,6 @@ jobs:
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
           echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
-
-      - name: Set up Homebrew on ARM Mac
-        if: matrix.arch == 'arm64'
-        run: |
-          arch -arm64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-          echo "/opt/homebrew/bin" >> $GITHUB_PATH
 
       - name: Run setup.py
         run: |

@@ -2,6 +2,8 @@ import asyncio
 
 import hikari
 
+from src.utils.parameters import ANNOUNCER_DISCORD_TOKEN
+
 rest = hikari.RESTApp()
 event_loop = asyncio.get_event_loop()
 rest_started = False
@@ -31,6 +33,10 @@ def send_message(token, channel_id, message):
     return event_loop.run_until_complete(
         _send_message(token, channel_id, message, rest)
     )
+
+
+async def announce_bot_move(bot_name: str, left_channel_id: str, enter_channel_id):
+    return (await send_message_async(ANNOUNCER_DISCORD_TOKEN, left_channel_id, f"{bot_name} left the room."), await send_message_async(ANNOUNCER_DISCORD_TOKEN, enter_channel_id, f"{bot_name} entered the room."))
 
 
 async def close_rest_app():

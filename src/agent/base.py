@@ -12,6 +12,8 @@ from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from langchain.schema import AIMessage, HumanMessage
 from pydantic import BaseModel
 
+from src.utils.discord import announce_bot_move
+
 from ..event.base import Event, EventsManager, EventType
 from ..location.base import Location
 from ..memory.base import MemoryType, SingleMemory
@@ -526,6 +528,8 @@ class Agent(BaseModel):
         self._log(
             "Moved Location", LogColor.MOVE, f"{self.location.name} -> {location.name}"
         )
+
+        await announce_bot_move(self.full_name, self.location.channel_id, location.channel_id)
 
         # Update the agents to the new location
         self.location = location

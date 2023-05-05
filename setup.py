@@ -19,6 +19,10 @@ def install_poetry():
     install_cmd = "curl -sSL https://install.python-poetry.org | python3 -"
     os.system(install_cmd)
 
+    poetry_bin_path = os.path.expanduser("~/.local/bin")
+    if poetry_bin_path not in os.environ["PATH"]:
+        os.environ["PATH"] = f"{poetry_bin_path}:{os.environ['PATH']}"
+
 
 def is_supabase_cli_installed():
     try:

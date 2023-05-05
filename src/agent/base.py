@@ -12,7 +12,7 @@ from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from langchain.schema import AIMessage, HumanMessage
 from pydantic import BaseModel
 
-from ..event.base import Event, EventsManager, EventType
+from ..event.base import Event, EventsManager, EventType, MessageEventSubtype
 from ..location.base import Location
 from ..memory.base import MemoryType, SingleMemory
 from ..tools.base import CustomTool, get_tools
@@ -628,6 +628,51 @@ class Agent(BaseModel):
                     related_memory_ids=related_memory_ids,
                 )
 
+        # Gossip to other agents
+
+        # Get other agents at the location
+        agents_at_location = self.context.get_agents_at_location(
+            location_id=self.location.id
+        )
+
+        other_agents = [a for a in agents_at_location if str(a["id"]) != str(self.id)]
+
+        # names of other agents at location
+        other_agent_names = ", ".join([a["full_name"] for a in other_agents])
+
+        # Make the reaction prompter
+        gossip_prompter = Prompter(
+            PromptString.GOSSIP,
+            {
+                "full_name": self.full_name,
+                "memory_descriptions": str(
+                    [memory.description for memory in recent_memories]
+                ),
+                "other_agent_names": other_agent_names,
+            },
+        )
+
+        response = await chat_llm.get_chat_completion(
+            gossip_prompter.prompt,
+            loading_text="🤔 Creating gossip...",
+        )
+
+        self._log(
+            "Gossip",
+            LogColor.ACT,
+            f"{response}",
+        )
+
+        event = Event(
+            agent_id=self.id,
+            type=EventType.MESSAGE,
+            subtype=MessageEventSubtype.AGENT_TO_AGENT,
+            description=f"{self.full_name} said to everyone in the {self.location.name}: '{response}'",
+            location_id=self.location.id,
+        )
+
+        await self.context.events_manager.add_event(event)
+
     async def _plan(self, thought_process: str = "") -> list[SinglePlan]:
         """Trigger the agent's planning process
 
@@ -883,51 +928,6 @@ class Agent(BaseModel):
 
         return parsed_reaction_response
 
-    async def _gossip(self) -> None:
-        recent_memories = sorted(
-            self.memories,
-            key=lambda memory: memory.last_accessed or memory.created_at,
-            reverse=True,
-        )[:GOSSIP_MEMORY_COUNT]
-
-        # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
-
-        # Format the memories into a string
-        memory_descriptions = [memory.description for memory in recent_memories]
-
-        # Make the reaction prompter
-        gossip_prompter = Prompter(
-            PromptString.GOSSIP,
-            {
-                "full_name": self.full_name,
-                "memory_descriptions": str(memory_descriptions),
-            },
-        )
-
-        # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
-
-        response = await llm.get_chat_completion(
-            gossip_prompter.prompt,
-            loading_text="🤔 Creating gossip...",
-        )
-
-        self._log(
-            "Gossip",
-            LogColor.ACT,
-            f"{response}",
-        )
-
-        event = Event(
-            agent_id=self.id,
-            type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} said the following: {response}",
-            location_id=self.location.id,
-        )
-
-        await self.context.events_manager.add_event(event)
-
     async def _act(
         self,
         plan: SinglePlan,
@@ -1090,4 +1090,3 @@ class Agent(BaseModel):
         # Reflect, if we should
         if await self._should_reflect():
             await self._reflect()
-            await self._gossip()

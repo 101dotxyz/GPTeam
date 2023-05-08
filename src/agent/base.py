@@ -16,7 +16,7 @@ from src.utils.discord import announce_bot_move
 
 from ..event.base import Event, EventsManager, EventType
 from ..location.base import Location
-from ..memory.base import MemoryType, SingleMemory
+from ..memory.base import MemoryType, SingleMemory, RelatedMemory, get_relevant_memories
 from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
@@ -42,14 +42,6 @@ from .message import AgentMessage, LLMMessageResponse, get_latest_messages
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
-
-
-class RelatedMemory(BaseModel):
-    memory: SingleMemory
-    relevance: float
-
-    def __str__(self) -> str:
-        return f"SingleMemory: {self.memory.description}, Relevance: {self.relevance}"
 
 
 class Agent(BaseModel):
@@ -424,20 +416,6 @@ class Agent(BaseModel):
             "discord_bot_token": self.discord_bot_token,
         }
 
-    async def _related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
-        # Calculate relevance for each memory and store it in a list of dictionaries
-        memories_with_relevance = [
-            RelatedMemory(memory=memory, relevance=await memory.relevance(query))
-            for memory in self.memories
-        ]
-
-        # Sort the list of dictionaries based on the 'relevance' key in descending order
-        sorted_memories = sorted(
-            memories_with_relevance, key=lambda x: x.relevance, reverse=True
-        )
-
-        return sorted_memories[:k]
-
     async def _summarize_activity(self, k: int = 20) -> str:
         recent_memories = sorted(
             self.memories, key=lambda memory: memory.created_at, reverse=True
@@ -579,7 +557,7 @@ class Agent(BaseModel):
         # For each question in the parsed questions...
         for question in parsed_questions_response.questions:
             # Get the related memories
-            related_memories = await self._related_memories(question, 20)
+            related_memories = await get_relevant_memories(question, self.memories, 20)
 
             # Format them into a string
             memory_strings = [
@@ -936,13 +914,22 @@ class Agent(BaseModel):
             await self._move_to_location(plan.location)
 
         # Execute the plan
-
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
+
+        # Gather relevant memories
+        relevant_memories = await get_relevant_memories(
+            plan.related_message.get_event_message() if plan.related_message else plan.description,
+            memories=self.memories,
+            k=20
+        )
+
+        print("RELEVANT MEMORIES", relevant_memories)
 
         self.plan_executor = PlanExecutor(
             self.id,
             world_context=self.context,
             message_to_respond_to=plan.related_message,
+            relevant_memories = relevant_memories
         )
 
         resp: PlanExecutorResponse = await self.plan_executor.start_or_continue_plan(

@@ -25,7 +25,7 @@ class AgentMessage(BaseModel):
     event_id: UUID = None
     discord_id: Optional[str] = None
 
-    def get_event_message(self):
+    def get_event_message(self) -> str:
         if self.type == MessageEventSubtype.AGENT_TO_HUMAN:
             event_message = f"{self.sender_name} asked the humans: '{self.content}'"
         elif self.recipient_id is None:

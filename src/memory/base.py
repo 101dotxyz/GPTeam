@@ -121,3 +121,26 @@ class SingleMemory(BaseModel):
             + SIMILARITY_WEIGHT * (await self.similarity(query))
             + RECENCY_WEIGHT * self.recency
         )
+
+class RelatedMemory(BaseModel):
+    memory: SingleMemory
+    relevance: float
+
+    def __str__(self) -> str:
+        return f"SingleMemory: {self.memory.description}, Relevance: {self.relevance}"
+    
+
+async def get_relevant_memories(query: str, memories: list[SingleMemory], k: int = 5) -> list[SingleMemory]:
+
+    memories_with_relevance = [
+        RelatedMemory(memory=memory, relevance=await memory.relevance(query))
+        for memory in memories
+    ]
+
+    # Sort the list of dictionaries based on the 'relevance' key in descending order
+    sorted_memories = sorted(
+        memories_with_relevance, key=lambda x: x.relevance, reverse=True
+    )
+
+    # return the top k memories, as a list of SingleMemory object
+    return [memory.memory for memory in sorted_memories[:k]]

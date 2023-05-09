@@ -53,7 +53,7 @@ async def send_message_async(recipient: str, message: str, tool_context: ToolCon
     discord_message = await send_discord_message_async(
         discord_token,
         tool_context.context.get_channel_id(agent_message.location.id),
-        agent_message.get_event_message(),
+        message,
     )
 
     # # add the discord id to the agent message
@@ -72,8 +72,8 @@ async def send_message_async(recipient: str, message: str, tool_context: ToolCon
         recipient_location_id = tool_context.context.get_agent_location_id(
             agent_message.recipient_id
         )
-        if recipient_location_id != agent_message.location.id:
-            return f"{event.description} but {agent_message.recipient_name} is not in the room to hear it."
+        # if recipient_location_id != agent_message.location.id:
+        #     return f"{event.description} but {agent_message.recipient_name} is not in the room to hear it."
 
     return event.description
 

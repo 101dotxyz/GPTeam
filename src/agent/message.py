@@ -62,14 +62,16 @@ class AgentMessage(BaseModel):
             # remove the leading and trailing quotation marks if they exist
             content = content.strip().strip("'").strip('"')
 
-        if "everyone" in recipient_name:
-            recipient_name = None
-            recipient_id = None
-        else:
-            try:
-                recipient_id = context.get_agent_id_from_name(recipient_name)
-            except Exception as e:
-                raise Exception(e)
+            if "everyone" in recipient_name:
+                recipient_name = None
+                recipient_id = None
+                
+            else:
+                try:
+                    recipient_id = context.get_agent_id_from_name(recipient_name)
+
+                except Exception as e:
+                    raise Exception(e)
 
             return cls(
                 content=content,
@@ -82,6 +84,7 @@ class AgentMessage(BaseModel):
                 timestamp=datetime.now(),
                 sender_name=agent_name,
             )
+        
         return cls(
             content=agent_input,
             sender_id=agent_id,

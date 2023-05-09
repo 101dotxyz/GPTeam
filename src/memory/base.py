@@ -131,6 +131,7 @@ class RelatedMemory(BaseModel):
     
 
 async def get_relevant_memories(query: str, memories: list[SingleMemory], k: int = 5) -> list[SingleMemory]:
+    """Returns a list of the top k most relevant NON MESSAGE memories, based on the query string"""
 
     memories_with_relevance = [
         RelatedMemory(memory=memory, relevance=await memory.relevance(query))

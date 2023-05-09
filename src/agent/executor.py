@@ -239,7 +239,7 @@ class PlanExecutor(BaseModel):
 
     async def execute(self, tools: list[CustomTool]) -> str:
         # Refresh the events
-        self.context.events_manager.refresh_events()
+        await self.context.events_manager.refresh_events()
 
         if self.plan is None:
             raise ValueError("No plan set")

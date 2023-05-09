@@ -30,6 +30,7 @@ from ..utils.parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
 from ..world.context import WorldContext
 from .message import AgentMessage, get_conversation_history
+from ..memory.base import SingleMemory
 from .plans import PlanStatus, SinglePlan
 
 load_dotenv()
@@ -154,6 +155,7 @@ class PlanExecutor(BaseModel):
 
     agent_id: UUID
     message_to_respond_to: Optional[AgentMessage] = None
+    relevant_memories: list[SingleMemory]
     context: WorldContext
     plan: Optional[SinglePlan] = None
 
@@ -161,11 +163,14 @@ class PlanExecutor(BaseModel):
         self,
         agent_id: UUID,
         world_context: WorldContext,
+        relevant_memories: list[SingleMemory],
         message_to_respond_to: AgentMessage = None,
     ) -> None:
+
         super().__init__(
             agent_id=agent_id,
             context=world_context,
+            relevant_memories=relevant_memories,
             message_to_respond_to=message_to_respond_to,
         )
 
@@ -182,6 +187,7 @@ class PlanExecutor(BaseModel):
                 "your_private_bio",
                 "location_context",
                 "conversation_history",
+                "relevant_memories"
             ],
         )
 
@@ -233,7 +239,7 @@ class PlanExecutor(BaseModel):
 
     async def execute(self, tools: list[CustomTool]) -> str:
         # Refresh the events
-        self.context.events_manager.refresh_events()
+        await self.context.events_manager.refresh_events()
 
         if self.plan is None:
             raise ValueError("No plan set")
@@ -253,6 +259,15 @@ class PlanExecutor(BaseModel):
             self.message_to_respond_to,
         )
 
+        # Make the relevant memories string
+        if self.relevant_memories:
+            relevant_memories = "\n".join(
+                f"{memory.description} [{memory.created_at}]"
+                for memory in self.relevant_memories
+            )
+        else:
+            relevant_memories = ""
+
         response = executor.plan(
             input=self.plan.make_plan_prompt(),
             intermediate_steps=intermediate_steps,
@@ -260,6 +275,7 @@ class PlanExecutor(BaseModel):
             your_private_bio=self.context.get_agent_private_bio(self.agent_id),
             location_context=self.context.location_context_string(self.agent_id),
             conversation_history=conversation_history,
+            relevant_memories=relevant_memories,
         )
 
         agent_name = self.context.get_agent_full_name(self.agent_id)

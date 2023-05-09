@@ -160,3 +160,4 @@ class WorldContext(BaseModel):
         agent["location_id"] = str(agent["location_id"])
         new_agents.append(agent)
         self.agents = new_agents
+

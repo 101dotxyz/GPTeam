@@ -22,6 +22,7 @@ REFLECTION_MEMORY_COUNT = 50
 PLAN_LENGTH = "24 hours"
 DEFAULT_LOCATION_ID = config.default_location_id
 DEFAULT_WORLD_ID = config.default_world_id
+ANNOUNCER_DISCORD_TOKEN = os.getenv("ANNOUNCER_DISCORD_TOKEN")
 
 DEFAULT_SMART_MODEL = (
     # ChatModelName.TURBO

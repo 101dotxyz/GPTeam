@@ -1,9 +1,6 @@
 import asyncio
-import hashlib
-import json
 import os
 import random
-from uuid import UUID
 
 from ..config import load_config
 from ..general import seed_uuid
@@ -53,6 +50,9 @@ agents = [
         "ordered_plan_ids": [],
         "world_id": config.default_world_id,
         "location_id": random.choice(locations)["id"],
+        "discord_bot_token": os.environ.get(
+            f"{agent.first_name.upper()}_DISCORD_TOKEN", None
+        ),
     }
     for agent in config.agents
 ]

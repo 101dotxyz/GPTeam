@@ -163,7 +163,7 @@ class PlanExecutor(BaseModel):
         self,
         agent_id: UUID,
         world_context: WorldContext,
-        relevant_memories: list[SingleMemory],
+        relevant_memories: list[SingleMemory] = [],
         message_to_respond_to: AgentMessage = None,
     ) -> None:
 
@@ -311,6 +311,7 @@ class PlanExecutor(BaseModel):
         tool_context = ToolContext(
             agent_id=self.agent_id,
             context=self.context,
+            memories=self.relevant_memories,
         )
 
         result = await tool.run(response.tool_input, tool_context)

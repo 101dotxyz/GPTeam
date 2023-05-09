@@ -20,9 +20,8 @@ class HasHappenedLLMResponse(BaseModel):
 async def wait_async(agent_input: str, tool_context: ToolContext) -> str:
     """Wait for a specified event to occur."""
 
-    # Recent memories
-    memories = await (await get_database()).get_by_field(Tables.Memories, "agent_id", str(tool_context.agent_id), limit=5)
-    memories = [f"{m['description']} @ {m['created_at']}" for m in memories]
+    # Get the memories
+    memories = [f"{m.description} @ {m.created_at}" for m in tool_context.memories]
 
     # Set up the LLM, Parser, and Prompter
     llm = ChatModel(temperature=0)
@@ -30,6 +29,7 @@ async def wait_async(agent_input: str, tool_context: ToolContext) -> str:
         parser=PydanticOutputParser(pydantic_object=HasHappenedLLMResponse),
         llm=llm.defaultModel,
     )
+
     prompter = Prompter(
         PromptString.HAS_HAPPENED,
         {
@@ -39,8 +39,6 @@ async def wait_async(agent_input: str, tool_context: ToolContext) -> str:
         },
     )
 
-    # Set up a complex chat model
-    quick_llm = ChatModel(DEFAULT_FAST_MODEL, temperature=0)
     # Get the response
     response = await llm.get_chat_completion(
         prompter.prompt,

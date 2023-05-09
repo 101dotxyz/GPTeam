@@ -1,5 +1,5 @@
 import asyncio
-
+from aiohttp import ServerDisconnectedError
 import hikari
 
 from src.utils.parameters import ANNOUNCER_DISCORD_TOKEN
@@ -20,6 +20,11 @@ async def _send_message(token, channel_id, message, rest_client: hikari.RESTApp,
                 await asyncio.sleep(delay)  # Wait for a while before trying again
             else:
                 raise  # Raise the TimeoutError if all retries have failed
+        except ServerDisconnectedError:
+            if attempt < retries - 1:
+                await asyncio.sleep(delay)
+            else:
+                raise
 
 
 async def send_message_async(token, channel_id, message):

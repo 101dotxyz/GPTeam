@@ -233,6 +233,7 @@ class EventsManager(BaseModel):
 
         await database.insert(Tables.Events, event.db_dict())
 
+        print("New event added to db")
         # add event to local events list
         self.recent_events.append(event)
 

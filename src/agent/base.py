@@ -16,7 +16,8 @@ from src.utils.discord import announce_bot_move
 
 from ..event.base import Event, EventsManager, EventType, MessageEventSubtype
 from ..location.base import Location
-from ..memory.base import MemoryType, RelatedMemory, SingleMemory, get_relevant_memories
+from ..memory.base import (MemoryType, RelatedMemory, SingleMemory,
+                           get_relevant_memories)
 from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
@@ -26,14 +27,9 @@ from ..utils.embeddings import get_embedding
 from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
-from ..utils.parameters import (
-    DEFAULT_FAST_MODEL,
-    DEFAULT_LOCATION_ID,
-    DEFAULT_SMART_MODEL,
-    DEFAULT_WORLD_ID,
-    PLAN_LENGTH,
-    REFLECTION_MEMORY_COUNT,
-)
+from ..utils.parameters import (DEFAULT_FAST_MODEL, DEFAULT_LOCATION_ID,
+                                DEFAULT_SMART_MODEL, DEFAULT_WORLD_ID,
+                                PLAN_LENGTH, REFLECTION_MEMORY_COUNT)
 from ..utils.prompt import Prompter, PromptString
 from ..world.context import WorldContext
 from .executor import PlanExecutor, PlanExecutorResponse
@@ -582,7 +578,7 @@ class Agent(BaseModel):
 
             # Format them into a string
             memory_strings = [
-                f"{index}. {related_memory.memory.description}"
+                f"{index}. {related_memory.description}"
                 for index, related_memory in enumerate(related_memories, start=1)
             ]
 
@@ -619,7 +615,7 @@ class Agent(BaseModel):
             for reflection_insight in parsed_insights_response.insights:
                 # Get the related memory ids
                 related_memory_ids = [
-                    related_memories[index - 1].memory.id
+                    related_memories[index - 1].id
                     for index in reflection_insight.related_statements
                 ]
 

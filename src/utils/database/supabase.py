@@ -1,7 +1,7 @@
 
 import datetime
 import os
-from typing import Dict, List, Any
+from typing import Coroutine, Dict, List, Any
 
 from colorama import Fore
 from numpy import ndarray
@@ -38,7 +38,7 @@ class SubabaseDatabase(DatabaseProviderSingleton):
         return (await self.client.table(table.value).select("*").contains(field, value).execute()).data
 
     async def get_memories_since(self, timestamp: datetime, agent_id: str) -> List[Dict[str, Any]]:
-        return (await self.client.table(Tables.Memories.value).select("*").gte("timestamp", timestamp).eq("agent_id", agent_id).execute()).data
+        return (await self.client.table(Tables.Memories.value).select("*").gte("created_at", timestamp).eq("agent_id", agent_id).execute()).data
 
     async def get_should_reflect(self, agent_id: str) -> List[Dict[str, Any]]:
         return (await self.client.table(Tables.Memories.value)
@@ -58,7 +58,7 @@ class SubabaseDatabase(DatabaseProviderSingleton):
                 .execute()
                 ).data
 
-    async def insert(self, table: Tables, data: dict, upsert=False) -> None:
+    async def insert(self, table: Tables, data: dict | list[dict], upsert=False) -> None:
         return await self.client.table(table.value).insert(data, upsert=upsert).execute()
 
     async def update(self, table: Tables, id: str, data: dict) -> None:
@@ -80,6 +80,9 @@ class SubabaseDatabase(DatabaseProviderSingleton):
                 "match_count": 10,
             },
         )).execute()).data
+
+    async def close(self) -> Coroutine[Any, Any, None]:
+        return await super().close()
 
     @classmethod
     async def create(cls):

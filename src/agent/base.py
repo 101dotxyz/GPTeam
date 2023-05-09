@@ -126,7 +126,7 @@ class Agent(BaseModel):
     async def allowed_locations(self) -> list[Location]:
         """Get locations that this agent is allowed to be in."""
         database = await get_database()
-        data = await database.get_by_field_contains(Tables.Locations, "allowed_agent_ids", [str(self.id)])
+        data = await database.get_by_field_contains(Tables.Locations, "allowed_agent_ids", str(self.id))
 
         # For testing purposes include locations with 0 allowed agents as well
         other_data = await database.get_by_field(Tables.Locations, "allowed_agent_ids", "{}")
@@ -287,7 +287,7 @@ class Agent(BaseModel):
         self.memories.append(memory)
 
         # add to database
-        await (await get_database()).insert(Tables.Memories, memory._db_dict())
+        await (await get_database()).insert(Tables.Memories, memory.db_dict())
 
         if log:
             self._log("New Memory", LogColor.MEMORY, f"{memory}")
@@ -336,7 +336,7 @@ class Agent(BaseModel):
         data = await (await get_database()).get_should_reflect(str(self.id))
 
         last_reflection_time = (
-            data[1][0]["created_at"] if len(data[1]) > 0 else datetime(1970, 1, 1)
+            data[0]["created_at"] if len(data) > 0 else datetime(1970, 1, 1)
         )
 
         memories_since_last_reflection = await self._get_memories_since(
@@ -774,7 +774,7 @@ class Agent(BaseModel):
         new_memories = []
         for event in new_events:
             new_memories.append(await self._add_memory(event.description, MemoryType.OBSERVATION, log=False))
-        
+
         self._log(f"{len(new_events)} New Memories: ", LogColor.MEMORY, {f"{event.description}" for event in new_events})
 
         input("Press any key to continue...")
@@ -783,7 +783,6 @@ class Agent(BaseModel):
 
     async def _react(self, events: list[Event]) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
-        
 
         # LLM call to decide how to react to new events
         # Make the reaction parser
@@ -897,7 +896,7 @@ class Agent(BaseModel):
             self.id,
             world_context=self.context,
             message_to_respond_to=plan.related_message,
-            relevant_memories = relevant_memories
+            relevant_memories=relevant_memories
         )
 
         resp: PlanExecutorResponse = await self.plan_executor.start_or_continue_plan(
@@ -1000,12 +999,12 @@ class Agent(BaseModel):
 
         # Get new events witnessed by this agent
         (events, refresh_time) = await self.context.events_manager.get_events(
-            location_id=self.location.id, 
+            location_id=self.location.id,
             after=self.last_checked_events,
             witness_ids=[self.id],
         )
         self.last_checked_events = refresh_time
-        
+
         # Make new memories based on the events
         await self.observe(events)
 

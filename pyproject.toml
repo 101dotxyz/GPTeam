@@ -28,6 +28,7 @@ pytz = "^2023.3"
 google-api-python-client = "^2.86.0"
 hikari = "^2.0.0.dev118"
 postgrest-py = "^0.10.6"
+aiosqlite = "^0.19.0"
 
 [tool.black]
 line-length = 88

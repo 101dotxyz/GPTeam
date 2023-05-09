@@ -1,4 +1,5 @@
 import asyncio
+import os
 import random
 import uuid
 
@@ -92,6 +93,7 @@ agents = [
         "ordered_plan_ids": ["06d08245-81a4-4236-ad98-e128ed01167b"],
         "world_id": DEFAULT_WORLD["id"],
         "location_id": random.choice(locations)["id"],
+        "discord_bot_token": os.environ.get("MARTY_DISCORD_TOKEN"),
     },
     {
         "id": "1cb5bc4f-4ea9-42b6-9fb7-af2626cf8bb0",
@@ -107,6 +109,7 @@ agents = [
         "ordered_plan_ids": ["2bedb32a-e1e8-46b3-a0c9-e98dfaabc391"],
         "world_id": DEFAULT_WORLD["id"],
         "location_id": random.choice(locations)["id"],
+        "discord_bot_token": os.environ.get("REBECCA_DISCORD_TOKEN"),
     },
     {
         "id": "b956fdf7-4ca8-4b25-9b84-a359b497017a",
@@ -122,6 +125,7 @@ agents = [
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
         "location_id": random.choice(locations)["id"],
+        "discord_bot_token": os.environ.get("MARTY_DISCORD_TOKEN"),
     },
     {
         "id": "7988ca44-d43a-4052-87ec-ded3fb48bd77",
@@ -137,6 +141,7 @@ agents = [
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
         "location_id": random.choice(locations)["id"],
+        "discord_bot_token": os.environ.get("MARTY_DISCORD_TOKEN"),
     },
     {
         "id": "f1f5a0d9-42fd-442c-b687-f9f1348998e6",
@@ -152,6 +157,7 @@ agents = [
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
         "location_id": random.choice(locations)["id"],
+        "discord_bot_token": os.environ.get("MARTY_DISCORD_TOKEN"),
     },
     {
         "id": "b227083f-3da2-4d1d-80b3-e903cdfa61d0",
@@ -167,6 +173,7 @@ agents = [
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
         "location_id": random.choice(locations)["id"],
+        "discord_bot_token": os.environ.get("MARTY_DISCORD_TOKEN"),
     },
     {
         "id": "ecf9c9b3-00cf-4b87-bbd8-d0d3d4695e0e",
@@ -182,6 +189,7 @@ agents = [
         "ordered_plan_ids": [],
         "world_id": DEFAULT_WORLD["id"],
         "location_id": random.choice(locations)["id"],
+        "discord_bot_token": os.environ.get("MARTY_DISCORD_TOKEN"),
     },
 ]
 

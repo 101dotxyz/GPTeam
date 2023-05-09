@@ -250,7 +250,9 @@ class EventsManager(BaseModel):
 
         event.witness_ids = [witness["id"] for witness in witness_data]
 
-        await supabase.table("Events").insert(event.db_dict()).execute()
+        res = await supabase.table("Events").insert(event.db_dict()).execute()
+
+        print("New event added to db: ", res)
 
         # add event to local events list
         self.recent_events.append(event)

@@ -12,9 +12,11 @@ from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from langchain.schema import AIMessage, HumanMessage
 from pydantic import BaseModel
 
+from src.utils.discord import announce_bot_move
+
 from ..event.base import Event, EventsManager, EventType, MessageEventSubtype
 from ..location.base import Location
-from ..memory.base import MemoryType, SingleMemory
+from ..memory.base import MemoryType, RelatedMemory, SingleMemory, get_relevant_memories
 from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
@@ -40,14 +42,6 @@ from .message import AgentMessage, LLMMessageResponse, get_latest_messages
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
-
-
-class RelatedMemory(BaseModel):
-    memory: SingleMemory
-    relevance: float
-
-    def __str__(self) -> str:
-        return f"SingleMemory: {self.memory.description}, Relevance: {self.relevance}"
 
 
 class Agent(BaseModel):
@@ -422,20 +416,6 @@ class Agent(BaseModel):
             "discord_bot_token": self.discord_bot_token,
         }
 
-    async def _related_memories(self, query: str, k: int = 5) -> list[RelatedMemory]:
-        # Calculate relevance for each memory and store it in a list of dictionaries
-        memories_with_relevance = [
-            RelatedMemory(memory=memory, relevance=await memory.relevance(query))
-            for memory in self.memories
-        ]
-
-        # Sort the list of dictionaries based on the 'relevance' key in descending order
-        sorted_memories = sorted(
-            memories_with_relevance, key=lambda x: x.relevance, reverse=True
-        )
-
-        return sorted_memories[:k]
-
     async def _summarize_activity(self, k: int = 20) -> str:
         recent_memories = sorted(
             self.memories, key=lambda memory: memory.created_at, reverse=True
@@ -522,9 +502,14 @@ class Agent(BaseModel):
         location: Location,
     ):
         """Move the agents, send event to Events table"""
+        old_location = self.location
 
         self._log(
             "Moved Location", LogColor.MOVE, f"{self.location.name} -> {location.name}"
+        )
+
+        await announce_bot_move(
+            self.full_name, self.location.channel_id, location.channel_id
         )
 
         # Update the agents to the new location
@@ -533,6 +518,24 @@ class Agent(BaseModel):
 
         # update the agents row in the db
         await self._update_agent_row()
+
+        # emit the departure event
+        departure_event = Event(
+            type=EventType.NON_MESSAGE,
+            description=f"{self.full_name} left the {old_location.name}",
+            location_id=old_location.id,
+            agent_id=self.id,
+        )
+        await self.context.events_manager.add_event(departure_event)
+
+        # emit the arrival event
+        arrival_event = Event(
+            type=EventType.NON_MESSAGE,
+            description=f"{self.full_name} arrived at the {location.name}",
+            location_id=location.id,
+            agent_id=self.id,
+        )
+        await self.context.events_manager.add_event(arrival_event)
 
     async def _reflect(self):
         recent_memories = sorted(
@@ -575,7 +578,7 @@ class Agent(BaseModel):
         # For each question in the parsed questions...
         for question in parsed_questions_response.questions:
             # Get the related memories
-            related_memories = await self._related_memories(question, 20)
+            related_memories = await get_relevant_memories(question, self.memories, 20)
 
             # Format them into a string
             memory_strings = [
@@ -864,19 +867,30 @@ class Agent(BaseModel):
         self.plans = response_plans + self.plans
         await self._update_agent_row()
 
-    async def _react(self) -> LLMReactionResponse:
-        """Get the recent activity and decide whether to replan to carry on"""
-
-        # Get the recent events
-        (events, _) = await self.context.events_manager.get_events(
-            location_id=self.location.id, after=self.last_checked_events
-        )
-
-        self._log("New Memories", LogColor.MEMORY, f"{len(events)} new memories.")
+    async def observe(self, new_events: list[Event]) -> list[SingleMemory]:
+        """Witness events and update the agent's memory"""
 
         # Store them as observations for this agent
-        for event in events:
-            await self._add_memory(event.description, MemoryType.OBSERVATION, log=False)
+        new_memories = []
+        for event in new_events:
+            new_memories.append(
+                await self._add_memory(
+                    event.description, MemoryType.OBSERVATION, log=False
+                )
+            )
+
+        self._log(
+            f"{len(new_events)} New Memories: ",
+            LogColor.MEMORY,
+            {f"{event.description}" for event in new_events},
+        )
+
+        input("Press any key to continue...")
+
+        return new_memories
+
+    async def _react(self, events: list[Event]) -> LLMReactionResponse:
+        """Get the recent activity and decide whether to replan to carry on"""
 
         # LLM call to decide how to react to new events
         # Make the reaction parser
@@ -938,13 +952,22 @@ class Agent(BaseModel):
             await self._move_to_location(plan.location)
 
         # Execute the plan
-
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
+
+        # Gather relevant memories
+        relevant_memories = await get_relevant_memories(
+            plan.related_message.get_event_message()
+            if plan.related_message
+            else plan.description,
+            memories=self.memories,
+            k=20,
+        )
 
         self.plan_executor = PlanExecutor(
             self.id,
             world_context=self.context,
             message_to_respond_to=plan.related_message,
+            relevant_memories=relevant_memories,
         )
 
         resp: PlanExecutorResponse = await self.plan_executor.start_or_continue_plan(
@@ -1000,15 +1023,6 @@ class Agent(BaseModel):
                 agent_full_name=self.full_name,
             )
 
-            event = Event(
-                agent_id=self.id,
-                type=EventType.NON_MESSAGE,
-                description=f"{self.full_name} is currently doing the following: {plan.description} at the location: {plan.location.name}. {tool_usage_summary}",
-                location_id=self.location.id,
-            )
-
-            await self.context.events_manager.add_event(event)
-
             self._log("Action In Progress", LogColor.ACT, f"{plan.description}")
 
         # If the plan is done, remove it from the list of plans
@@ -1026,15 +1040,6 @@ class Agent(BaseModel):
 
             # remove all plans with the same description
             self.plans = [p for p in self.plans if p.description != plan.description]
-
-            event = Event(
-                agent_id=self.id,
-                type=EventType.NON_MESSAGE,
-                description=f"{self.full_name} has just completed the following: {plan.description} at the location: {plan.location.name}. The result was: {resp.output}.",
-                location_id=self.location.id,
-            )
-
-            await self.context.events_manager.add_event(event)
 
             self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
@@ -1059,29 +1064,28 @@ class Agent(BaseModel):
         await self._act(current_plan)
 
     async def run_for_one_step(self):
-        print(f"{self.full_name}: run_for_one_step...")  # TIMC
-        print(
-            f"Getting events at {self.location.name}, after {self.last_checked_events}..."
-        )  # TIMC
+        print(f"{self.full_name}: RUNNING ONE STEP...")  # TIMC
 
-        print(f"[{self.full_name}]: RUN_FOR_ONE_STEP...")  # TIMC
-
-        (events, first_refresh_time) = await self.context.events_manager.get_events(
+        # Get new events witnessed by this agent
+        (events, refresh_time) = await self.context.events_manager.get_events(
             location_id=self.location.id,
             after=self.last_checked_events,
+            witness_ids=[self.id],
         )
+        self.last_checked_events = refresh_time
 
-        # Respond to new messages
+        # Make new memories based on the events
+        await self.observe(events)
+
+        # Respond to new message events
         await self._plan_responses(events)
 
-        # Generate a reaction to the latest events
-        react_response = await self._react()
+        # Decide how to react to these events
+        react_response = await self._react(events)
 
         # If the reaction calls for a new plan, make one
         if react_response.reaction == Reaction.REPLAN:
             await self._plan(react_response.thought_process)
-
-        self.last_checked_events = first_refresh_time
 
         # Work through the plans
         await self._do_first_plan()

@@ -34,6 +34,7 @@ from .wait import wait_async, wait_sync
 
 
 class CustomTool(Tool):
+    name: ToolName
     requires_context: Optional[bool] = False
     requires_authorization: bool = False
     worldwide: bool = True
@@ -43,7 +44,7 @@ class CustomTool(Tool):
 
     def __init__(
         self,
-        name: str,
+        name: ToolName,
         description: str,
         requires_context: Optional[bool],
         worldwide: bool,
@@ -56,9 +57,12 @@ class CustomTool(Tool):
         **kwargs: Any,
     ):
         super().__init__(
-            name=name, func=func, description=description, coroutine=coroutine, **kwargs
+            name=name,
+            func=func,
+            description=description,
+            coroutine=coroutine,
+            **kwargs,
         )
-
         self.requires_context = requires_context
         self.requires_authorization = requires_authorization
         self.worldwide = worldwide
@@ -125,19 +129,19 @@ class CustomTool(Tool):
 
 
 def load_built_in_tool(
-    tool: str,
+    tool_name: ToolName,
     tool_usage_description: str,
     worldwide=True,
     requires_authorization=False,
     tool_usage_summarization_prompt: Optional[PromptString] = None,
     enabled=True,
 ) -> CustomTool:
-    tools = load_tools(tool_names=[tool], llm=OpenAI())
+    tools = load_tools(tool_names=[tool_name.value], llm=OpenAI())
 
     tool = tools[0]
 
     return CustomTool(
-        name=tool.name,
+        name=tool_name,
         func=tool.run,
         description=tool.description,
         worldwide=worldwide,
@@ -173,7 +177,7 @@ def get_tools(
 
     TOOLS: dict[ToolName, CustomTool] = {
         ToolName.SEARCH: CustomTool(
-            name="search",
+            name=ToolName.SEARCH,
             func=GoogleSearchAPIWrapper().run,
             description="useful for when you need to search for information you do not know. the input to this should be a single search term.",
             tool_usage_summarization_prompt="You have just searched Google with the following search input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
@@ -184,10 +188,10 @@ def get_tools(
             enabled=bool(os.getenv("SERPAPI_KEY")),
         ),
         ToolName.SPEAK: CustomTool(
-            name="speak",
+            name=ToolName.SPEAK,
             func=send_message_sync,
             coroutine=send_message_async,
-            description=f"say something in the {location_name}. The following people are also in the {location_name} and are the only people who will hear what you say: [{other_agent_names}] You can say something to everyone in the {location_name}, or address a specific person at your location. Input should be a json string with two keys: \"recipient\" and \"message\". The value of \"recipient\" should be a string of the recipients name or \"everyone\" if speaking to everyone, and the value of \"message\" should be a string. If you are waiting for a response, just keep using the 'wait' tool.",
+            description=f'say something in the {location_name}. The following people are also in the {location_name} and are the only people who will hear what you say: [{other_agent_names}] You can say something to everyone in the {location_name}, or address a specific person at your location. Input should be a json string with two keys: "recipient" and "message". The value of "recipient" should be a string of the recipients name or "everyone" if speaking to everyone, and the value of "message" should be a string. If you are waiting for a response, just keep using the \'wait\' tool.',
             tool_usage_description="To make progress on their plans, {agent_full_name} spoke to {recipient_full_name}.",
             requires_context=True,
             args_schema=SpeakToolInput,
@@ -195,7 +199,7 @@ def get_tools(
             worldwide=True,
         ),
         ToolName.WAIT: CustomTool(
-            name="wait",
+            name=ToolName.WAIT,
             func=wait_sync,
             coroutine=wait_async,
             description="Useful for when you are waiting for something to happen. Input a very detailed description of what exactly you are waiting for. Start your input with 'I am waiting for...' (e.g. I am waiting for any type of meeting to start in the conference room).",
@@ -205,7 +209,7 @@ def get_tools(
             worldwide=True,
         ),
         ToolName.WOLFRAM_APLHA: load_built_in_tool(
-            "wolfram-alpha",
+            ToolName.WOLFRAM_APLHA,
             requires_authorization=False,
             worldwide=True,
             tool_usage_summarization_prompt="You have just used Wolphram Alpha with the following input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
@@ -213,7 +217,7 @@ def get_tools(
             enabled=bool(os.getenv("WOLFRAM_ALPHA_APPID")),
         ),
         ToolName.HUMAN: CustomTool(
-            name="human",
+            name=ToolName.HUMAN,
             func=ask_human,
             coroutine=ask_human_async,
             description=(
@@ -228,7 +232,7 @@ def get_tools(
             worldwide=True,
         ),
         ToolName.COMPANY_DIRECTORY: CustomTool(
-            name=ToolName.COMPANY_DIRECTORY.value,
+            name=ToolName.COMPANY_DIRECTORY,
             func=consult_directory,
             description="A directory of all the people you can speak with, detailing their names and bios. Useful for when you need help from another person. Takes an empty string as input.",
             tool_usage_summarization_prompt="You have just consulted the company directory and found out the following: {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
@@ -238,7 +242,7 @@ def get_tools(
             worldwide=True,
         ),
         ToolName.SAVE_DOCUMENT: CustomTool(
-            name=ToolName.SAVE_DOCUMENT.value,
+            name=ToolName.SAVE_DOCUMENT,
             coroutine=save_document,
             description="""Write text to an existing document or create a new one. Useful for when you need to save a document for later use. Input should be a json string with two keys: "title" and "document". The value of "title" should be a string, and the value of "document" should be a string.""",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} saved a document.",
@@ -248,7 +252,7 @@ def get_tools(
             worldwide=True,
         ),
         ToolName.READ_DOCUMENT: CustomTool(
-            name=ToolName.READ_DOCUMENT.value,
+            name=ToolName.READ_DOCUMENT,
             coroutine=read_document,
             description="""Read text from an existing document. Useful for when you need to read a document that you have saved.
 Input should be a json string with one key: "title". The value of "title" should be a string.""",
@@ -259,7 +263,7 @@ Input should be a json string with one key: "title". The value of "title" should
             worldwide=True,
         ),
         ToolName.SEARCH_DOCUMENTS: CustomTool(
-            name=ToolName.SEARCH_DOCUMENTS.value,
+            name=ToolName.SEARCH_DOCUMENTS,
             coroutine=search_documents,
             description="""Search previously saved documents. Useful for when you need to read a document who's exact name you forgot.
 Input should be a json string with one key: "query". The value of "query" should be a string.""",

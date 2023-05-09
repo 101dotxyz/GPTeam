@@ -133,11 +133,12 @@ if not is_supabase_cli_installed():
     print("🚀 Installing Supabase CLI...")
     install_or_update_supabase_cli()
 
-    print("Starting supabase...")
-    subprocess.run(["supabase", "start"], check=True)
 
-    print("Resetting the database...")
-    subprocess.run(["supabase", "db", "reset"], check=True)
+print("Starting supabase...")
+subprocess.run(["supabase", "start"], check=True)
 
-    print("🌱 Seeding database with agents...")
-    subprocess.run(["poetry", "run", "db-seed"], check=True)
+print("Resetting the database...")
+subprocess.run(["supabase", "db", "reset"], check=True)
+
+print("🌱 Seeding database with agents...")
+subprocess.run(["poetry", "run", "db-seed"], check=True)

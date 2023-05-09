@@ -8,18 +8,24 @@ from uuid import UUID
 
 from dotenv import load_dotenv
 from langchain import LLMChain
-from langchain.llms import OpenAI
-from langchain.schema import OutputParserException
 from langchain.agents import AgentOutputParser, LLMSingleActionAgent
+from langchain.llms import OpenAI
 from langchain.output_parsers import OutputFixingParser
 from langchain.prompts import BaseChatPromptTemplate
-from langchain.schema import AgentAction, AgentFinish, HumanMessage, SystemMessage
+from langchain.schema import (
+    AgentAction,
+    AgentFinish,
+    HumanMessage,
+    OutputParserException,
+    SystemMessage,
+)
 from langchain.tools import BaseTool
 from pydantic import BaseModel
 from typing_extensions import override
 
 from src.world.context import WorldContext
 
+from ..memory.base import SingleMemory
 from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
@@ -30,7 +36,6 @@ from ..utils.parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
 from ..world.context import WorldContext
 from .message import AgentMessage, get_conversation_history
-from ..memory.base import SingleMemory
 from .plans import PlanStatus, SinglePlan
 
 load_dotenv()
@@ -60,13 +65,9 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
             [f"{tool.name}: {tool.description}" for tool in self.tools]
         )
         # Create a list of tool names for the tools provided
-        kwargs["tool_names"] = ", ".join([tool.name for tool in self.tools])
+        kwargs["tool_names"] = ", ".join([tool.name.value for tool in self.tools])
 
         formatted = self.template.format(**kwargs)
-
-        print(
-            f"CUSTOM PROMPT TEMPLATE:\n\n---------------------\n{formatted}\n-----------------------\n\n"
-        )
 
         return [HumanMessage(content=formatted)]
 
@@ -132,11 +133,10 @@ class PlanExecutorResponse(BaseModel):
     tool_input: Optional[str]
     scratchpad: List[dict] = []
 
-class CustomSingleActionAgent(LLMSingleActionAgent):
 
+class CustomSingleActionAgent(LLMSingleActionAgent):
     @override
     def plan(self, *args, **kwargs) -> Union[AgentAction, AgentFinish]:
-
         try:
             result = super().plan(*args, **kwargs)
 
@@ -144,11 +144,12 @@ class CustomSingleActionAgent(LLMSingleActionAgent):
         except OutputParserException as e:
             print("OutputParserException", e)
 
-            if 'input' in kwargs:
-                kwargs['input'] = kwargs['input'] + PromptString.OUTPUT_FORMAT.value
+            if "input" in kwargs:
+                kwargs["input"] = kwargs["input"] + PromptString.OUTPUT_FORMAT.value
             result = super().plan(*args, **kwargs)
 
         return result
+
 
 class PlanExecutor(BaseModel):
     """Executes plans for an agent."""
@@ -166,7 +167,6 @@ class PlanExecutor(BaseModel):
         relevant_memories: list[SingleMemory] = [],
         message_to_respond_to: AgentMessage = None,
     ) -> None:
-
         super().__init__(
             agent_id=agent_id,
             context=world_context,
@@ -187,13 +187,12 @@ class PlanExecutor(BaseModel):
                 "your_private_bio",
                 "location_context",
                 "conversation_history",
-                "relevant_memories"
+                "relevant_memories",
             ],
         )
 
         # set up a simple completion llm
         llm = ChatModel(model_name=DEFAULT_SMART_MODEL, temperature=0.2).defaultModel
-
 
         # LLM chain consisting of the LLM and a prompt
         llm_chain = LLMChain(llm=llm, prompt=prompt)
@@ -300,8 +299,9 @@ class PlanExecutor(BaseModel):
 
         # Else, the response is an AgentAction
         try:
+            formatted_tool_name = response.tool.lower().replace(" ", "-")
             tool = get_tools(
-                [ToolName(response.tool.lower())],
+                [ToolName(formatted_tool_name)],
                 context=self.context,
                 agent_id=self.agent_id,
             )[0]

@@ -16,7 +16,7 @@ from src.utils.discord import announce_bot_move
 
 from ..event.base import Event, EventsManager, EventType
 from ..location.base import Location
-from ..memory.base import MemoryType, SingleMemory, RelatedMemory, get_relevant_memories
+from ..memory.base import MemoryType, RelatedMemory, SingleMemory, get_relevant_memories
 from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
@@ -31,6 +31,7 @@ from ..utils.parameters import (
     DEFAULT_LOCATION_ID,
     DEFAULT_SMART_MODEL,
     DEFAULT_WORLD_ID,
+    DISCORD_ENABLED,
     PLAN_LENGTH,
     REFLECTION_MEMORY_COUNT,
 )
@@ -240,15 +241,19 @@ class Agent(BaseModel):
             .execute()
         )
 
+        available_tools = list(
+            map(lambda name: ToolName(name), location.get("available_tools"))
+        )
+
+        print("available tools", available_tools)
+
         locations = {
             str(location["id"]): Location(
                 id=location["id"],
                 name=location["name"],
                 description=location["description"],
                 channel_id=location["channel_id"],
-                available_tools=list(
-                    map(lambda name: ToolName(name), location.get("available_tools"))
-                ),
+                available_tools=available_tools,
                 world_id=location["world_id"],
                 allowed_agent_ids=list(
                     map(lambda id: UUID(id), location.get("allowed_agent_ids"))
@@ -493,6 +498,7 @@ class Agent(BaseModel):
             tool
             for tool in all_tools
             if (tool.name in self.authorized_tools or not tool.requires_authorization)
+            and tool.enabled
         ]
 
         return authorized_tools
@@ -508,7 +514,10 @@ class Agent(BaseModel):
             "Moved Location", LogColor.MOVE, f"{self.location.name} -> {location.name}"
         )
 
-        await announce_bot_move(self.full_name, self.location.channel_id, location.channel_id)
+        if DISCORD_ENABLED:
+            await announce_bot_move(
+                self.full_name, self.location.channel_id, location.channel_id
+            )
 
         # Update the agents to the new location
         self.location = location
@@ -745,7 +754,7 @@ class Agent(BaseModel):
         await self._update_agent_row()
 
         # add the plans to the plan table
-        await self._add_plan_rows(new_plans)
+        await self._upsert_plan_rows(new_plans)
 
         # Loop through each plan and print it to the console
         for index, plan in enumerate(new_plans):
@@ -826,17 +835,22 @@ class Agent(BaseModel):
         # Store them as observations for this agent
         new_memories = []
         for event in new_events:
-            new_memories.append(await self._add_memory(event.description, MemoryType.OBSERVATION, log=False))
-        
-        self._log(f"{len(new_events)} New Memories: ", LogColor.MEMORY, {f"{event.description}" for event in new_events})
+            new_memories.append(
+                await self._add_memory(
+                    event.description, MemoryType.OBSERVATION, log=False
+                )
+            )
 
-        input("Press any key to continue...")
+        self._log(
+            f"{len(new_events)} New Memories: ",
+            LogColor.MEMORY,
+            [f"{event.description}" for event in new_events],
+        )
 
         return new_memories
 
     async def _react(self, events: list[Event]) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
-        
 
         # LLM call to decide how to react to new events
         # Make the reaction parser
@@ -941,16 +955,18 @@ class Agent(BaseModel):
 
         # Gather relevant memories
         relevant_memories = await get_relevant_memories(
-            plan.related_message.get_event_message() if plan.related_message else plan.description,
+            plan.related_message.get_event_message()
+            if plan.related_message
+            else plan.description,
             memories=self.memories,
-            k=20
+            k=20,
         )
 
         self.plan_executor = PlanExecutor(
             self.id,
             world_context=self.context,
             message_to_respond_to=plan.related_message,
-            relevant_memories = relevant_memories
+            relevant_memories=relevant_memories,
         )
 
         resp: PlanExecutorResponse = await self.plan_executor.start_or_continue_plan(
@@ -1049,16 +1065,14 @@ class Agent(BaseModel):
         await self._act(current_plan)
 
     async def run_for_one_step(self):
-        print(f"{self.full_name}: RUNNING ONE STEP...")  # TIMC
-
         # Get new events witnessed by this agent
         (events, refresh_time) = await self.context.events_manager.get_events(
-            location_id=self.location.id, 
+            location_id=self.location.id,
             after=self.last_checked_events,
             witness_ids=[self.id],
         )
         self.last_checked_events = refresh_time
-        
+
         # Make new memories based on the events
         await self.observe(events)
 

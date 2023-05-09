@@ -2,9 +2,9 @@ from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from pydantic import BaseModel, Field, validator
 
 from src.tools.context import ToolContext
+from src.utils.database.client import get_database
 from src.utils.prompt import Prompter, PromptString
 
-from ..utils.database.client import supabase
 from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 
@@ -20,13 +20,7 @@ async def wait_async(agent_input: str, tool_context: ToolContext) -> str:
     """Wait for a specified event to occur."""
 
     # Recent memories
-    (_, memories), _ = (
-        await supabase.table("Memories")
-        .select("*")
-        .eq("agent_id", str(tool_context.agent_id))
-        .limit(5)
-        .execute()
-    )
+    memories = await (await get_database()).get_by_field("Memories", "agent_id", str(tool_context.agent_id), limit=5)
     memories = [f"{m['description']} @ {m['created_at']}" for m in memories]
 
     # Set up the LLM, Parser, and Prompter

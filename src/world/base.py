@@ -9,10 +9,11 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel
 
 from src.event.base import EventsManager
+from src.utils.database.base import Tables
+from src.utils.database.client import get_database
 
 from ..agent.base import Agent
 from ..location.base import Location
-from ..utils.database.client import supabase
 from .context import WorldContext, WorldData
 
 
@@ -55,19 +56,14 @@ class World(BaseModel):
 
     @classmethod
     async def from_id(cls, id: UUID):
-        data = (
-            await supabase.table("Worlds").select("*").eq("id", str(id)).execute()
-        ).data
+        database = await get_database()
+        data = await database.get_by_id(Tables.Worlds, str(id))
 
         # get all locations
-        (_, locations), count = (
-            await supabase.table("Locations").select("*").eq("world_id", id).execute()
-        )
+        locations = await database.get_by_field(Tables.Locations, "world_id", str(id))
 
         # get all agents
-        (_, agents), count = (
-            await supabase.table("Agents").select("*").eq("world_id", id).execute()
-        )
+        agents = await database.get_by_field(Tables.Agents, "world_id", str(id))
 
         context = await WorldContext.from_data(
             agents=agents, locations=locations, world=WorldData(**data[0])
@@ -83,9 +79,7 @@ class World(BaseModel):
 
     @classmethod
     async def from_name(cls, name: str):
-        (_, worlds), count = (
-            await supabase.table("Worlds").select("*").eq("name", name).execute()
-        )
+        worlds = await (await get_database()).get_by_field(Tables.Worlds, "name", name)
 
         if not worlds:
             raise ValueError(f"World with name {name} not found")

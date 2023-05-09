@@ -2,9 +2,11 @@ import asyncio
 import os
 import random
 import uuid
+from src.utils.database.base import Tables
+
+from src.utils.database.client import get_database
 
 from ..parameters import DiscordChannelId
-from .client import supabase
 
 DEFAULT_WORLD = {
     "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
@@ -243,10 +245,11 @@ plans = [
 
 async def seed(small=False):
     print(f"🌱 seeding the db - {'small' if small else 'normal'}")
-    await supabase.table("Worlds").upsert(worlds).execute()
-    await supabase.table("Locations").upsert(locations).execute()
-    await supabase.table("Agents").upsert(agents[:2] if small else agents).execute()
-    await supabase.table("Plans").upsert(plans[:2] if small else plans).execute()
+    database = await get_database()
+    await database.insert(Tables.Worlds, worlds, upsert=True)
+    await database.insert(Tables.Locations, locations, upsert=True)
+    await database.insert(Tables.Agents, agents[:2] if small else agents, upsert=True)
+    await database.insert(Tables.Plans, plans[:2] if small else plans, upsert=True)
 
 
 def main():

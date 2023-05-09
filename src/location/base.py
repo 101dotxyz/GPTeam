@@ -4,11 +4,13 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
+from src.utils.database.base import Tables
+
+from src.utils.database.client import get_database
 
 from ..tools.name import ToolName
 
 # from ..agent.base import Agent
-from ..utils.database.client import supabase
 from ..utils.parameters import DEFAULT_WORLD_ID
 
 
@@ -71,9 +73,7 @@ class Location(BaseModel):
 
     @classmethod
     async def from_id(cls, id: UUID):
-        (_, data), _ = (
-            await supabase.table("Locations").select("*").eq("id", str(id)).execute()
-        )
+        data = await (await get_database()).get_by_id(Tables.Locations, str(id))
 
         if len(data) == 0:
             raise ValueError(f"Location with id {id} not found")

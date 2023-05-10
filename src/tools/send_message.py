@@ -28,9 +28,6 @@ async def send_message_async(recipient: str, message: str, tool_context: ToolCon
     And triggers discord to send a message to the appropriate channel
     """
 
-    # TIMC
-    input("Press any key to continue...")
-
     # Make an AgentMessage object
     agent_message = None
 
@@ -82,9 +79,6 @@ def send_message_sync(recipient: str, message: str, tool_context: ToolContext):
     """Emits a message event to the Events table
     And triggers discord to send a message to the appropriate channel
     """
-
-    # TIMC
-    input("Press any key to continue...")
 
     # Make an AgentMessage object
     agent_message = AgentMessage.from_agent_input(

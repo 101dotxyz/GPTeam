@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from typing import Literal, Optional, Type, cast
 from uu import Error
 from uuid import UUID, uuid4
+import asyncio
 
 import pytz
 from colorama import Fore
@@ -60,6 +61,7 @@ class Agent(BaseModel):
     context: WorldContext
     location: Location
     discord_bot_token: str = None
+    react_response: LLMReactionResponse = None
 
     class Config:
         allow_underscore_names = True
@@ -69,10 +71,10 @@ class Agent(BaseModel):
         full_name: str,
         private_bio: str,
         public_bio: str,
-        last_checked_events: datetime,
         context: WorldContext,
         location: Location,
         directives: list[str] = None,
+        last_checked_events: datetime = None,
         memories: list[SingleMemory] = [],
         plans: list[SinglePlan] = [],
         authorized_tools: list[ToolName] = [],
@@ -84,6 +86,8 @@ class Agent(BaseModel):
             id = uuid4()
         elif isinstance(id, str):
             id = UUID(id)
+        if last_checked_events is None:
+            last_checked_events = datetime.fromtimestamp(0)
 
         # initialize the base model
         super().__init__(
@@ -308,6 +312,7 @@ class Agent(BaseModel):
     async def _add_memory(
         self,
         description: str,
+        created_at: datetime = datetime.now(),
         type: MemoryType = MemoryType.OBSERVATION,
         related_memory_ids: list[UUID] = [],
         log: bool = True,
@@ -319,6 +324,7 @@ class Agent(BaseModel):
             importance=await self._calculate_importance(description),
             embedding=await get_embedding(description),
             related_memory_ids=related_memory_ids,
+            created_at=created_at,
         )
 
         self.memories.append(memory)
@@ -500,40 +506,46 @@ class Agent(BaseModel):
     async def _move_to_location(
         self,
         location: Location,
-    ):
+    ) -> None:
         """Move the agents, send event to Events table"""
         old_location = self.location
 
         self._log(
-            "Moved Location", LogColor.MOVE, f"{self.location.name} -> {location.name}"
+            "Moved Location", LogColor.MOVE, f"{self.location.name} -> {location.name} @ {datetime.now(pytz.utc)}"
         )
-
-        await announce_bot_move(self.full_name, self.location.channel_id, location.channel_id)
 
         # Update the agents to the new location
         self.location = location
         self.context.update_agent(self._db_dict())
 
-        # update the agents row in the db
-        await self._update_agent_row()
-
-        # emit the departure event
+        
         departure_event = Event(
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left the {old_location.name}",
             location_id=old_location.id,
             agent_id=self.id,
-        )
-        await self.context.events_manager.add_event(departure_event)
-
-        # emit the arrival event
+            timestamp=datetime.now(pytz.utc)
+        ) 
+        
         arrival_event = Event(
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at the {location.name}",
             location_id=location.id,
             agent_id=self.id,
+            timestamp=datetime.now(pytz.utc)
         )
+
+        # update the agents row in the db
+        # emit the departure event
+        # emit the arrival event
+        tasks = [
+            self._update_agent_row(),
+            announce_bot_move(self.full_name, old_location.channel_id, location.channel_id)
+        ]
+
+        await self.context.events_manager.add_event(departure_event)
         await self.context.events_manager.add_event(arrival_event)
+        await asyncio.gather(*tasks)
 
     async def _reflect(self):
         recent_memories = sorted(
@@ -745,7 +757,7 @@ class Agent(BaseModel):
         await self._update_agent_row()
 
         # add the plans to the plan table
-        await self._add_plan_rows(new_plans)
+        await self._upsert_plan_rows(new_plans)
 
         # Loop through each plan and print it to the console
         for index, plan in enumerate(new_plans):
@@ -793,12 +805,12 @@ class Agent(BaseModel):
         response_plans: list[SinglePlan] = []
 
         # For each unique message.sender_id...
-        unique_senders = {message.sender_id for message in relevant_messages}
+        unique_correspondents = {message.sender_id for message in relevant_messages}
 
         # Make a plan to respond
-        for sender_id in unique_senders:
+        for correspondent_id in unique_correspondents:
             sender_name = (
-                self.context.get_agent_full_name(sender_id) if sender_id else "Human"
+                self.context.get_agent_full_name(correspondent_id) if correspondent_id else "Human"
             )
             new_plan = SinglePlan(
                 description=f"Respond to what {sender_name} said to me.",
@@ -809,7 +821,7 @@ class Agent(BaseModel):
                 related_message=[
                     relevant_messages
                     for relevant_messages in relevant_messages
-                    if relevant_messages.sender_id == sender_id
+                    if relevant_messages.sender_id == correspondent_id or relevant_messages.recipient_id == correspondent_id
                 ][0],
             )
             response_plans.append(new_plan)
@@ -819,20 +831,6 @@ class Agent(BaseModel):
         await self._upsert_plan_rows(response_plans)
         self.plans = response_plans + self.plans
         await self._update_agent_row()
-
-    async def observe(self, new_events: list[Event]) -> list[SingleMemory]:
-        """Witness events and update the agent's memory"""
-
-        # Store them as observations for this agent
-        new_memories = []
-        for event in new_events:
-            new_memories.append(await self._add_memory(event.description, MemoryType.OBSERVATION, log=False))
-        
-        self._log(f"{len(new_events)} New Memories: ", LogColor.MEMORY, {f"{event.description}" for event in new_events})
-
-        input("Press any key to continue...")
-
-        return new_memories
 
     async def _react(self, events: list[Event]) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
@@ -938,6 +936,9 @@ class Agent(BaseModel):
 
         # Execute the plan
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
+
+        # Observe and react to new events
+        await self.observe_and_plan_responses()
 
         # Gather relevant memories
         relevant_memories = await get_relevant_memories(
@@ -1048,29 +1049,59 @@ class Agent(BaseModel):
 
         await self._act(current_plan)
 
+    async def observe_and_plan_responses(self) -> list[Event]:
+
+        # Get new events witnessed by this agent
+        last_checked_events = self.last_checked_events
+        print(f"{self.full_name}, Last checked: {last_checked_events}")
+
+        self.last_checked_events = datetime.now(pytz.utc) #TIMC
+
+        (events, new_refresh_time) = await self.context.events_manager.get_events(
+            after=last_checked_events,
+            witness_ids=[self.id],
+            force_refresh=True
+        )
+
+        if len(events) > 0:
+            print(f"{self.full_name} has observed {len(events)} new events since {last_checked_events}.")
+
+            # Make new memories based on the events
+            new_memories = []
+            for event in events:
+                new_memories.append(
+                    await self._add_memory(
+                    event.description,
+                    created_at = event.timestamp,
+                    type = MemoryType.OBSERVATION, 
+                    log = False)
+                )
+            
+            self._log(f"{len(events)} New Memories: ", LogColor.MEMORY, {f"{event.description}" for event in events})
+
+            # Respond to new message events
+            await self._plan_responses(events)
+        
+        else:
+            print(f"{self.full_name} has observed no new events since {last_checked_events}.")
+
+        return events
+
+
     async def run_for_one_step(self):
         print(f"{self.full_name}: RUNNING ONE STEP...")  # TIMC
 
-        # Get new events witnessed by this agent
-        (events, refresh_time) = await self.context.events_manager.get_events(
-            location_id=self.location.id, 
-            after=self.last_checked_events,
-            witness_ids=[self.id],
-        )
-        self.last_checked_events = refresh_time
-        
-        # Make new memories based on the events
-        await self.observe(events)
+        # Wait 5 seconds
+        await asyncio.sleep(5)
 
-        # Respond to new message events
-        await self._plan_responses(events)
+        events = await self.observe_and_plan_responses()
 
         # Decide how to react to these events
-        react_response = await self._react(events)
+        self.react_response = await self._react(events)
 
         # If the reaction calls for a new plan, make one
-        if react_response.reaction == Reaction.REPLAN:
-            await self._plan(react_response.thought_process)
+        if self.react_response.reaction == Reaction.REPLAN:
+            await self._plan(self.react_response.thought_process)
 
         # Work through the plans
         await self._do_first_plan()

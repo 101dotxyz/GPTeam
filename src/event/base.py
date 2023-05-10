@@ -80,6 +80,9 @@ class Event(BaseModel):
         if witness_ids is None:
             witness_ids = []
 
+        if agent_id is not None and agent_id not in witness_ids:
+            witness_ids.append(agent_id)
+
         subtype = Subtype(subtype) if subtype is not None else None
         if (
             type == EventType.MESSAGE
@@ -199,6 +202,10 @@ class EventsManager(BaseModel):
         )
 
     async def refresh_events(self) -> None:
+        """ Gathers the last RECENT_EVENTS_BUFFER events from the database and updates the self.recent_events list
+
+        """
+
         started_checking_events = datetime.now(pytz.utc)
 
         async with self.refresh_lock:
@@ -243,16 +250,17 @@ class EventsManager(BaseModel):
         # get the witnesses
         (_, witness_data), count = (
             await supabase.table("Agents")
-            .select("id")
+            .select("id, full_name")
             .eq("location_id", event.location_id)
             .execute()
         )
 
-        event.witness_ids = [witness["id"] for witness in witness_data]
+        for witness in witness_data:
+            print(f"{witness['full_name']} is in the {event.location_id}")
+
+        event.witness_ids.extend([UUID(witness["id"]) for witness in witness_data if witness["id"] != event.agent_id])
 
         res = await supabase.table("Events").insert(event.db_dict()).execute()
-
-        print("New event added to db: ", res)
 
         # add event to local events list
         self.recent_events.append(event)
@@ -267,6 +275,7 @@ class EventsManager(BaseModel):
         witness_ids: Optional[list[UUID]] = None,
         force_refresh: Optional[bool] = False,
     ) -> tuple[list[Event], datetime]:
+
         if (
             (datetime.now(pytz.utc) - self.last_refresh).seconds
             > REFRESH_INTERVAL_SECONDS
@@ -303,6 +312,7 @@ class EventsManager(BaseModel):
             ]
 
         if witness_ids is not None:
+
             filtered_events = [
                 event
                 for event in filtered_events

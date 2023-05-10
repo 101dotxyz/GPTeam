@@ -1,5 +1,7 @@
 import asyncio
+import os
 import traceback
+import openai
 
 from dotenv import load_dotenv
 
@@ -14,6 +16,7 @@ init_logging()
 
 
 async def run_world():
+    openai.api_key = os.getenv("OPENAI_API_KEY")
     try:
         world = await World.from_name("AI Discord Server")
         await world.run()

@@ -166,6 +166,8 @@ class SqliteDatabase(DatabaseProviderSingleton):
     async def search_document_embeddings(
         self, embedding_text: str, limit: int = 10
     ) -> None:
+        if len(self.vector_db.documents) == 0:
+            return []
         docs = self.vector_db.query(
             embedding_text, top_k=limit, return_similarities=False
         )
@@ -180,8 +182,13 @@ class SqliteDatabase(DatabaseProviderSingleton):
         cls.client = await aiosqlite.connect("database.db")
         cls.documents = []
         cls.vector_db = HyperDB(cls.documents, key="embedding_text")
-        # if isfile("vectors.pickle.gz"):
-        #     cls.vector_db.load("vectors.pickle.gz")
+        try:
+            if isfile("vectors.pickle.gz"):
+                cls.vector_db.load("vectors.pickle.gz")
+        except:
+            cls.documents = []
+            cls.vector_db = HyperDB(cls.documents, key="embedding_text")
+            pass
 
         await cls.client.execute(
             """

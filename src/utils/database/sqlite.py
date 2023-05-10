@@ -180,8 +180,8 @@ class SqliteDatabase(DatabaseProviderSingleton):
         cls.client = await aiosqlite.connect("database.db")
         cls.documents = []
         cls.vector_db = HyperDB(cls.documents, key="embedding_text")
-        if isfile("vectors.pickle.gz"):
-            cls.vector_db.load("vectors.pickle.gz")
+        # if isfile("vectors.pickle.gz"):
+        #     cls.vector_db.load("vectors.pickle.gz")
 
         await cls.client.execute(
             """

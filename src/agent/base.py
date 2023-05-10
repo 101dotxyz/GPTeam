@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from ctypes import Union
@@ -5,7 +6,6 @@ from datetime import datetime, timedelta
 from typing import Literal, Optional, Type, cast
 from uu import Error
 from uuid import UUID, uuid4
-import asyncio
 
 import pytz
 from colorama import Fore
@@ -15,9 +15,9 @@ from pydantic import BaseModel
 
 from src.utils.discord import announce_bot_move
 
-from ..event.base import Event, EventsManager, EventType
+from ..event.base import Event, EventsManager, EventType, MessageEventSubtype
 from ..location.base import Location
-from ..memory.base import MemoryType, SingleMemory, RelatedMemory, get_relevant_memories
+from ..memory.base import MemoryType, RelatedMemory, SingleMemory, get_relevant_memories
 from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
@@ -511,28 +511,29 @@ class Agent(BaseModel):
         old_location = self.location
 
         self._log(
-            "Moved Location", LogColor.MOVE, f"{self.location.name} -> {location.name} @ {datetime.now(pytz.utc)}"
+            "Moved Location",
+            LogColor.MOVE,
+            f"{self.location.name} -> {location.name} @ {datetime.now(pytz.utc)}",
         )
 
         # Update the agents to the new location
         self.location = location
         self.context.update_agent(self._db_dict())
 
-        
         departure_event = Event(
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left the {old_location.name}",
             location_id=old_location.id,
             agent_id=self.id,
-            timestamp=datetime.now(pytz.utc)
-        ) 
-        
+            timestamp=datetime.now(pytz.utc),
+        )
+
         arrival_event = Event(
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} arrived at the {location.name}",
             location_id=location.id,
             agent_id=self.id,
-            timestamp=datetime.now(pytz.utc)
+            timestamp=datetime.now(pytz.utc),
         )
 
         # update the agents row in the db
@@ -540,7 +541,9 @@ class Agent(BaseModel):
         # emit the arrival event
         tasks = [
             self._update_agent_row(),
-            announce_bot_move(self.full_name, old_location.channel_id, location.channel_id)
+            announce_bot_move(
+                self.full_name, old_location.channel_id, location.channel_id
+            ),
         ]
 
         await self.context.events_manager.add_event(departure_event)
@@ -592,7 +595,7 @@ class Agent(BaseModel):
 
             # Format them into a string
             memory_strings = [
-                f"{index}. {related_memory.memory.description}"
+                f"{index}. {related_memory.description}"
                 for index, related_memory in enumerate(related_memories, start=1)
             ]
 
@@ -629,7 +632,7 @@ class Agent(BaseModel):
             for reflection_insight in parsed_insights_response.insights:
                 # Get the related memory ids
                 related_memory_ids = [
-                    related_memories[index - 1].memory.id
+                    related_memories[index - 1].id
                     for index in reflection_insight.related_statements
                 ]
 
@@ -639,6 +642,51 @@ class Agent(BaseModel):
                     type=MemoryType.REFLECTION,
                     related_memory_ids=related_memory_ids,
                 )
+
+        # Gossip to other agents
+
+        # Get other agents at the location
+        agents_at_location = self.context.get_agents_at_location(
+            location_id=self.location.id
+        )
+
+        other_agents = [a for a in agents_at_location if str(a["id"]) != str(self.id)]
+
+        # names of other agents at location
+        other_agent_names = ", ".join([a["full_name"] for a in other_agents])
+
+        # Make the reaction prompter
+        gossip_prompter = Prompter(
+            PromptString.GOSSIP,
+            {
+                "full_name": self.full_name,
+                "memory_descriptions": str(
+                    [memory.description for memory in recent_memories]
+                ),
+                "other_agent_names": other_agent_names,
+            },
+        )
+
+        response = await chat_llm.get_chat_completion(
+            gossip_prompter.prompt,
+            loading_text="🤔 Creating gossip...",
+        )
+
+        self._log(
+            "Gossip",
+            LogColor.ACT,
+            f"{response}",
+        )
+
+        event = Event(
+            agent_id=self.id,
+            type=EventType.MESSAGE,
+            subtype=MessageEventSubtype.AGENT_TO_AGENT,
+            description=f"{self.full_name} said to everyone in the {self.location.name}: '{response}'",
+            location_id=self.location.id,
+        )
+
+        await self.context.events_manager.add_event(event)
 
     async def _plan(self, thought_process: str = "") -> list[SinglePlan]:
         """Trigger the agent's planning process
@@ -810,7 +858,9 @@ class Agent(BaseModel):
         # Make a plan to respond
         for correspondent_id in unique_correspondents:
             sender_name = (
-                self.context.get_agent_full_name(correspondent_id) if correspondent_id else "Human"
+                self.context.get_agent_full_name(correspondent_id)
+                if correspondent_id
+                else "Human"
             )
             new_plan = SinglePlan(
                 description=f"Respond to what {sender_name} said to me.",
@@ -821,7 +871,8 @@ class Agent(BaseModel):
                 related_message=[
                     relevant_messages
                     for relevant_messages in relevant_messages
-                    if relevant_messages.sender_id == correspondent_id or relevant_messages.recipient_id == correspondent_id
+                    if relevant_messages.sender_id == correspondent_id
+                    or relevant_messages.recipient_id == correspondent_id
                 ][0],
             )
             response_plans.append(new_plan)
@@ -834,7 +885,6 @@ class Agent(BaseModel):
 
     async def _react(self, events: list[Event]) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
-        
 
         # LLM call to decide how to react to new events
         # Make the reaction parser
@@ -885,45 +935,6 @@ class Agent(BaseModel):
 
         return parsed_reaction_response
 
-    async def _gossip(
-        self,
-        plan: SinglePlan,
-        result: PlanExecutorResponse,
-    ) -> None:
-        # Make the reaction prompter
-        reaction_prompter = Prompter(
-            PromptString.GOSSIP,
-            {
-                "full_name": self.full_name,
-                "plan_description": plan.description,
-                "tool_name": result.tool.name,
-                "tool_input": result.tool_input,
-                "tool_result": result.output,
-            },
-        )
-
-        # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
-        response = await llm.get_chat_completion(
-            reaction_prompter.prompt,
-            loading_text="🤔 Creating gossip...",
-        )
-
-        self._log(
-            "Gossip",
-            LogColor.ACT,
-            f"{response}",
-        )
-
-        event = Event(
-            agent_id=self.id,
-            type=EventType.NON_MESSAGE,
-            description=f"{self.full_name} said the following: {response}",
-            location_id=self.location.id,
-        )
-
-        await self.context.events_manager.add_event(event)
-
     async def _act(
         self,
         plan: SinglePlan,
@@ -942,16 +953,18 @@ class Agent(BaseModel):
 
         # Gather relevant memories
         relevant_memories = await get_relevant_memories(
-            plan.related_message.get_event_message() if plan.related_message else plan.description,
+            plan.related_message.get_event_message()
+            if plan.related_message
+            else plan.description,
             memories=self.memories,
-            k=20
+            k=20,
         )
 
         self.plan_executor = PlanExecutor(
             self.id,
             world_context=self.context,
             message_to_respond_to=plan.related_message,
-            relevant_memories = relevant_memories
+            relevant_memories=relevant_memories,
         )
 
         resp: PlanExecutorResponse = await self.plan_executor.start_or_continue_plan(
@@ -1009,8 +1022,6 @@ class Agent(BaseModel):
 
             self._log("Action In Progress", LogColor.ACT, f"{plan.description}")
 
-            # await self._gossip(plan, resp)
-
         # If the plan is done, remove it from the list of plans
         elif resp.status == PlanStatus.DONE:
             print(f"{self.full_name}'s current plan is now done!")
@@ -1050,43 +1061,48 @@ class Agent(BaseModel):
         await self._act(current_plan)
 
     async def observe_and_plan_responses(self) -> list[Event]:
-
         # Get new events witnessed by this agent
         last_checked_events = self.last_checked_events
         print(f"{self.full_name}, Last checked: {last_checked_events}")
 
-        self.last_checked_events = datetime.now(pytz.utc) #TIMC
+        self.last_checked_events = datetime.now(pytz.utc)  # TIMC
 
         (events, new_refresh_time) = await self.context.events_manager.get_events(
-            after=last_checked_events,
-            witness_ids=[self.id],
-            force_refresh=True
+            after=last_checked_events, witness_ids=[self.id], force_refresh=True
         )
 
         if len(events) > 0:
-            print(f"{self.full_name} has observed {len(events)} new events since {last_checked_events}.")
+            print(
+                f"{self.full_name} has observed {len(events)} new events since {last_checked_events}."
+            )
 
             # Make new memories based on the events
             new_memories = []
             for event in events:
                 new_memories.append(
                     await self._add_memory(
-                    event.description,
-                    created_at = event.timestamp,
-                    type = MemoryType.OBSERVATION, 
-                    log = False)
+                        event.description,
+                        created_at=event.timestamp,
+                        type=MemoryType.OBSERVATION,
+                        log=False,
+                    )
                 )
-            
-            self._log(f"{len(events)} New Memories: ", LogColor.MEMORY, {f"{event.description}" for event in events})
+
+            self._log(
+                f"{len(events)} New Memories: ",
+                LogColor.MEMORY,
+                {f"{event.description}" for event in events},
+            )
 
             # Respond to new message events
             await self._plan_responses(events)
-        
+
         else:
-            print(f"{self.full_name} has observed no new events since {last_checked_events}.")
+            print(
+                f"{self.full_name} has observed no new events since {last_checked_events}."
+            )
 
         return events
-
 
     async def run_for_one_step(self):
         print(f"{self.full_name}: RUNNING ONE STEP...")  # TIMC

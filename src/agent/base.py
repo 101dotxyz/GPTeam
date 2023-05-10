@@ -498,7 +498,6 @@ class Agent(BaseModel):
             tool
             for tool in all_tools
             if (tool.name in self.authorized_tools or not tool.requires_authorization)
-            and tool.enabled
         ]
 
         return authorized_tools

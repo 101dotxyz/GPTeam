@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Any, Awaitable, Callable, List, Optional, Type, Union
 from uuid import UUID
 
-from langchain import GoogleSearchAPIWrapper
+from langchain import GoogleSearchAPIWrapper, SerpAPIWrapper, WolframAlphaAPIWrapper
 from langchain.agents import Tool, load_tools
 from langchain.llms import OpenAI
 from langchain.tools import BaseTool
@@ -40,7 +40,6 @@ class CustomTool(Tool):
     worldwide: bool = True
     tool_usage_description: str = None
     tool_usage_summarization_prompt: PromptString = None
-    enabled: bool = True
 
     def __init__(
         self,
@@ -50,7 +49,6 @@ class CustomTool(Tool):
         worldwide: bool,
         requires_authorization: bool,
         tool_usage_description: str,
-        enabled: bool = True,
         func: Optional[Any] = lambda x: x,
         coroutine: Optional[Any] = None,
         tool_usage_summarization_prompt: Optional[PromptString] = None,
@@ -68,7 +66,6 @@ class CustomTool(Tool):
         self.worldwide = worldwide
         self.tool_usage_description = tool_usage_description
         self.tool_usage_summarization_prompt = tool_usage_summarization_prompt
-        self.enabled = enabled
 
     @override
     async def run(self, agent_input: str | dict, tool_context: ToolContext) -> Any:
@@ -134,7 +131,6 @@ def load_built_in_tool(
     worldwide=True,
     requires_authorization=False,
     tool_usage_summarization_prompt: Optional[PromptString] = None,
-    enabled=True,
 ) -> CustomTool:
     tools = load_tools(tool_names=[tool_name.value], llm=OpenAI())
 
@@ -150,7 +146,6 @@ def load_built_in_tool(
         tool_usage_description=tool_usage_description,
         tool_usage_summarization_prompt=tool_usage_summarization_prompt,
         requires_context=False,
-        enabled=enabled,
     )
 
 
@@ -175,18 +170,27 @@ def get_tools(
     # names of other agents at location
     other_agent_names = ", ".join([a["full_name"] for a in other_agents])
 
+    SEARCH_ENABLED = bool(os.getenv("SERPAPI_KEY"))
+    WOLFRAM_ENABLED = bool(os.getenv("WOLFRAM_ALPHA_APPID"))
+
+    print(f"SEARCH_ENABLED: {SEARCH_ENABLED}")
+    print(f"WOLFRAM_ENABLED: {WOLFRAM_ENABLED}")
+
     TOOLS: dict[ToolName, CustomTool] = {
         ToolName.SEARCH: CustomTool(
-            name=ToolName.SEARCH,
-            func=GoogleSearchAPIWrapper().run,
-            description="useful for when you need to search for information you do not know. the input to this should be a single search term.",
+            name=ToolName.SPEAK,
+            func=SerpAPIWrapper().run,
+            description="search the web for information. input should be the search query.",
+            coroutine=SerpAPIWrapper().arun,
             tool_usage_summarization_prompt="You have just searched Google with the following search input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
             tool_usage_description="To make progress on their plans, {agent_full_name} searched Google and realised the following: {tool_usage_reflection}.",
-            requires_context=False,
             requires_authorization=False,
+            requires_context=True,
+            args_schema=SpeakToolInput,
             worldwide=True,
-            enabled=bool(os.getenv("SERPAPI_KEY")),
-        ),
+        )
+        if SEARCH_ENABLED
+        else None,
         ToolName.SPEAK: CustomTool(
             name=ToolName.SPEAK,
             func=send_message_sync,
@@ -208,14 +212,18 @@ def get_tools(
             requires_authorization=False,
             worldwide=True,
         ),
-        ToolName.WOLFRAM_APLHA: load_built_in_tool(
-            ToolName.WOLFRAM_APLHA,
+        ToolName.WOLFRAM_APLHA: CustomTool(
+            name=ToolName.WOLFRAM_APLHA,
+            description="A wrapper around Wolfram Alpha. Useful for when you need to answer questions about Math, Science, Technology, Culture, Society and Everyday Life. Input should be a search query.",
+            func=WolframAlphaAPIWrapper().run,
             requires_authorization=False,
             worldwide=True,
+            requires_context=False,
             tool_usage_summarization_prompt="You have just used Wolphram Alpha with the following input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} used Wolphram Alpha and realised the following: {tool_usage_reflection}.",
-            enabled=bool(os.getenv("WOLFRAM_ALPHA_APPID")),
-        ),
+        )
+        if WOLFRAM_ENABLED
+        else None,
         ToolName.HUMAN: CustomTool(
             name=ToolName.HUMAN,
             func=ask_human,
@@ -275,9 +283,10 @@ Input should be a json string with one key: "query". The value of "query" should
         ),
     }
 
+    print("Enabled tools:", [tool.name for tool in TOOLS.values() if tool is not None])
+
     return [
         tool
         for tool in TOOLS.values()
-        if (tool.name in tools or (tool.worldwide and include_worldwide))
-        and tool.enabled
+        if tool and (tool.name in tools or (tool.worldwide and include_worldwide))
     ]

@@ -1,37 +1,38 @@
-# Multi-Agent GPT
+# Multi-Agent GPT: Collaborative AI Dialogues
 
-Multi-Agent GPT is a collaborative project that uses GPT models to generate text-based dialogues between multiple agents as they work towards predefined goals. The project is aimed at exploring the capabilities of GPT models for multi-agent productivity and communication.
+Multi-Agent GPT is an innovative project that leverages GPT models to generate dynamic, text-based dialogues between multiple agents as they collaborate to achieve predefined goals. The main objective of this project is to explore the potential of GPT models in enhancing multi-agent productivity and effective communication.
 
 ## How it works
 
----
+Multi-Agent GPT employs separate agents, each equipped with a memory, that interact with one another using communication as a tool. The implementation of agent memory and reflection is inspired by [this research paper](https://arxiv.org/pdf/2304.03442.pdf).
 
 ## Requirements
 
-To run the world you will need [Docker](https://docs.docker.com/get-started/) installed on your machine.
+To run the world simulation, you will need Python installed on your machine.
 
 ## Getting started
 
-To get started with Multi-Agent GPT, you can follow these steps:
+To begin exploring Multi-Agent GPT, follow these steps:
 
 1. Clone the project repository to your local machine
-3. Run `python setup.py`. This will check if you have your environment setup correctly and if not help you get it set up.
-4. Fill in the environment variables in `.env` with your API Keys. You will need an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). Providing other API keys will enable other tools to be used.
-5. Run the project by running `poetry run world`
+2. Move to the repository: `cd multiagent-gpt`
+3. Run `python setup.py` to check your environment setup and configure it as needed
+4. Update the environment variables in `.env` with your API Keys. You will need an OpenAI API key, which you can obtain [here](https://platform.openai.com/account/api-keys). Supplying additional API keys will enable the use of other tools
+5. Launch the world simulation by running `poetry run world`
 
-You can watch the world run and observe the agents as they interact with eachother to achieve their directives.
+Now you can observe the world simulation in action and watch as the agents interact with each other, working together to accomplish their assigned directives.
 
 ## Contributing
 
-We welcome contributions to Multi-Agent GPT! If you would like to contribute, please follow these steps:
+We enthusiastically welcome contributions to Multi-Agent GPT! To contribute, please follow these steps:
 
 1. Fork the project repository to your own account
 2. Create a new branch for your changes
-3. Make your changes to the project code
+3. Implement your changes to the project code
 4. Submit a pull request to the main project repository
 
-We will review your pull request and provide feedback as needed.
+We will review your pull request and provide feedback as necessary.
 
 ## License
 
-The Multi-Agent GPT project is licensed under the MIT License. See the `LICENSE` file for more information.
+The Multi-Agent GPT project is licensed under the MIT License. For more information, refer to the `LICENSE` file.

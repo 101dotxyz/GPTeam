@@ -123,6 +123,9 @@ class Event(BaseModel):
             .execute()
         )
 
+        if len(data) == 0:
+            raise ValueError(f"Event with id {event_id} not found")
+
         event = data[0]
 
         return cls(

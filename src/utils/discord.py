@@ -15,8 +15,8 @@ async def _send_message(
 ):
     for attempt in range(retries):
         try:
-            # async with rest_client.acquire(token, "BOT") as client:
-            #     message = await client.create_message(channel_id, message)
+            async with rest_client.acquire(token, "BOT") as client:
+                message = await client.create_message(channel_id, message)
             return message
         except asyncio.TimeoutError:
             if attempt < retries - 1:  # If it's not the last attempt

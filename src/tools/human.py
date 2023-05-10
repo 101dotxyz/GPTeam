@@ -25,15 +25,15 @@ async def ask_human_async(agent_input: str, tool_context: ToolContext):
         # get the appropriate discord token
         discord_token = tool_context.context.get_discord_token(agent_message.sender_id)
 
-        # # now time to send the message in discord
-        # discord_message = await send_discord_message_async(
-        #     discord_token,
-        #     tool_context.context.get_channel_id(agent_message.location.id),
-        #     agent_message.get_event_message(),
-        # )
+        # now time to send the message in discord
+        discord_message = await send_discord_message_async(
+            discord_token,
+            tool_context.context.get_channel_id(agent_message.location.id),
+            agent_message.get_event_message(),
+        )
 
-        # # add the discord id to the agent message
-        # agent_message.discord_id = str(discord_message.id)
+        # add the discord id to the agent message
+        agent_message.discord_id = str(discord_message.id)
 
         # Covert the AgentMessage to an event
         event = agent_message.to_event()

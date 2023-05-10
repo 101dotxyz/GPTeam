@@ -139,9 +139,16 @@ async def get_relevant_memories(query: str, memories: list[SingleMemory], k: int
     ]
 
     # Sort the list of dictionaries based on the 'relevance' key in descending order
-    sorted_memories = sorted(
+    sorted_by_relevance = sorted(
         memories_with_relevance, key=lambda x: x.relevance, reverse=True
     )
 
-    # return the top k memories, as a list of SingleMemory object
-    return [memory.memory for memory in sorted_memories[:k]]
+    # get the top k memories, as a list of SingleMemory object
+    top_memories = [memory.memory for memory in sorted_by_relevance[:k]]
+
+    # now sort the list based on the created_at field, with the oldest memories first
+    sorted_by_created_at = sorted(
+        top_memories, key=lambda x: x.created_at, reverse=False
+    )
+
+    return sorted_by_created_at

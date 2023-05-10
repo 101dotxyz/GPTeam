@@ -220,6 +220,12 @@ class Agent(BaseModel):
             Tables.Locations, "world_id", agent["world_id"]
         )
 
+        location = [
+            location
+            for location in locations_data
+            if str(location["id"]) == agent["location_id"]
+        ][0]
+
         available_tools = list(
             map(lambda name: ToolName(name), location.get("available_tools"))
         )
@@ -638,7 +644,7 @@ class Agent(BaseModel):
             },
         )
 
-        chat_llm = ChatModel(temperature=0.3, streaming=True, request_timeout=600)
+        chat_llm = ChatModel(temperature=0, streaming=True, request_timeout=600)
 
         # Get the plans
         response = await chat_llm.get_chat_completion(
@@ -835,7 +841,7 @@ class Agent(BaseModel):
         )
 
         # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
         response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Deciding how to react...",
@@ -873,7 +879,7 @@ class Agent(BaseModel):
         )
 
         # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
         response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Creating gossip...",

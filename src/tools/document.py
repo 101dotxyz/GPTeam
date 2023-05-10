@@ -18,13 +18,16 @@ class SaveDocumentToolInput(BaseModel):
 async def save_document(title: str, document: str, tool_context: ToolContext):
     normalized_title = title.lower().strip().replace(" ", "_")
 
-    await (await get_database()).insert_document_with_embedding(Tables.Documents, {
-        "title": title,
-        "normalized_title": normalized_title,
-        "content": document,
-        "agent_id": str(tool_context.agent_id),
-    }, f"""{title} ({normalized_title})
-{document}""")
+    await (await get_database()).insert_document_with_embedding(
+        {
+            "title": title,
+            "normalized_title": normalized_title,
+            "content": document,
+            "agent_id": str(tool_context.agent_id),
+        },
+        f"""{title} ({normalized_title})
+{document}""",
+    )
 
     return f"Document saved: {title}"
 
@@ -39,8 +42,10 @@ async def read_document(title: str, tool_context: ToolContext):
     normalized_title = title.lower().strip().replace(" ", "_")
     try:
         document = (
-            (await (await get_database()).get_by_field(Tables.Documents, "normalized_title", normalized_title))[0]["content"]
-        )
+            await (await get_database()).get_by_field(
+                Tables.Documents, "normalized_title", normalized_title
+            )
+        )[0]["content"]
     except Exception:
         return f"Document not found: {title}"
     return f"""Document found: {title}

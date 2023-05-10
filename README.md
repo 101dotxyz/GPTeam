@@ -25,7 +25,7 @@ Now you can observe the world simulation in action and watch as the agents inter
 To change the world, all you need to do is:
 
 1. Make changes to the `config.json` by updating the available agents or locations
-2. Reset your database: `x`
+2. Reset your database: `poetry run db-reset`
 3. Run the world again: `poetry run world`
 
 ## Contributing

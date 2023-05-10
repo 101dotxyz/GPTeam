@@ -482,14 +482,6 @@ test = ["async-timeout", "pytest", "pytest-asyncio (>=0.17)", "pytest-trio", "te
 trio = ["async_generator", "trio"]
 
 [[package]]
-name = "json-log-formatter"
-version = "0.5.2"
-description = "JSON log formatter"
-category = "main"
-optional = false
-python-versions = ">=2.7"
-
-[[package]]
 name = "keyring"
 version = "23.13.1"
 description = "Store and access your passwords safely."
@@ -1209,7 +1201,7 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8.1,<3.12"
-content-hash = "636d03d9127cf373c4ef2a7a44b3a280bf0f7b8aa06c84428ac1630a8b30e7ca"
+content-hash = "8ff2da0a3a7fbcade3b13b45379bdf96d2e4eaa802cbafe901adfb16c0c49341"
 
 [metadata.files]
 aiohttp = [
@@ -1752,9 +1744,6 @@ jaraco-context = [
 jeepney = [
     {file = "jeepney-0.8.0-py3-none-any.whl", hash = "sha256:c0a454ad016ca575060802ee4d590dd912e35c122fa04e70306de3d076cce755"},
     {file = "jeepney-0.8.0.tar.gz", hash = "sha256:5efe48d255973902f6badc3ce55e2aa6c5c3b3bc642059ef3a91247bcfcc5806"},
-]
-json-log-formatter = [
-    {file = "JSON-log-formatter-0.5.2.tar.gz", hash = "sha256:7b191ae4056468baf2b7445c5ce651bd9ee6b76b4162a479a7d85db6ae029f2d"},
 ]
 keyring = [
     {file = "keyring-23.13.1-py3-none-any.whl", hash = "sha256:771ed2a91909389ed6148631de678f82ddc73737d85a927f382a8a1b157898cd"},

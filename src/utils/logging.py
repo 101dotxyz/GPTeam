@@ -8,7 +8,6 @@ from typing import List
 
 import openai
 import pytz
-from json_log_formatter import JSONFormatter
 
 
 def clean_json_string(json_string):
@@ -55,36 +54,6 @@ class OpenAIFilter(logging.Filter):
         return "openai" in record.name
 
 
-class CustomJsonFormatter(JSONFormatter):
-    def json_record(self, message, extra, record):
-        json_data = super().json_record(message, extra, record)
-
-        message_dict = {}
-
-        matches = get_completion_data(json_data["message"])
-        if len(matches) == 3:
-            for match in matches:
-                key = match.split("=")[0]
-                value = match.split("=")[1]
-
-                # Remove initial and ending quote marks, if they exist
-                if value[0] in ("'", '"') and value[-1] in ("'", '"'):
-                    value = value[1:-1]
-
-                cleaned = clean_json_string(value)
-
-                try:
-                    value = json.loads(cleaned)
-                except:
-                    value = value
-
-                message_dict[key] = value
-
-        json_data["message"] = message_dict
-
-        return json_data
-
-
 class JsonArrayFileHandler(logging.FileHandler):
     def __init__(self, filename, mode="a", encoding=None, delay=False):
         super().__init__(filename, mode, encoding, delay)
@@ -106,27 +75,6 @@ class JsonArrayFileHandler(logging.FileHandler):
         if self.stream.tell() > 1:
             self.stream.write(",\n")
         super().emit(record)
-
-
-def set_up_logging():
-    # Set up logging to a file
-    logger = logging.getLogger()
-    # set path to be this current directory
-    timestamp = datetime.now(pytz.utc).strftime("%H-%M__%m-%d-%y")
-    path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        f"logs/{timestamp}_logs.json",
-    )
-    file_handler = JsonArrayFileHandler(path)
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.addFilter(OpenAIFilter())
-
-    # Add the custom JSON formatter to the file handler
-    formatter = CustomJsonFormatter()
-    # formatter = JSONFormatter()
-    file_handler.setFormatter(formatter)
-
-    logger.addHandler(file_handler)
 
 
 class LoggingFilter(logging.Filter):

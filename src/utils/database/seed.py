@@ -1,6 +1,7 @@
 import asyncio
 import os
 import random
+import traceback
 
 from src.utils.database.base import Tables
 from src.utils.database.client import get_database
@@ -109,10 +110,14 @@ for location in locations:
 
 async def seed(small=False):
     print(f"🌱 seeding the db - {'small' if small else 'normal'}")
+
     database = await get_database()
     await database.insert(Tables.Worlds, worlds, upsert=True)
     await database.insert(Tables.Locations, locations, upsert=True)
     await database.insert(Tables.Agents, agents[:2] if small else agents, upsert=True)
+
+    await database.close()
+
     # await database.insert(Tables.Plans, plans[:2] if small else plans, upsert=True)
 
 

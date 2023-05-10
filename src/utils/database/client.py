@@ -1,12 +1,16 @@
-
 import os
 
-from src.utils.database.supabase import SubabaseDatabase
 from src.utils.database.sqlite import SqliteDatabase
 
+config_value = os.getenv("DATABASE_PROVIDER", "sqlite")
 
-config_value = os.getenv("DATABASE_PROVIDER", "supabase")
-database_class = SubabaseDatabase if config_value == "supabase" else SqliteDatabase
+database_class = SqliteDatabase
+
+if config_value == "supabase":
+    from src.utils.database.supabase import SupabaseDatabase
+
+    database_class = SupabaseDatabase
+
 database = None
 
 

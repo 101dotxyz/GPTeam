@@ -283,8 +283,6 @@ Input should be a json string with one key: "query". The value of "query" should
         ),
     }
 
-    print("Enabled tools:", [tool.name for tool in TOOLS.values() if tool is not None])
-
     return [
         tool
         for tool in TOOLS.values()

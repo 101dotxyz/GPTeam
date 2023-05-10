@@ -1,14 +1,15 @@
 import datetime
-from genericpath import isfile
 import json
+import uuid
 from sqlite3 import Cursor
 from typing import Any, Coroutine
-import uuid
+
 import aiosqlite
-from numpy import ndarray
-from src.utils.database.base import DatabaseProviderSingleton, Tables
-import sqlite_vss
+from genericpath import isfile
 from hyperdb import HyperDB
+from numpy import ndarray
+
+from src.utils.database.base import DatabaseProviderSingleton, Tables
 
 
 class NumpyArrayEncoder(json.JSONEncoder):
@@ -20,7 +21,12 @@ class NumpyArrayEncoder(json.JSONEncoder):
 
 def dict_factory(cursor: Cursor, row: Any) -> dict[str, Any]:
     fields = [column[0] for column in cursor.description]
-    row = [json.loads(value) if isinstance(value, str) and (value.startswith("[") or value.startswith("{")) else value for value in row]
+    row = [
+        json.loads(value)
+        if isinstance(value, str) and (value.startswith("[") or value.startswith("{"))
+        else value
+        for value in row
+    ]
     return {key: value for key, value in zip(fields, row)}
 
 
@@ -30,51 +36,83 @@ class SqliteDatabase(DatabaseProviderSingleton):
     vector_db: HyperDB = None
 
     async def get_by_id(self, table: Tables, id: str) -> list[dict[str, Any]]:
-        async with self.client.execute(f"SELECT * FROM {table.value} WHERE id = ?", (id,)) as cursor:
+        async with self.client.execute(
+            f"SELECT * FROM {table.value} WHERE id = ?", (id,)
+        ) as cursor:
             return await cursor.fetchall()
 
     async def get_by_ids(self, table: Tables, ids: list[str]) -> list[dict[str, Any]]:
-        async with self.client.execute(f"SELECT * FROM {table.value} WHERE id IN ({','.join('?' * len(ids))})", ids) as cursor:
+        async with self.client.execute(
+            f"SELECT * FROM {table.value} WHERE id IN ({','.join('?' * len(ids))})", ids
+        ) as cursor:
             return await cursor.fetchall()
 
     async def get_all(self, table: Tables) -> list[dict[str, Any]]:
         async with self.client.execute(f"SELECT * FROM {table.value}") as cursor:
             return await cursor.fetchall()
 
-    async def get_by_field(self, table: Tables, field: str, value: Any, limit: int = None) -> list[dict[str, Any]]:
+    async def get_by_field(
+        self, table: Tables, field: str, value: Any, limit: int = None
+    ) -> list[dict[str, Any]]:
         if isinstance(value, list) or isinstance(value, dict):
             value = json.dumps(value)
         if limit is None:
-            async with self.client.execute(f"SELECT * FROM {table.value} WHERE {field} = ?", (value,)) as cursor:
+            async with self.client.execute(
+                f"SELECT * FROM {table.value} WHERE {field} = ?", (value,)
+            ) as cursor:
                 return await cursor.fetchall()
-        async with self.client.execute(f"SELECT * FROM {table.value} WHERE {field} = ? LIMIT ?", (value, limit)) as cursor:
+        async with self.client.execute(
+            f"SELECT * FROM {table.value} WHERE {field} = ? LIMIT ?", (value, limit)
+        ) as cursor:
             return await cursor.fetchall()
 
     # needs testing
-    async def get_by_field_contains(self, table: Tables, field: str, value: Any, limit: int = None) -> list[dict[str, Any]]:
+    async def get_by_field_contains(
+        self, table: Tables, field: str, value: Any, limit: int = None
+    ) -> list[dict[str, Any]]:
         if isinstance(value, list) or isinstance(value, dict):
             value = json.dumps(value)
         if limit is None:
-            async with self.client.execute(f"SELECT * FROM {table.value} WHERE {field} LIKE ?", (f"%{value}%",)) as cursor:
+            async with self.client.execute(
+                f"SELECT * FROM {table.value} WHERE {field} LIKE ?", (f"%{value}%",)
+            ) as cursor:
                 return await cursor.fetchall()
-        async with self.client.execute(f"SELECT * FROM {table.value} WHERE {field} LIKE ? LIMIT ?", (f"%{value}%", limit)) as cursor:
+        async with self.client.execute(
+            f"SELECT * FROM {table.value} WHERE {field} LIKE ? LIMIT ?",
+            (f"%{value}%", limit),
+        ) as cursor:
             return await cursor.fetchall()
 
     # needs testing
-    async def get_memories_since(self, timestamp: datetime, agent_id: str) -> list[dict[str, Any]]:
-        async with self.client.execute(f"SELECT * FROM Memories WHERE agent_id = ? AND created_at > ?", (agent_id, timestamp)) as cursor:
+    async def get_memories_since(
+        self, timestamp: datetime, agent_id: str
+    ) -> list[dict[str, Any]]:
+        async with self.client.execute(
+            f"SELECT * FROM Memories WHERE agent_id = ? AND created_at > ?",
+            (agent_id, timestamp),
+        ) as cursor:
             return await cursor.fetchall()
 
     async def get_should_reflect(self, agent_id: str) -> list[dict[str, Any]]:
-        async with self.client.execute(f"SELECT * FROM Memories WHERE id = ? AND type = 'reflection' ORDER BY created_at DESC LIMIT 1", (agent_id,)) as cursor:
+        async with self.client.execute(
+            f"SELECT * FROM Memories WHERE id = ? AND type = 'reflection' ORDER BY created_at DESC LIMIT 1",
+            (agent_id,),
+        ) as cursor:
             return await cursor.fetchall()
 
     # needs testing
-    async def get_recent_events(self, world_id: str, limit: int) -> list[dict[str, Any]]:
-        async with self.client.execute(f"SELECT * FROM Events INNER JOIN locations ON Events.location_id = locations.id WHERE Events.world_id = ? ORDER BY Events.timestamp DESC LIMIT ?", (world_id, limit)) as cursor:
+    async def get_recent_events(
+        self, world_id: str, limit: int
+    ) -> list[dict[str, Any]]:
+        async with self.client.execute(
+            f"SELECT * FROM Events INNER JOIN locations ON Events.location_id = locations.id WHERE Events.world_id = ? ORDER BY Events.timestamp DESC LIMIT ?",
+            (world_id, limit),
+        ) as cursor:
             return await cursor.fetchall()
 
-    async def insert(self, table: Tables, data: dict | list[dict], upsert=False) -> None:
+    async def insert(
+        self, table: Tables, data: dict | list[dict], upsert=False
+    ) -> None:
         if isinstance(data, dict):
             data = [data]
         for item in data:
@@ -84,23 +122,34 @@ class SqliteDatabase(DatabaseProviderSingleton):
                 if isinstance(value, list) or isinstance(value, dict):
                     item[key] = json.dumps(value)
             if upsert:
-                await self.client.execute(f"INSERT OR REPLACE INTO {table.value} ({','.join(item.keys())}) VALUES ({','.join(['?'] * len(item))})", tuple(item.values()))
+                await self.client.execute(
+                    f"INSERT OR REPLACE INTO {table.value} ({','.join(item.keys())}) VALUES ({','.join(['?'] * len(item))})",
+                    tuple(item.values()),
+                )
             else:
-                await self.client.execute(f"INSERT INTO {table.value} ({','.join(item.keys())}) VALUES ({','.join(['?'] * len(item))})", tuple(item.values()))
+                await self.client.execute(
+                    f"INSERT INTO {table.value} ({','.join(item.keys())}) VALUES ({','.join(['?'] * len(item))})",
+                    tuple(item.values()),
+                )
             await self.client.commit()
 
     async def update(self, table: Tables, id: str, data: dict) -> None:
         for key, value in data.items():
             if isinstance(value, list) or isinstance(value, dict):
                 data[key] = json.dumps(value)
-        await self.client.execute(f"UPDATE {table.value} SET {','.join([f'{key} = ?' for key in data.keys()])} WHERE id = ?", tuple(data.values()) + (id,))
+        await self.client.execute(
+            f"UPDATE {table.value} SET {','.join([f'{key} = ?' for key in data.keys()])} WHERE id = ?",
+            tuple(data.values()) + (id,),
+        )
         await self.client.commit()
 
     async def delete(self, table: Tables, id: str) -> None:
         await self.client.execute(f"DELETE FROM {table.value} WHERE id = ?", (id,))
         await self.client.commit()
         if table == Tables.Documents:
-            indexes = [i for i, x in enumerate(self.vector_db.documents) if x["id"] == id]
+            indexes = [
+                i for i, x in enumerate(self.vector_db.documents) if x["id"] == id
+            ]
             if len(indexes) > 0:
                 self.vector_db.remove_document(indexes[0])
 
@@ -114,21 +163,25 @@ class SqliteDatabase(DatabaseProviderSingleton):
         data["embedding_text"] = embedding_text
         self.vector_db.add_document(data)
 
-    async def search_document_embeddings(self, embedding_text: str, limit: int = 10) -> None:
-        docs = self.vector_db.query(embedding_text, top_k=limit, return_similarities=False)
+    async def search_document_embeddings(
+        self, embedding_text: str, limit: int = 10
+    ) -> None:
+        docs = self.vector_db.query(
+            embedding_text, top_k=limit, return_similarities=False
+        )
         return docs
 
     async def close(self) -> None:
         await self.client.close()
-        self.vector_db.save('vectors.pickle.gz')
+        self.vector_db.save("vectors.pickle.gz")
 
     @classmethod
     async def create(cls):
         cls.client = await aiosqlite.connect("database.db")
         cls.documents = []
         cls.vector_db = HyperDB(cls.documents, key="embedding_text")
-        if (isfile('vectors.pickle.gz')):
-            cls.vector_db.load('vectors.pickle.gz')
+        if isfile("vectors.pickle.gz"):
+            cls.vector_db.load("vectors.pickle.gz")
 
         await cls.client.execute(
             """

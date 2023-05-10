@@ -45,7 +45,7 @@ if __name__ == "__main__":
         prompt = True
 
     if is_poetry_installed():
-        print("✅ Poetry is already installed.")
+        print("Poetry is already installed.")
     else:
         if prompt:
             answer = input(
@@ -54,11 +54,11 @@ if __name__ == "__main__":
             if answer.lower() != "y":
                 exit(1)
 
-        print("🚀 Installing Poetry...")
+        print("Installing Poetry...")
         install_poetry()
 
-    print("🎁 Installing dependencies...")
+    print("Installing dependencies...")
     subprocess.run(["poetry", "install"], check=True)
 
-    print("🌱 Seeding database with agents...")
+    print("Seeding database with agents...")
     subprocess.run(["poetry", "run", "db-seed"], check=True)

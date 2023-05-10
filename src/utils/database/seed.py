@@ -109,7 +109,7 @@ for location in locations:
 
 
 async def seed(small=False):
-    print(f"🌱 seeding the db - {'small' if small else 'normal'}")
+    print(f"seeding the db - {'small' if small else 'normal'}")
 
     database = await get_database()
     await database.insert(Tables.Worlds, worlds, upsert=True)

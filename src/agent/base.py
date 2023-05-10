@@ -692,7 +692,7 @@ class Agent(BaseModel):
         await self._update_agent_row()
 
         # add the plans to the plan table
-        await self._add_plan_rows(new_plans)
+        await self._upsert_plan_rows(new_plans)
 
         # Loop through each plan and print it to the console
         for index, plan in enumerate(new_plans):

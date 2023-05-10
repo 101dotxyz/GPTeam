@@ -226,7 +226,7 @@ class EventsManager(BaseModel):
 
         # get the witnesses
         witness_data = await database.get_by_field(
-            Tables.Agents, "location_id", event.location_id
+            Tables.Agents, "location_id", str(event.location_id)
         )
 
         event.witness_ids = [witness["id"] for witness in witness_data]

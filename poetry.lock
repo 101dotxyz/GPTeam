@@ -1099,6 +1099,22 @@ trio = ["trio (>=0.11.0)"]
 uvloop = ["uvloop"]
 
 [[package]]
+name = "hyperdb-python"
+version = "0.1.3"
+description = "A hyper-fast local vector database for use with LLM Agents."
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "hyperdb-python-0.1.3.tar.gz", hash = "sha256:d9be942fdac74c2b2de87e7b40e2eb12e9952cfa3209de15ca7afaf2a098e8be"},
+    {file = "hyperdb_python-0.1.3-py3-none-any.whl", hash = "sha256:680cf2ddca00d185c8c618273c09c113bb8cec9cc17a03322ccdbed02065cf8d"},
+]
+
+[package.dependencies]
+numpy = "*"
+openai = "*"
+
+[[package]]
 name = "hyperframe"
 version = "6.0.1"
 description = "HTTP/2 framing layer for Python"
@@ -2791,4 +2807,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "fae0e567a78e168096069c3d7b652616d08709c4c8fffa45446616a4df8eda1d"
+content-hash = "af6824ee34787fb038d99c952430703a252e954d0ca5b362eeb5af3675087ff4"

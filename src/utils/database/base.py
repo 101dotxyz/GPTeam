@@ -76,12 +76,12 @@ class DatabaseProviderSingleton(AbstractSingleton):
         pass
 
     @abc.abstractmethod
-    async def insert_document_with_embedding(self, data: dict, embedding: ndarray) -> None:
+    async def insert_document_with_embedding(self, data: dict, embedding_text: str) -> None:
         """insert a row with an embedding"""
         pass
 
     @abc.abstractmethod
-    async def search_document_embeddings(self, embedding: ndarray, limit: int = 10) -> None:
+    async def search_document_embeddings(self, embedding_text: str, limit: int = 10) -> None:
         """search for rows with embeddings"""
         pass
 

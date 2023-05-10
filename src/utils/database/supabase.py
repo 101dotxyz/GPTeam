@@ -8,6 +8,7 @@ from numpy import ndarray
 from src.utils.colors import LogColor
 from src.utils.database.base import DatabaseProviderSingleton, Tables
 from src.utils.database.clients.supabase_client import Client, create_client
+from src.utils.embeddings import get_embedding
 from src.utils.formatting import print_to_console
 
 
@@ -67,17 +68,18 @@ class SubabaseDatabase(DatabaseProviderSingleton):
     async def delete(self, table: Tables, id: str) -> None:
         return await self.client.table(table.value).delete().eq("id", id).execute()
 
-    async def insert_document_with_embedding(self, data: dict, embedding: ndarray) -> None:
-        data["embedding"] = embedding
-        return await self.insert(Tables.Documents, data)
+    async def insert_document_with_embedding(self, data: dict, embedding_text: str) -> None:
+        data["embedding"] = await get_embedding(embedding_text)
+        await self.insert(Tables.Documents, data)
 
-    async def search_document_embeddings(self, embedding: ndarray, limit: int = 10):
+    async def search_document_embeddings(self, embedding_text: str, limit: int = 10):
+        embedding = await get_embedding(embedding_text)
         return (await (await self.client.rpc(
             "match_documents",
             {
                 "query_embedding": list(embedding),
                 "match_threshold": 0.78,
-                "match_count": 10,
+                "match_count": limit,
             },
         )).execute()).data
 

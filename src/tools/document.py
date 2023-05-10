@@ -17,17 +17,14 @@ class SaveDocumentToolInput(BaseModel):
 
 async def save_document(title: str, document: str, tool_context: ToolContext):
     normalized_title = title.lower().strip().replace(" ", "_")
-    embedding = await get_embedding(
-        f"""{title} ({normalized_title})
-{document}"""
-    )
 
     await (await get_database()).insert_document_with_embedding(Tables.Documents, {
         "title": title,
         "normalized_title": normalized_title,
         "content": document,
         "agent_id": str(tool_context.agent_id),
-    }, embedding)
+    }, f"""{title} ({normalized_title})
+{document}""")
 
     return f"Document saved: {title}"
 
@@ -58,8 +55,7 @@ class SearchDocumentsToolInput(BaseModel):
 
 
 async def search_documents(query: str, tool_context: ToolContext):
-    embedding = await get_embedding(query)
-    documents = await (await get_database()).search_document_embeddings(embedding, 10)
+    documents = await (await get_database()).search_document_embeddings(query, 10)
     if len(documents) == 0:
         return f"No documents found for query: {query}"
     document_names = (

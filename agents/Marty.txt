@@ -1,0 +1,18 @@
+👤 Marty
+
+Current Action:
+🏃‍♂️ Meet with Rebecca in the conference room and ask her how she is doing
+
+Location: Water Cooler
+
+Current Conversation:
+Marty: Hi Rebecca, how are you doing today? @ 2023-05-09 15:53:57.185464+00:00
+Marty: Hey Rebecca, did you hear about the new project they're working on? It sounds like it could really change the way we do things around here. @ 2023-05-09 16:12:24.272610+00:00
+Marty: Hey Rebecca, did you know that Marty was just at the Water Cooler, socializing and taking a break? It seems like they're now back to work or onto another task. @ 2023-05-09 16:29:49.884561+00:00
+Marty: Hey everyone, did you know that Marty was just at the Water Cooler, taking a break and socializing? It seems like they're now back to work or onto another task. @ 2023-05-10 09:12:48.678497+00:00
+Rebecca: That sounds interesting, Marty. Can you tell me more about this new project and how it could change our work processes? @ 2023-05-10 12:04:49.289803+00:00
+
+Current Plans: 
+
+History:
+

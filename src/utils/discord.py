@@ -1,6 +1,7 @@
 import asyncio
-from aiohttp import ServerDisconnectedError
+
 import hikari
+from aiohttp import ServerDisconnectedError
 
 from src.utils.parameters import ANNOUNCER_DISCORD_TOKEN
 
@@ -9,11 +10,13 @@ event_loop = asyncio.get_event_loop()
 rest_started = False
 
 
-async def _send_message(token, channel_id, message, rest_client: hikari.RESTApp, retries=3, delay=5):
+async def _send_message(
+    token, channel_id, message, rest_client: hikari.RESTApp, retries=3, delay=5
+):
     for attempt in range(retries):
         try:
-            async with rest_client.acquire(token, "BOT") as client:
-                message = await client.create_message(channel_id, message)
+            # async with rest_client.acquire(token, "BOT") as client:
+            #     message = await client.create_message(channel_id, message)
             return message
         except asyncio.TimeoutError:
             if attempt < retries - 1:  # If it's not the last attempt
@@ -43,7 +46,14 @@ def send_message(token, channel_id, message):
 
 
 async def announce_bot_move(bot_name: str, left_channel_id: str, enter_channel_id):
-    return (await send_message_async(ANNOUNCER_DISCORD_TOKEN, left_channel_id, f"{bot_name} left the room."), await send_message_async(ANNOUNCER_DISCORD_TOKEN, enter_channel_id, f"{bot_name} entered the room."))
+    return (
+        await send_message_async(
+            ANNOUNCER_DISCORD_TOKEN, left_channel_id, f"{bot_name} left the room."
+        ),
+        await send_message_async(
+            ANNOUNCER_DISCORD_TOKEN, enter_channel_id, f"{bot_name} entered the room."
+        ),
+    )
 
 
 async def close_rest_app():

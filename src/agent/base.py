@@ -39,7 +39,12 @@ from ..utils.prompt import Prompter, PromptString
 from ..world.context import WorldContext
 from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
-from .message import AgentMessage, LLMMessageResponse, get_latest_messages
+from .message import (
+    AgentMessage,
+    LLMMessageResponse,
+    get_conversation_history,
+    get_latest_messages,
+)
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
@@ -1104,8 +1109,41 @@ class Agent(BaseModel):
 
         return events
 
+    # async def write_to_file(self, data):
+    #     agents_folder = os.path.join(os.getcwd(), "agents")
+    #     if not os.path.exists(agents_folder):
+    #         os.makedirs(agents_folder)
+
+    #     file_path = os.path.join(agents_folder, f"{self.full_name}.txt")
+    #     with open(file_path, "a") as f:
+    #         f.write(data + "\n")
+
+    async def write_to_file(self):
+        agents_folder = os.path.join(os.getcwd(), "agents")
+        if not os.path.exists(agents_folder):
+            os.makedirs(agents_folder)
+
+        file_path = os.path.join(agents_folder, f"{self.full_name}.txt")
+
+        plans_in_progress = "\n".join(
+            [
+                "🏃‍♂️ " + plan.description
+                for plan in self.plans
+                if plan.status == PlanStatus.IN_PROGRESS
+            ]
+        )
+
+        conversation_history = await get_conversation_history(self.id, self.context)
+
+        with open(file_path, "w") as f:
+            f.write(
+                f"👤 {self.full_name}\n\nCurrent Action:\n{plans_in_progress}\n\nLocation: {self.location.name}\n\nCurrent Conversation:\n{conversation_history}\n\nCurrent Plans: \n\nHistory:\n\n"
+            )
+
     async def run_for_one_step(self):
         print(f"{self.full_name}: RUNNING ONE STEP...")  # TIMC
+
+        await self.write_to_file()
 
         # Wait 5 seconds
         await asyncio.sleep(5)

@@ -1,0 +1,23 @@
+👤 Rebecca
+
+Current Action:
+🏃‍♂️ Respond to what Marty said to me.
+🏃‍♂️ Respond to what Marty said to me.
+🏃‍♂️ Join the team meeting in the conference room
+
+Location: Conference Room
+
+Current Conversation:
+Marty: Hi Rebecca, how are you doing today? @ 2023-05-09 15:53:57.185464+00:00
+Rebecca: Hi Marty, I'm doing well, thank you. How about yourself? @ 2023-05-09 15:55:12.155296+00:00
+Rebecca: It seems like Marty has arrived at the Conference Room multiple times today. Marty, you must be really excited about this meeting! @ 2023-05-09 16:11:53.556359+00:00
+Marty: Hey Rebecca, did you hear about the new project they're working on? It sounds like it could really change the way we do things around here. @ 2023-05-09 16:12:24.272610+00:00
+Rebecca: It's impressive how dedicated Marty is to this meeting, considering he has arrived at the Conference Room so many times today. Marty, your enthusiasm is truly contagious! @ 2023-05-09 16:17:25.884099+00:00
+Rebecca: Yes, Marty, I've heard about the new project. It does sound promising and could potentially revolutionize our operations. I'm looking forward to seeing how it develops. @ 2023-05-09 16:28:31.544714+00:00
+Marty: Hey Rebecca, did you know that Marty was just at the Water Cooler, socializing and taking a break? It seems like they're now back to work or onto another task. @ 2023-05-09 16:29:49.884561+00:00
+Rebecca: That sounds interesting, Marty. Can you tell me more about this new project and how it could change our work processes? @ 2023-05-10 12:04:49.289803+00:00
+
+Current Plans: 
+
+History:
+

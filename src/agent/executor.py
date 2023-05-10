@@ -8,18 +8,24 @@ from uuid import UUID
 
 from dotenv import load_dotenv
 from langchain import LLMChain
-from langchain.llms import OpenAI
-from langchain.schema import OutputParserException
 from langchain.agents import AgentOutputParser, LLMSingleActionAgent
+from langchain.llms import OpenAI
 from langchain.output_parsers import OutputFixingParser
 from langchain.prompts import BaseChatPromptTemplate
-from langchain.schema import AgentAction, AgentFinish, HumanMessage, SystemMessage
+from langchain.schema import (
+    AgentAction,
+    AgentFinish,
+    HumanMessage,
+    OutputParserException,
+    SystemMessage,
+)
 from langchain.tools import BaseTool
 from pydantic import BaseModel
 from typing_extensions import override
 
 from src.world.context import WorldContext
 
+from ..memory.base import SingleMemory
 from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
@@ -30,7 +36,6 @@ from ..utils.parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
 from ..world.context import WorldContext
 from .message import AgentMessage, get_conversation_history
-from ..memory.base import SingleMemory
 from .plans import PlanStatus, SinglePlan
 
 load_dotenv()
@@ -132,11 +137,10 @@ class PlanExecutorResponse(BaseModel):
     tool_input: Optional[str]
     scratchpad: List[dict] = []
 
-class CustomSingleActionAgent(LLMSingleActionAgent):
 
+class CustomSingleActionAgent(LLMSingleActionAgent):
     @override
     def plan(self, *args, **kwargs) -> Union[AgentAction, AgentFinish]:
-
         try:
             result = super().plan(*args, **kwargs)
 
@@ -144,11 +148,12 @@ class CustomSingleActionAgent(LLMSingleActionAgent):
         except OutputParserException as e:
             print("OutputParserException", e)
 
-            if 'input' in kwargs:
-                kwargs['input'] = kwargs['input'] + PromptString.OUTPUT_FORMAT.value
+            if "input" in kwargs:
+                kwargs["input"] = kwargs["input"] + PromptString.OUTPUT_FORMAT.value
             result = super().plan(*args, **kwargs)
 
         return result
+
 
 class PlanExecutor(BaseModel):
     """Executes plans for an agent."""
@@ -166,7 +171,6 @@ class PlanExecutor(BaseModel):
         relevant_memories: list[SingleMemory] = [],
         message_to_respond_to: AgentMessage = None,
     ) -> None:
-
         super().__init__(
             agent_id=agent_id,
             context=world_context,
@@ -187,13 +191,12 @@ class PlanExecutor(BaseModel):
                 "your_private_bio",
                 "location_context",
                 "conversation_history",
-                "relevant_memories"
+                "relevant_memories",
             ],
         )
 
         # set up a simple completion llm
         llm = ChatModel(model_name=DEFAULT_SMART_MODEL, temperature=0.2).defaultModel
-
 
         # LLM chain consisting of the LLM and a prompt
         llm_chain = LLMChain(llm=llm, prompt=prompt)
@@ -238,7 +241,6 @@ class PlanExecutor(BaseModel):
         return await self.execute(tools)
 
     async def execute(self, tools: list[CustomTool]) -> str:
-        
         if self.plan is None:
             raise ValueError("No plan set")
 
@@ -252,9 +254,7 @@ class PlanExecutor(BaseModel):
 
         # Make the conversation history
         conversation_history = await get_conversation_history(
-            self.context.get_agent_location_id(self.agent_id),
-            self.context,
-            self.message_to_respond_to,
+            self.context.get_agent_location_id(self.agent_id), self.context
         )
 
         # Make the relevant memories string

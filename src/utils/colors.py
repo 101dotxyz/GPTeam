@@ -13,3 +13,4 @@ class LogColor(Enum):
     REFLECT = Fore.MAGENTA
     MEMORY = Fore.RED
     THOUGHT = Fore.LIGHTBLACK_EX
+    ERROR = Fore.RED

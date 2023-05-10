@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field
 
 from src.tools.context import ToolContext
-from src.utils.database.client import supabase
+from src.utils.database.base import Tables
+from src.utils.database.client import get_database
 from src.utils.embeddings import get_embedding
 
 # pydantic model for the document tool
@@ -16,19 +17,15 @@ class SaveDocumentToolInput(BaseModel):
 
 async def save_document(title: str, document: str, tool_context: ToolContext):
     normalized_title = title.lower().strip().replace(" ", "_")
-    embedding = await get_embedding(
-        f"""{title} ({normalized_title})
-{document}"""
-    )
-    await supabase.table("Documents").insert(
-        {
-            "title": title,
-            "normalized_title": normalized_title,
-            "content": document,
-            "agent_id": str(tool_context.agent_id),
-            "embedding": embedding,
-        }
-    ).execute()
+
+    await (await get_database()).insert_document_with_embedding(Tables.Documents, {
+        "title": title,
+        "normalized_title": normalized_title,
+        "content": document,
+        "agent_id": str(tool_context.agent_id),
+    }, f"""{title} ({normalized_title})
+{document}""")
+
     return f"Document saved: {title}"
 
 
@@ -42,11 +39,7 @@ async def read_document(title: str, tool_context: ToolContext):
     normalized_title = title.lower().strip().replace(" ", "_")
     try:
         document = (
-            await supabase.table("Documents")
-            .select("*")
-            .eq("normalized_title", normalized_title)
-            .execute()
-            .data[0]["content"]
+            (await (await get_database()).get_by_field(Tables.Documents, "normalized_title", normalized_title))[0]["content"]
         )
     except Exception:
         return f"Document not found: {title}"
@@ -62,19 +55,7 @@ class SearchDocumentsToolInput(BaseModel):
 
 
 async def search_documents(query: str, tool_context: ToolContext):
-    embedding = await get_embedding(query)
-    documents = (
-        supabase.rpc(
-            "match_documents",
-            {
-                "query_embedding": list(embedding),
-                "match_threshold": 0.78,
-                "match_count": 10,
-            },
-        )
-        .execute()
-        .data
-    )
+    documents = await (await get_database()).search_document_embeddings(query, 10)
     if len(documents) == 0:
         return f"No documents found for query: {query}"
     document_names = (

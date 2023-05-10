@@ -54,6 +54,11 @@ if __name__ == "__main__":
         print("Installing Poetry...")
         install_poetry()
 
+    # copy .env.example to .env
+    if not os.path.exists(".env"):
+        print("Creating .env file...")
+        subprocess.run(["cp", ".env.example", ".env"], check=True)
+
     print("Installing dependencies...")
     subprocess.run(["poetry", "install"], check=True)
 

@@ -10,8 +10,10 @@ import pytz
 from pydantic import BaseModel, Field
 from sqlalchemy import desc
 
+from src.utils.database.base import Tables
+from src.utils.database.client import get_database
+
 from ..utils.colors import LogColor
-from ..utils.database.client import supabase
 from ..utils.formatting import print_to_console
 from ..utils.parameters import DEFAULT_WORLD_ID
 
@@ -118,13 +120,10 @@ class Event(BaseModel):
 
     @classmethod
     async def from_id(cls, event_id: UUID) -> "Event":
-        (_, data), _ = (
-            await supabase.table("Events")
-            .select("*, location_id(*)")
-            .eq("id", str(event_id))
-            .limit(1)
-            .execute()
-        )
+        data = await (await get_database()).get_by_id(Tables.Events, str(event_id))
+
+        if len(data) == 0:
+            raise ValueError(f"Event with id {event_id} not found")
 
         event = data[0]
 
@@ -133,7 +132,7 @@ class Event(BaseModel):
             type=event["type"],
             subtype=event["subtype"],
             description=event["description"],
-            location_id=event["location_id"]["id"],
+            location_id=event["location_id"],
             agent_id=event["agent_id"],
             timestamp=datetime.fromisoformat(event["timestamp"]),
             witness_ids=event["witness_ids"],
@@ -175,13 +174,8 @@ class EventsManager(BaseModel):
 
     @classmethod
     async def from_world_id(cls, world_id: str):
-        (_, data), _ = (
-            await supabase.table("Events")
-            .select("*, location_id(*)")
-            .eq("location_id.world_id", world_id)
-            .order("timestamp", desc=True)
-            .limit(RECENT_EVENTS_BUFFER)
-            .execute()
+        data = await (await get_database()).get_recent_events(
+            world_id, RECENT_EVENTS_BUFFER
         )
         recent_events = [
             Event(
@@ -202,21 +196,14 @@ class EventsManager(BaseModel):
         )
 
     async def refresh_events(self) -> None:
-        """ Gathers the last RECENT_EVENTS_BUFFER events from the database and updates the self.recent_events list
-
-        """
+        """Gathers the last RECENT_EVENTS_BUFFER events from the database and updates the self.recent_events list"""
 
         started_checking_events = datetime.now(pytz.utc)
 
         async with self.refresh_lock:
             print("Refreshing events...")
-            (_, data), _ = (
-                await supabase.table("Events")
-                .select("*, location_id(*)")
-                .eq("location_id.world_id", self.world_id)
-                .order("timestamp", desc=True)
-                .limit(RECENT_EVENTS_BUFFER)
-                .execute()
+            data = await (await get_database()).get_recent_events(
+                self.world_id, RECENT_EVENTS_BUFFER
             )
 
             events = [
@@ -246,21 +233,22 @@ class EventsManager(BaseModel):
 
     async def add_event(self, event: Event) -> None:
         """Adds an event in the current step to the DB and local object"""
+        database = await get_database()
 
         # get the witnesses
-        (_, witness_data), count = (
-            await supabase.table("Agents")
-            .select("id, full_name")
-            .eq("location_id", event.location_id)
-            .execute()
+        witness_data = await database.get_by_field(
+            Tables.Agents, "location_id", str(event.location_id)
         )
 
-        for witness in witness_data:
-            print(f"{witness['full_name']} is in the {event.location_id}")
+        event.witness_ids.extend(
+            [
+                UUID(witness["id"])
+                for witness in witness_data
+                if witness["id"] != event.agent_id
+            ]
+        )
 
-        event.witness_ids.extend([UUID(witness["id"]) for witness in witness_data if witness["id"] != event.agent_id])
-
-        res = await supabase.table("Events").insert(event.db_dict()).execute()
+        await database.insert(Tables.Events, event.db_dict())
 
         # add event to local events list
         self.recent_events.append(event)
@@ -275,7 +263,6 @@ class EventsManager(BaseModel):
         witness_ids: Optional[list[UUID]] = None,
         force_refresh: Optional[bool] = False,
     ) -> tuple[list[Event], datetime]:
-
         if (
             (datetime.now(pytz.utc) - self.last_refresh).seconds
             > REFRESH_INTERVAL_SECONDS
@@ -312,7 +299,6 @@ class EventsManager(BaseModel):
             ]
 
         if witness_ids is not None:
-
             filtered_events = [
                 event
                 for event in filtered_events

@@ -13,6 +13,8 @@ from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from langchain.schema import AIMessage, HumanMessage
 from pydantic import BaseModel
 
+from src.utils.database.base import Tables
+from src.utils.database.client import get_database
 from src.utils.discord import announce_bot_move
 
 from ..event.base import Event, EventsManager, EventType, MessageEventSubtype
@@ -22,16 +24,14 @@ from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
 from ..utils.colors import LogColor
-from ..utils.database.client import supabase
 from ..utils.embeddings import get_embedding
 from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
 from ..utils.parameters import (
-    DEFAULT_FAST_MODEL,
-    DEFAULT_LOCATION_ID,
     DEFAULT_SMART_MODEL,
     DEFAULT_WORLD_ID,
+    DISCORD_ENABLED,
     PLAN_LENGTH,
     REFLECTION_MEMORY_COUNT,
 )
@@ -92,7 +92,7 @@ class Agent(BaseModel):
         elif isinstance(id, str):
             id = UUID(id)
         if last_checked_events is None:
-            last_checked_events = datetime.fromtimestamp(0)
+            last_checked_events = datetime.fromtimestamp(0, tz=pytz.utc)
 
         # initialize the base model
         super().__init__(
@@ -133,43 +133,32 @@ class Agent(BaseModel):
     @property
     async def allowed_locations(self) -> list[Location]:
         """Get locations that this agent is allowed to be in."""
-        data, count = (
-            await supabase.table("Locations")
-            .select("*")
-            .contains("allowed_agent_ids", [str(self.id)])
-            .execute()
+        database = await get_database()
+        data = await database.get_by_field_contains(
+            Tables.Locations, "allowed_agent_ids", str(self.id)
         )
+
         # For testing purposes include locations with 0 allowed agents as well
-        other_data, count = (
-            await supabase.table("Locations")
-            .select("*")
-            .eq("allowed_agent_ids", "{}")
-            .execute()
+        other_data = await database.get_by_field(
+            Tables.Locations, "allowed_agent_ids", "{}"
         )
-        return [Location(**location) for location in data[1] + other_data[1]]
+
+        return [Location(**location) for location in data + other_data]
 
     @classmethod
     async def from_db_dict(
         cls, agent_dict: dict, locations: list[Location], context: WorldContext
     ):
         """Create an agent from a dictionary retrieved from the database."""
-
-        (_, plans), count = (
-            await supabase.table("Plans")
-            .select("*")
-            .in_("id", agent_dict["ordered_plan_ids"])
-            .execute()
-        )
+        database = await get_database()
+        plans = await database.get_by_ids(Tables.Plans, agent_dict["ordered_plan_ids"])
 
         ordered_plans: list[dict] = sorted(
             plans, key=lambda plan: agent_dict["ordered_plan_ids"].index(plan["id"])
         )
 
-        memories_data, memories_count = (
-            await supabase.table("Memories")
-            .select("*")
-            .eq("agent_id", str(agent_dict["id"]))
-            .execute()
+        memories_data = await database.get_by_field(
+            Tables.Memories, "agent_id", str(agent_dict["id"])
         )
 
         plans = []
@@ -218,36 +207,39 @@ class Agent(BaseModel):
             world_id=agent_dict["world_id"],
             location=agent_location,
             context=context,
-            memories=[SingleMemory(**memory) for memory in memories_data[1]],
+            memories=[SingleMemory(**memory) for memory in memories_data],
             plans=plans,
             discord_bot_token=agent_dict["discord_bot_token"],
         )
 
     @classmethod
     async def from_id(cls, id: UUID, context: WorldContext):
-        agents_data, agents_count = (
-            await supabase.table("Agents").select("*").eq("id", str(id)).execute()
-        )
-        if agents_count == 0:
+        database = await get_database()
+        agents_data = await database.get_by_id(Tables.Agents, str(id))
+        if len(agents_data) == 0:
             raise ValueError("No agent with that id")
         agent = agents_data[1][0]
         # get all the plans in db that are in the agent's plan list
-        plans_data, plans_count = (
-            await supabase.table("Plans")
-            .select("*")
-            .in_("id", agent["ordered_plan_ids"])
-            .execute()
-        )
+        plans_data = await database.get_by_ids(Tables.Plans, agent["ordered_plan_ids"])
         ordered_plans_data = sorted(
-            plans_data[1], key=lambda plan: agent["ordered_plan_ids"].index(plan["id"])
+            plans_data, key=lambda plan: agent["ordered_plan_ids"].index(plan["id"])
         )
 
-        (_, locations_data), _ = (
-            await supabase.table("Locations")
-            .select("*")
-            .eq("world_id", agent["world_id"])
-            .execute()
+        locations_data = await database.get_by_field(
+            Tables.Locations, "world_id", agent["world_id"]
         )
+
+        location = [
+            location
+            for location in locations_data
+            if str(location["id"]) == agent["location_id"]
+        ][0]
+
+        available_tools = list(
+            map(lambda name: ToolName(name), location.get("available_tools"))
+        )
+
+        print("available tools", available_tools)
 
         locations = {
             str(location["id"]): Location(
@@ -255,9 +247,7 @@ class Agent(BaseModel):
                 name=location["name"],
                 description=location["description"],
                 channel_id=location["channel_id"],
-                available_tools=list(
-                    map(lambda name: ToolName(name), location.get("available_tools"))
-                ),
+                available_tools=available_tools,
                 world_id=location["world_id"],
                 allowed_agent_ids=list(
                     map(lambda id: UUID(id), location.get("allowed_agent_ids"))
@@ -266,12 +256,7 @@ class Agent(BaseModel):
             for location in locations_data
         }
 
-        memories_data, memories_count = (
-            await supabase.table("Memories")
-            .select("*")
-            .eq("agent_id", str(id))
-            .execute()
-        )
+        memories_data = await database.get_by_field(Tables.Memory, "agent_id", str(id))
 
         plans = [
             SinglePlan(
@@ -304,11 +289,8 @@ class Agent(BaseModel):
         )
 
     async def _get_memories(self):
-        (_, data), count = (
-            await supabase.table("Memories")
-            .select("*")
-            .eq("agent_id", str(self.id))
-            .execute()
+        data = await (await get_database()).get_by_field(
+            Tables.Memories, "agent_id", str(self.id)
         )
 
         memories = [SingleMemory(**memory) for memory in data]
@@ -335,7 +317,7 @@ class Agent(BaseModel):
         self.memories.append(memory)
 
         # add to database
-        await supabase.table("Memories").insert(memory.db_dict()).execute()
+        await (await get_database()).insert(Tables.Memories, memory.db_dict())
 
         if log:
             self._log("New Memory", LogColor.MEMORY, f"{memory}")
@@ -351,13 +333,12 @@ class Agent(BaseModel):
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
         }
 
-        return (
-            await supabase.table("Agents").update(row).eq("id", str(self.id)).execute()
-        )
+        return await (await get_database()).update(Tables.Agents, str(self.id), row)
 
     async def _upsert_plan_rows(self, plans: list[SinglePlan]):
+        database = await get_database()
         for plan in plans:
-            await supabase.table("Plans").upsert(plan._db_dict()).execute()
+            await database.insert(Tables.Plans, plan._db_dict(), upsert=True)
 
     def update_plan(self, new_plan: SinglePlan):
         old_plan = [
@@ -373,15 +354,8 @@ class Agent(BaseModel):
         return self.memories[-count:]
 
     async def _get_memories_since(self, date: datetime):
-        data, count = (
-            await supabase.table("Memories")
-            .select("*")
-            .eq("agent_id", str(self.id))
-            .gt("created_at", date)
-            .order("created_at", desc=True)
-            .execute()
-        )
-        memories = [SingleMemory(**memory) for memory in data[1]]
+        data = await (await get_database()).get_memories_since(date, str(self.id))
+        memories = [SingleMemory(**memory) for memory in data]
         return memories
 
     async def _should_reflect(self) -> bool:
@@ -389,18 +363,10 @@ class Agent(BaseModel):
         Returns True if the cumulative importance score of memories
         since the last reflection is over 100
         """
-        data, count = (
-            await supabase.table("Memories")
-            .select("type", "created_at", "agent_id")
-            .eq("agent_id", str(self.id))
-            .eq("type", MemoryType.REFLECTION.value)
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
+        data = await (await get_database()).get_should_reflect(str(self.id))
 
         last_reflection_time = (
-            data[1][0]["created_at"] if len(data[1]) > 0 else datetime(1970, 1, 1)
+            data[0]["created_at"] if len(data) > 0 else datetime(1970, 1, 1)
         )
 
         memories_since_last_reflection = await self._get_memories_since(
@@ -541,19 +507,15 @@ class Agent(BaseModel):
             timestamp=datetime.now(pytz.utc),
         )
 
-        # update the agents row in the db
-        # emit the departure event
-        # emit the arrival event
-        tasks = [
-            self._update_agent_row(),
+        await self._update_agent_row(),
+
+        if DISCORD_ENABLED:
             announce_bot_move(
                 self.full_name, old_location.channel_id, location.channel_id
             ),
-        ]
 
         await self.context.events_manager.add_event(departure_event)
         await self.context.events_manager.add_event(arrival_event)
-        await asyncio.gather(*tasks)
 
     async def _reflect(self):
         recent_memories = sorted(
@@ -740,7 +702,7 @@ class Agent(BaseModel):
             },
         )
 
-        chat_llm = ChatModel(temperature=0.3, streaming=True, request_timeout=600)
+        chat_llm = ChatModel(temperature=0, streaming=True, request_timeout=600)
 
         # Get the plans
         response = await chat_llm.get_chat_completion(
@@ -920,7 +882,7 @@ class Agent(BaseModel):
         )
 
         # Get the reaction
-        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.3)
+        llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
         response = await llm.get_chat_completion(
             reaction_prompter.prompt,
             loading_text="🤔 Deciding how to react...",
@@ -1068,19 +1030,14 @@ class Agent(BaseModel):
     async def observe_and_plan_responses(self) -> list[Event]:
         # Get new events witnessed by this agent
         last_checked_events = self.last_checked_events
-        print(f"{self.full_name}, Last checked: {last_checked_events}")
 
-        self.last_checked_events = datetime.now(pytz.utc)  # TIMC
+        self.last_checked_events = datetime.now(pytz.utc)
 
-        (events, new_refresh_time) = await self.context.events_manager.get_events(
+        (events, _) = await self.context.events_manager.get_events(
             after=last_checked_events, witness_ids=[self.id], force_refresh=True
         )
 
         if len(events) > 0:
-            print(
-                f"{self.full_name} has observed {len(events)} new events since {last_checked_events}."
-            )
-
             # Make new memories based on the events
             new_memories = []
             for event in events:
@@ -1101,11 +1058,6 @@ class Agent(BaseModel):
 
             # Respond to new message events
             await self._plan_responses(events)
-
-        else:
-            print(
-                f"{self.full_name} has observed no new events since {last_checked_events}."
-            )
 
         return events
 
@@ -1160,10 +1112,10 @@ class Agent(BaseModel):
             )
 
     async def run_for_one_step(self):
-        print(f"{self.full_name}: RUNNING ONE STEP...")  # TIMC
+        print(f"{self.full_name}: RUNNING ONE STEP...")
 
         # Wait 5 seconds
-        await asyncio.sleep(5)
+        await asyncio.sleep(1)
 
         events = await self.observe_and_plan_responses()
 

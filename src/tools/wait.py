@@ -2,9 +2,10 @@ from langchain.output_parsers import OutputFixingParser, PydanticOutputParser
 from pydantic import BaseModel, Field, validator
 
 from src.tools.context import ToolContext
+from src.utils.database.base import Tables
+from src.utils.database.client import get_database
 from src.utils.prompt import Prompter, PromptString
 
-from ..utils.database.client import supabase
 from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 

@@ -1,11 +1,12 @@
 import asyncio
 import enum
 import inspect
+import os
 from enum import Enum
 from typing import Any, Awaitable, Callable, List, Optional, Type, Union
 from uuid import UUID
 
-from langchain import GoogleSearchAPIWrapper
+from langchain import GoogleSearchAPIWrapper, SerpAPIWrapper, WolframAlphaAPIWrapper
 from langchain.agents import Tool, load_tools
 from langchain.llms import OpenAI
 from langchain.tools import BaseTool
@@ -22,7 +23,7 @@ from src.tools.document import (
 )
 from src.tools.human import ask_human, ask_human_async
 from src.utils.models import ChatModel
-from src.utils.parameters import DEFAULT_SMART_MODEL
+from src.utils.parameters import DEFAULT_SMART_MODEL, DISCORD_ENABLED
 from src.utils.prompt import Prompter, PromptString
 from src.world.context import WorldContext
 
@@ -33,6 +34,7 @@ from .wait import wait_async, wait_sync
 
 
 class CustomTool(Tool):
+    name: str
     requires_context: Optional[bool] = False
     requires_authorization: bool = False
     worldwide: bool = True
@@ -53,9 +55,12 @@ class CustomTool(Tool):
         **kwargs: Any,
     ):
         super().__init__(
-            name=name, func=func, description=description, coroutine=coroutine, **kwargs
+            name=name,
+            func=func,
+            description=description,
+            coroutine=coroutine,
+            **kwargs,
         )
-
         self.requires_context = requires_context
         self.requires_authorization = requires_authorization
         self.worldwide = worldwide
@@ -99,7 +104,7 @@ class CustomTool(Tool):
                 },
             )
 
-            llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0.1)
+            llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
 
             tool_usage_reflection = await llm.get_chat_completion(
                 reaction_prompter.prompt,
@@ -121,18 +126,18 @@ class CustomTool(Tool):
 
 
 def load_built_in_tool(
-    tool: str,
+    tool_name: ToolName,
     tool_usage_description: str,
     worldwide=True,
     requires_authorization=False,
     tool_usage_summarization_prompt: Optional[PromptString] = None,
 ) -> CustomTool:
-    tools = load_tools(tool_names=[tool], llm=OpenAI())
+    tools = load_tools(tool_names=[tool_name.value], llm=OpenAI())
 
     tool = tools[0]
 
     return CustomTool(
-        name=tool.name,
+        name=tool_name,
         func=tool.run,
         description=tool.description,
         worldwide=worldwide,
@@ -144,8 +149,12 @@ def load_built_in_tool(
     )
 
 
+SERPAPI_KEY = os.environ.get("SERPAPI_KEY")
+WOLFRAM_ALPHA_APPID = os.environ.get("WOLFRAM_ALPHA_APPID")
+
+
 def get_tools(
-    tools: List[ToolName],
+    tools: list[ToolName],
     context: WorldContext,
     agent_id: str | UUID,
     include_worldwide=False,
@@ -161,22 +170,29 @@ def get_tools(
     # names of other agents at location
     other_agent_names = ", ".join([a["full_name"] for a in other_agents])
 
+    SEARCH_ENABLED = bool(os.getenv("SERPAPI_KEY"))
+    WOLFRAM_ENABLED = bool(os.getenv("WOLFRAM_ALPHA_APPID"))
+
     TOOLS: dict[ToolName, CustomTool] = {
         ToolName.SEARCH: CustomTool(
-            name="search",
-            func=GoogleSearchAPIWrapper().run,
-            description="useful for when you need to search for information you do not know. the input to this should be a single search term.",
+            name=ToolName.SPEAK.value,
+            func=SerpAPIWrapper().run,
+            description="search the web for information. input should be the search query.",
+            coroutine=SerpAPIWrapper().arun,
             tool_usage_summarization_prompt="You have just searched Google with the following search input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
             tool_usage_description="To make progress on their plans, {agent_full_name} searched Google and realised the following: {tool_usage_reflection}.",
-            requires_context=False,
             requires_authorization=False,
+            requires_context=True,
+            args_schema=SpeakToolInput,
             worldwide=True,
-        ),
+        )
+        if SEARCH_ENABLED
+        else None,
         ToolName.SPEAK: CustomTool(
             name="speak",
             func=send_message_sync,
             coroutine=send_message_async,
-            description=f"say something in the {location_name}. The following people are also in the {location_name} and are the only people who will hear what you say: [{other_agent_names}] You can say something to everyone in the {location_name}, or address a specific person at your location. Input should be a json string with two keys: \"recipient\" and \"message\". The value of \"recipient\" should be a string of the recipients name or \"everyone\" if speaking to everyone, and the value of \"message\" should be a string. If you are waiting for a response, just keep using the 'wait' tool.",
+            description=f'say something in the {location_name}. The following people are also in the {location_name} and are the only people who will hear what you say: [{other_agent_names}] You can say something to everyone in the {location_name}, or address a specific person at your location. Input should be a json string with two keys: "recipient" and "message". The value of "recipient" should be a string of the recipients name or "everyone" if speaking to everyone, and the value of "message" should be a string. If you are waiting for a response, just keep using the \'wait\' tool.',
             tool_usage_description="To make progress on their plans, {agent_full_name} spoke to {recipient_full_name}.",
             requires_context=True,
             args_schema=SpeakToolInput,
@@ -184,7 +200,7 @@ def get_tools(
             worldwide=True,
         ),
         ToolName.WAIT: CustomTool(
-            name="wait",
+            name=ToolName.WAIT.value,
             func=wait_sync,
             coroutine=wait_async,
             description="Useful for when you are waiting for something to happen. Input a very detailed description of what exactly you are waiting for. Start your input with 'I am waiting for...' (e.g. I am waiting for any type of meeting to start in the conference room).",
@@ -193,15 +209,20 @@ def get_tools(
             requires_authorization=False,
             worldwide=True,
         ),
-        ToolName.WOLFRAM_APLHA: load_built_in_tool(
-            "wolfram-alpha",
+        ToolName.WOLFRAM_APLHA: CustomTool(
+            name=ToolName.WOLFRAM_APLHA.value,
+            description="A wrapper around Wolfram Alpha. Useful for when you need to answer questions about Math, Science, Technology, Culture, Society and Everyday Life. Input should be a search query.",
+            func=WolframAlphaAPIWrapper().run,
             requires_authorization=False,
             worldwide=True,
+            requires_context=False,
             tool_usage_summarization_prompt="You have just used Wolphram Alpha with the following input: {tool_input} and got the following result {tool_result}. Write a single sentence with useful information about how the result can help you accomplish your plan: {plan_description}.",
             tool_usage_description="In order to make progress on their plans, {agent_full_name} used Wolphram Alpha and realised the following: {tool_usage_reflection}.",
-        ),
+        )
+        if WOLFRAM_ENABLED
+        else None,
         ToolName.HUMAN: CustomTool(
-            name="human",
+            name=ToolName.HUMAN.value,
             func=ask_human,
             coroutine=ask_human_async,
             description=(
@@ -259,7 +280,12 @@ Input should be a json string with one key: "query". The value of "query" should
         ),
     }
 
-    if not include_worldwide:
-        return [TOOLS[tool] for tool in tools]
-
-    return [tool for tool in TOOLS.values() if (tool.name in tools or tool.worldwide)]
+    return [
+        tool
+        for tool in TOOLS.values()
+        if tool
+        and (
+            tool.name in [t.value for t in tools]
+            or (tool.worldwide and include_worldwide)
+        )
+    ]

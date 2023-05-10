@@ -34,7 +34,6 @@ from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
-from ..world.context import WorldContext
 from .message import AgentMessage, get_conversation_history
 from .plans import PlanStatus, SinglePlan
 
@@ -68,10 +67,6 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         kwargs["tool_names"] = ", ".join([tool.name for tool in self.tools])
 
         formatted = self.template.format(**kwargs)
-
-        print(
-            f"CUSTOM PROMPT TEMPLATE:\n\n---------------------\n{formatted}\n-----------------------\n\n"
-        )
 
         return [HumanMessage(content=formatted)]
 
@@ -196,7 +191,7 @@ class PlanExecutor(BaseModel):
         )
 
         # set up a simple completion llm
-        llm = ChatModel(model_name=DEFAULT_SMART_MODEL, temperature=0.2).defaultModel
+        llm = ChatModel(model_name=DEFAULT_SMART_MODEL, temperature=0).defaultModel
 
         # LLM chain consisting of the LLM and a prompt
         llm_chain = LLMChain(llm=llm, prompt=prompt)
@@ -298,13 +293,16 @@ class PlanExecutor(BaseModel):
 
         # Else, the response is an AgentAction
         try:
+            formatted_tool_name = response.tool.lower().replace(" ", "-")
             tool = get_tools(
-                [ToolName(response.tool.lower())],
+                [ToolName(formatted_tool_name)],
                 context=self.context,
                 agent_id=self.agent_id,
             )[0]
         except ValueError:
-            raise ValueError(f"Tool: '{response.tool}' is not found in tool list")
+            raise ValueError(f"Tool: '{formatted_tool_name}' is not found in tool list")
+        except IndexError:
+            raise ValueError(f"Tool: '{formatted_tool_name}' is not found in tool list")
 
         tool_context = ToolContext(
             agent_id=self.agent_id,

@@ -5,9 +5,11 @@ from uuid import UUID, uuid4
 
 import pytz
 from pydantic import BaseModel, Field, validator
+from src.utils.database.base import Tables
+
+from src.utils.database.client import get_database
 
 from ..location.base import Location
-from ..utils.database.client import supabase
 from .message import AgentMessage
 
 
@@ -74,11 +76,9 @@ class SinglePlan(BaseModel):
 
     @classmethod
     async def from_id(cls, id: UUID):
-        (_, data), (_, count) = (
-            await supabase.table("Plans").select("*").eq("id", str(id)).execute()
-        )
+        data = await (await get_database()).get_by_id(Tables.Plan, id)
 
-        if not count:
+        if len(data) == 0:
             raise ValueError(f"Plan with id {id} does not exist")
 
         plan_data = data[0]
@@ -88,10 +88,7 @@ class SinglePlan(BaseModel):
         return cls(**plan_data)
 
     async def delete(self):
-        data, count = (
-            await supabase.table("Plans").delete().eq("id", str(self.id)).execute()
-        )
-        return data
+        return await (await get_database()).get_by_id(Tables.Plan, str(self.id))
 
     def _db_dict(self):
         row = {

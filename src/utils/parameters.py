@@ -2,7 +2,10 @@
 import os
 from enum import Enum
 
+from .config import load_config
 from .model_name import ChatModelName
+
+config = load_config()
 
 
 class HumanMode(Enum):
@@ -17,8 +20,8 @@ SIMILARITY_WEIGHT = 1
 IMPORTANCE_WEIGHT = 1
 REFLECTION_MEMORY_COUNT = 50
 PLAN_LENGTH = "24 hours"
-DEFAULT_LOCATION_ID = os.getenv("DEFAULT_LOCATION_ID")
-DEFAULT_WORLD_ID = os.getenv("DEFAULT_WORLD_ID")
+DEFAULT_LOCATION_ID = config.default_location_id
+DEFAULT_WORLD_ID = config.world_id
 ANNOUNCER_DISCORD_TOKEN = os.getenv("ANNOUNCER_DISCORD_TOKEN")
 
 DEFAULT_SMART_MODEL = (
@@ -27,6 +30,10 @@ DEFAULT_SMART_MODEL = (
 )
 DEFAULT_FAST_MODEL = ChatModelName.TURBO
 HUMAN_MODE = HumanMode.DISCORD
+
+
+# Tools
+DISCORD_ENABLED = bool(os.getenv("DISCORD_TOKEN"))
 
 
 ## DISCORD CHANNEL IDS

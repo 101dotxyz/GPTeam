@@ -13,7 +13,7 @@ db-seed = "src.utils.database.seed:main"
 db-seed-small = "src.utils.database.seed:main_small"
 
 [tool.poetry.dependencies]
-python = ">=3.11"
+python = ">=3.8.1,<3.12"
 quart = {extras = ["dotenv"], version = "^0.18.3"}
 colorama = "^0.4.6"
 python-dotenv = "^1.0.0"

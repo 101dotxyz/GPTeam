@@ -207,33 +207,6 @@ class AgentMessage(BaseModel):
 
         return event
 
-    # Given a message, get the relevant chat history
-    async def get_chat_history(self) -> str:
-        """Gets the relevant chat history for a particular message."""
-
-        # get all the messages sent at the location
-        (
-            recent_message_events_at_location,
-            _,
-        ) = await self.context.events_manager.get_events(
-            type=EventType.MESSAGE,
-            location_id=self.location.id,
-        )
-
-        messages = [
-            AgentMessage.from_event(event, self.context)
-            for event in recent_message_events_at_location
-        ]
-
-        # sort the messages by timestamp, with the newest messages last
-        messages.sort(key=lambda x: x.timestamp)
-
-        formatted_messages = [
-            f"{m.sender_name}: {m.content} @ {m.timestamp}" for m in messages
-        ]
-
-        return "\n".join(formatted_messages)
-
     def __str__(self):
         if self.recipient_name is None:
             return f"[{self.location.name}] {self.sender_name}: {self.content}"
@@ -253,25 +226,18 @@ def get_latest_messages(messages: list[AgentMessage]) -> list[AgentMessage]:
 
 
 async def get_conversation_history(
-    location_id: UUID | str,
+    agent_id: UUID | str,
     context: WorldContext,
-    message: Optional[AgentMessage] = None,
 ) -> str:
     """Gets up to 20 messages from the location. If a message is provided, only gets messages from that agent."""
-    if isinstance(location_id, str):
-        location_id = UUID(location_id)
+    if isinstance(agent_id, str):
+        agent_id = UUID(agent_id)
 
-    # get all the messages sent at the location
+    # get all the messages sent at the location witnessed by the agent_id
     (message_events, _) = await context.events_manager.get_events(
         type=EventType.MESSAGE,
-        location_id=location_id,
-        agent_id=message.sender_id if message is not None else None,
+        witness_ids = [agent_id],
     )
-
-    # if message is not None:
-    #     message_events = [
-    #         event for event in message_events if (event.agent_id == message.sender_id or event.agent_id == message.recipient_id)
-    #     ]
 
     messages = [AgentMessage.from_event(event, context) for event in message_events]
 

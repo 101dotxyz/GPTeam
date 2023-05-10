@@ -9,8 +9,8 @@ from uuid import UUID, uuid4
 import pytz
 from pydantic import BaseModel, Field
 from sqlalchemy import desc
-from src.utils.database.base import Tables
 
+from src.utils.database.base import Tables
 from src.utils.database.client import get_database
 
 from ..utils.colors import LogColor
@@ -81,6 +81,9 @@ class Event(BaseModel):
 
         if witness_ids is None:
             witness_ids = []
+
+        if agent_id is not None and agent_id not in witness_ids:
+            witness_ids.append(agent_id)
 
         subtype = Subtype(subtype) if subtype is not None else None
         if (
@@ -171,8 +174,9 @@ class EventsManager(BaseModel):
 
     @classmethod
     async def from_world_id(cls, world_id: str):
-
-        data = await (await get_database()).get_recent_events(world_id, RECENT_EVENTS_BUFFER)
+        data = await (await get_database()).get_recent_events(
+            world_id, RECENT_EVENTS_BUFFER
+        )
         recent_events = [
             Event(
                 type=EventType(event["type"]),
@@ -192,11 +196,15 @@ class EventsManager(BaseModel):
         )
 
     async def refresh_events(self) -> None:
+        """Gathers the last RECENT_EVENTS_BUFFER events from the database and updates the self.recent_events list"""
+
         started_checking_events = datetime.now(pytz.utc)
 
         async with self.refresh_lock:
             print("Refreshing events...")
-            data = await (await get_database()).get_recent_events(self.world_id, RECENT_EVENTS_BUFFER)
+            data = await (await get_database()).get_recent_events(
+                self.world_id, RECENT_EVENTS_BUFFER
+            )
 
             events = [
                 Event(
@@ -232,11 +240,16 @@ class EventsManager(BaseModel):
             Tables.Agents, "location_id", str(event.location_id)
         )
 
-        event.witness_ids = [witness["id"] for witness in witness_data]
+        event.witness_ids.extend(
+            [
+                UUID(witness["id"])
+                for witness in witness_data
+                if witness["id"] != event.agent_id
+            ]
+        )
 
         await database.insert(Tables.Events, event.db_dict())
 
-        print("New event added to db")
         # add event to local events list
         self.recent_events.append(event)
 

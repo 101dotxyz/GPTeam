@@ -236,9 +236,6 @@ class PlanExecutor(BaseModel):
         return await self.execute(tools)
 
     async def execute(self, tools: list[CustomTool]) -> str:
-        # Refresh the events
-        await self.context.events_manager.refresh_events()
-
         if self.plan is None:
             raise ValueError("No plan set")
 
@@ -252,9 +249,7 @@ class PlanExecutor(BaseModel):
 
         # Make the conversation history
         conversation_history = await get_conversation_history(
-            self.context.get_agent_location_id(self.agent_id),
-            self.context,
-            self.message_to_respond_to,
+            self.context.get_agent_location_id(self.agent_id), self.context
         )
 
         # Make the relevant memories string

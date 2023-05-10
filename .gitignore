@@ -164,6 +164,6 @@ logs/
 # shell scripts
 start.sh
 
-#random stuff
 database.db
 vectors.pickle.gz
+agents/*.txt

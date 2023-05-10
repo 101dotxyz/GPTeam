@@ -13,7 +13,7 @@ CREATE TABLE "public"."Agents" (
     "authorized_tools" text[],
     "directives" text[],
     "world_id" uuid,
-    "last_checked_events" timestamp with time zone default now(),
+    "last_checked_events" timestamp with time zone,
     "ordered_plan_ids" uuid[],
     "location_id" uuid,
     "discord_bot_token" text,

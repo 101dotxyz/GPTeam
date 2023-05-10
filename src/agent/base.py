@@ -1109,16 +1109,7 @@ class Agent(BaseModel):
 
         return events
 
-    # async def write_to_file(self, data):
-    #     agents_folder = os.path.join(os.getcwd(), "agents")
-    #     if not os.path.exists(agents_folder):
-    #         os.makedirs(agents_folder)
-
-    #     file_path = os.path.join(agents_folder, f"{self.full_name}.txt")
-    #     with open(file_path, "a") as f:
-    #         f.write(data + "\n")
-
-    async def write_to_file(self):
+    async def write_progress_to_file(self):
         agents_folder = os.path.join(os.getcwd(), "agents")
         if not os.path.exists(agents_folder):
             os.makedirs(agents_folder)
@@ -1135,15 +1126,33 @@ class Agent(BaseModel):
 
         conversation_history = await get_conversation_history(self.id, self.context)
 
+        plans_to_do = [
+            "📆 " + plan.description
+            for plan in self.plans
+            if plan.status == PlanStatus.TODO
+        ]
+
+        current_plans = "\n".join(plans_to_do) if len(plans_to_do) > 0 else "No plans"
+
+        # Sort memories in reverse chronological order
+        sorted_memories = sorted(
+            self.memories, key=lambda m: m.created_at, reverse=True
+        )
+
+        memories = "\n".join(
+            [
+                f"{memory.created_at.replace(tzinfo=pytz.utc).strftime('%Y-%m-%d %H:%M:%S')}: {'👀' if memory.type == MemoryType.OBSERVATION else '💭'} {memory.description} (Importance: ${memory.importance})"
+                for memory in sorted_memories
+            ]
+        )
+
         with open(file_path, "w") as f:
             f.write(
-                f"👤 {self.full_name}\n\nCurrent Action:\n{plans_in_progress}\n\nLocation: {self.location.name}\n\nCurrent Conversation:\n{conversation_history}\n\nCurrent Plans: \n\nHistory:\n\n"
+                f"👤 {self.full_name}\n\nCurrent Action:\n{plans_in_progress}\n\nLocation: {self.location.name}\n\nCurrent Conversations:\n{conversation_history}\n\nCurrent Plans:\n{current_plans}\n\nHistory:\n{memories}\n"
             )
 
     async def run_for_one_step(self):
         print(f"{self.full_name}: RUNNING ONE STEP...")  # TIMC
-
-        await self.write_to_file()
 
         # Wait 5 seconds
         await asyncio.sleep(5)
@@ -1163,3 +1172,5 @@ class Agent(BaseModel):
         # Reflect, if we should
         if await self._should_reflect():
             await self._reflect()
+
+        await self.write_progress_to_file()

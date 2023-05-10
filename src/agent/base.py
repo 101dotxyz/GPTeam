@@ -28,8 +28,6 @@ from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
 from ..utils.parameters import (
-    DEFAULT_FAST_MODEL,
-    DEFAULT_LOCATION_ID,
     DEFAULT_SMART_MODEL,
     DEFAULT_WORLD_ID,
     DISCORD_ENABLED,

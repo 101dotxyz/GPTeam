@@ -38,7 +38,12 @@
             "directives": [
                 "Prepare for and run the company's daily standup meetings.",
                 "Make sure your employees are happy"
-            ]
+            ],
+            "initial_plan": {
+                "description": "Meet with Rebecca in the conference room and ask her how she is doing",
+                "stop_condition": "The meeting is over",
+                "location": "Conference Room"
+            }
         },
         {
             "first_name": "Rebecca",
@@ -48,7 +53,12 @@
                 "Make sure the employees are productive.",
                 "Make sure Marty is happy",
                 "Make sure the company is profitable."
-            ]
+            ],
+            "initial_plan": {
+                "description": "Join the team meeting in the conference room",
+                "stop_condition": "The meeting is over",
+                "location": "Conference Room"
+            }
         },
         {
             "first_name": "Sam",
@@ -58,7 +68,12 @@
                 "Lead the engineering team and provide guidance and support.",
                 "Ensure the quality and timely delivery of the company's products.",
                 "Collaborate with other departments to drive innovation."
-            ]
+            ],
+            "initial_plan": {
+                "description": "Conduct a code review session with the engineering team in the Work Zone",
+                "stop_condition": "The code review session is complete",
+                "location": "Work Zone"
+            }
         },
         {
             "first_name": "Oliver",
@@ -68,7 +83,12 @@
                 "Oversee the company's financial planning and budget management.",
                 "Ensure timely and accurate financial reporting.",
                 "Identify cost-saving opportunities and optimize resource allocation."
-            ]
+            ],
+            "initial_plan": {
+                "description": "Analyze the latest financial reports and prepare a budget update in the Break Room",
+                "stop_condition": "The budget update is prepared",
+                "location": "Work Zone"
+            }
         }
     ]
 }

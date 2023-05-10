@@ -173,9 +173,6 @@ def get_tools(
     SEARCH_ENABLED = bool(os.getenv("SERPAPI_KEY"))
     WOLFRAM_ENABLED = bool(os.getenv("WOLFRAM_ALPHA_APPID"))
 
-    print(f"SEARCH_ENABLED: {SEARCH_ENABLED}")
-    print(f"WOLFRAM_ENABLED: {WOLFRAM_ENABLED}")
-
     TOOLS: dict[ToolName, CustomTool] = {
         ToolName.SEARCH: CustomTool(
             name=ToolName.SPEAK,

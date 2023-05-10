@@ -1,12 +1,17 @@
 import os
 
+import dotenv
+
 from src.utils.database.sqlite import SqliteDatabase
 
-config_value = os.getenv("DATABASE_PROVIDER", "sqlite")
+dotenv.load_dotenv()
+
+database_provider = os.getenv("DATABASE_PROVIDER", "sqlite")
+
 
 database_class = SqliteDatabase
 
-if config_value == "supabase":
+if database_provider == "supabase":
     from src.utils.database.supabase import SupabaseDatabase
 
     database_class = SupabaseDatabase

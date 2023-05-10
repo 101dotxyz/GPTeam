@@ -54,14 +54,14 @@ class SupabaseDatabase(DatabaseProviderSingleton):
             return (
                 await self.client.table(table.value)
                 .select("*")
-                .contains(field, value)
+                .contains(field, [value])
                 .limit(limit)
                 .execute()
             ).data
         return (
             await self.client.table(table.value)
             .select("*")
-            .contains(field, value)
+            .contains(field, [value])
             .execute()
         ).data
 

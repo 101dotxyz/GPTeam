@@ -213,7 +213,7 @@ class Agent(BaseModel):
         # get all the plans in db that are in the agent's plan list
         plans_data = await database.get_by_ids(Tables.Plans, agent["ordered_plan_ids"])
         ordered_plans_data = sorted(
-            plans_data[1], key=lambda plan: agent["ordered_plan_ids"].index(plan["id"])
+            plans_data, key=lambda plan: agent["ordered_plan_ids"].index(plan["id"])
         )
 
         locations_data = await database.get_by_field(

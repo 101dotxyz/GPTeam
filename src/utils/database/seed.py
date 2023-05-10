@@ -49,7 +49,7 @@ agents = [
         "public_bio": agent.public_bio,
         "directives": agent.directives,
         "authorized_tools": [],
-        "ordered_plan_ids": [],
+        "ordered_plan_ids": [seed_uuid(f"agent-{agent.id}-initial-plan")],
         "world_id": config.world_id,
         "location_id": random.choice(locations)["id"],
         "discord_bot_token": os.environ.get(

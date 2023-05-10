@@ -188,6 +188,17 @@ def get_tools(
         )
         if SEARCH_ENABLED
         else None,
+        ToolName.SPEAK: CustomTool(
+            name="speak",
+            func=send_message_sync,
+            coroutine=send_message_async,
+            description=f'say something in the {location_name}. The following people are also in the {location_name} and are the only people who will hear what you say: [{other_agent_names}] You can say something to everyone in the {location_name}, or address a specific person at your location. Input should be a json string with two keys: "recipient" and "message". The value of "recipient" should be a string of the recipients name or "everyone" if speaking to everyone, and the value of "message" should be a string. If you are waiting for a response, just keep using the \'wait\' tool.',
+            tool_usage_description="To make progress on their plans, {agent_full_name} spoke to {recipient_full_name}.",
+            requires_context=True,
+            args_schema=SpeakToolInput,
+            requires_authorization=False,
+            worldwide=True,
+        ),
         ToolName.WAIT: CustomTool(
             name=ToolName.WAIT.value,
             func=wait_sync,

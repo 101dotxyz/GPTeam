@@ -36,8 +36,11 @@ class SingleMemory(BaseModel):
 
     @property
     def recency(self) -> float:
+        if self.last_accessed.tzinfo is None:
+            self.last_accessed = pytz.utc.localize(self.last_accessed)
+
         last_retrieved_hours_ago = (
-            datetime.now(tz=pytz.utc) - self.last_accessed
+            datetime.now(pytz.utc) - self.last_accessed
         ) / timedelta(hours=1 / TIME_SPEED_MULTIPLIER)
 
         decay_factor = 0.99
@@ -102,8 +105,6 @@ class SingleMemory(BaseModel):
             ],
         }
 
-
-
     # Customize the printing behavior
     def __str__(self):
         return f"[{self.type.name}] - {self.description} ({round(self.importance, 1)})"
@@ -122,15 +123,18 @@ class SingleMemory(BaseModel):
             + RECENCY_WEIGHT * self.recency
         )
 
+
 class RelatedMemory(BaseModel):
     memory: SingleMemory
     relevance: float
 
     def __str__(self) -> str:
         return f"SingleMemory: {self.memory.description}, Relevance: {self.relevance}"
-    
 
-async def get_relevant_memories(query: str, memories: list[SingleMemory], k: int = 5) -> list[SingleMemory]:
+
+async def get_relevant_memories(
+    query: str, memories: list[SingleMemory], k: int = 5
+) -> list[SingleMemory]:
     """Returns a list of the top k most relevant NON MESSAGE memories, based on the query string"""
 
     memories_with_relevance = [

@@ -39,7 +39,12 @@ from ..utils.prompt import Prompter, PromptString
 from ..world.context import WorldContext
 from .executor import PlanExecutor, PlanExecutorResponse
 from .importance import ImportanceRatingResponse
-from .message import AgentMessage, LLMMessageResponse, get_latest_messages
+from .message import (
+    AgentMessage,
+    LLMMessageResponse,
+    get_conversation_history,
+    get_latest_messages,
+)
 from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
@@ -1104,6 +1109,56 @@ class Agent(BaseModel):
 
         return events
 
+    async def write_progress_to_file(self):
+        agents_folder = os.path.join(os.getcwd(), "agents")
+        if not os.path.exists(agents_folder):
+            os.makedirs(agents_folder)
+
+        file_path = os.path.join(agents_folder, f"{self.full_name}.txt")
+
+        plans_in_progress = [
+            "🏃‍♂️ " + plan.description
+            for plan in self.plans
+            if plan.status == PlanStatus.IN_PROGRESS
+        ]
+
+        current_action = (
+            "\n".join(plans_in_progress) if len(plans_in_progress) > 0 else "No actions"
+        )
+
+        conversation_history = await get_conversation_history(self.id, self.context)
+
+        current_conversations = (
+            conversation_history
+            if conversation_history != ""
+            else "No current conversations"
+        )
+
+        plans_to_do = [
+            "📆 " + plan.description
+            for plan in self.plans
+            if plan.status == PlanStatus.TODO
+        ]
+
+        current_plans = "\n".join(plans_to_do) if len(plans_to_do) > 0 else "No plans"
+
+        # Sort memories in reverse chronological order
+        sorted_memories = sorted(
+            self.memories, key=lambda m: m.created_at, reverse=True
+        )
+
+        memories = "\n".join(
+            [
+                f"{memory.created_at.replace(tzinfo=pytz.utc).strftime('%Y-%m-%d %H:%M:%S')}: {'👀' if memory.type == MemoryType.OBSERVATION else '💭'} {memory.description} (Importance: {memory.importance})"
+                for memory in sorted_memories
+            ]
+        )
+
+        with open(file_path, "w") as f:
+            f.write(
+                f"👤 {self.full_name}\n\nCurrent Action:\n{current_action}\n\nLocation: {self.location.name}\n\nCurrent Conversations:\n{conversation_history}\n\nCurrent Plans:\n{current_plans}\n\nHistory:\n{memories}\n"
+            )
+
     async def run_for_one_step(self):
         print(f"{self.full_name}: RUNNING ONE STEP...")  # TIMC
 
@@ -1125,3 +1180,5 @@ class Agent(BaseModel):
         # Reflect, if we should
         if await self._should_reflect():
             await self._reflect()
+
+        await self.write_progress_to_file()

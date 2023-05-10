@@ -16,23 +16,9 @@ def is_poetry_installed():
 
 
 def install_poetry():
-    if os_type == "Windows":
-        install_cmd = "powershell (Invoke-WebRequest -Uri https://install.python-poetry.org/preview/ -UseBasicParsing).Content | python -"
-    else:
-        install_cmd = "curl -sSL https://install.python-poetry.org | python3 -"
+    install_cmd = "curl -sSL https://install.python-poetry.org | python3 -"
 
     os.system(install_cmd)
-
-    if os_type == "Windows":
-        poetry_bin_path = os.path.expanduser("~\\AppData\\Roaming\\Python\\Scripts")
-    else:
-        poetry_bin_path = os.path.expanduser("~/.local/bin")
-
-    if poetry_bin_path not in os.environ["PATH"]:
-        if os_type == "Windows":
-            os.environ["PATH"] = f"{poetry_bin_path};{os.environ['PATH']}"
-        else:
-            os.environ["PATH"] = f"{poetry_bin_path}:{os.environ['PATH']}"
 
 
 if __name__ == "__main__":

@@ -20,6 +20,17 @@ def install_poetry():
 
     os.system(install_cmd)
 
+    if os_type == "Windows":
+        poetry_bin_path = os.path.expanduser("~\\AppData\\Roaming\\Python\\Scripts")
+    else:
+        poetry_bin_path = os.path.expanduser("~/.local/bin")
+
+    if poetry_bin_path not in os.environ["PATH"]:
+        if os_type == "Windows":
+            os.environ["PATH"] = f"{poetry_bin_path};{os.environ['PATH']}"
+        else:
+            os.environ["PATH"] = f"{poetry_bin_path}:{os.environ['PATH']}"
+
 
 if __name__ == "__main__":
     os_type = platform.system()

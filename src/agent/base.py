@@ -49,7 +49,8 @@ from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
 
-SUMMARIZE_ACTIVITY_INTERVAL = 20 # seconds
+SUMMARIZE_ACTIVITY_INTERVAL = 20  # seconds
+
 
 class Agent(BaseModel):
     id: UUID
@@ -686,7 +687,7 @@ class Agent(BaseModel):
         )
 
         # Get a summary of the recent activity
-        if (datetime.now() - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
+        if (datetime.now(tz=pytz.utc) - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
             recent_activity = await self._summarize_activity()
         else:
             recent_activity = self.recent_activity
@@ -875,7 +876,7 @@ class Agent(BaseModel):
         )
 
         # Get a summary of the recent activity
-        if (datetime.now() - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
+        if (datetime.now(tz=pytz.utc) - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
             recent_activity = await self._summarize_activity()
         else:
             recent_activity = self.recent_activity

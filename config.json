@@ -40,7 +40,7 @@
                 "Make sure your employees are happy"
             ],
             "initial_plan": {
-                "description": "Go to the Conference Room and sing a funny song to yourself",
+                "description": "Go to the Conference Room and sing a funny song to yourself out loud",
                 "stop_condition": "You've been singing for 5 minutes",
                 "location": "Conference Room"
             }
@@ -55,7 +55,7 @@
                 "Make sure the company is profitable."
             ],
             "initial_plan": {
-                "description": "Go to the work zone and start singing a song to yourself",
+                "description": "Go to the work zone and start singing a song to yourself out loud",
                 "stop_condition": "You've been singing for 5 minutes",
                 "location": "Work Zone"
             }

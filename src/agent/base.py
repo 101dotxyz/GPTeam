@@ -52,6 +52,8 @@ from .reflection import ReflectionQuestions, ReflectionResponse
 SUMMARIZE_ACTIVITY_INTERVAL = 20  # seconds
 
 
+
+
 class Agent(BaseModel):
     id: UUID
     full_name: str
@@ -899,7 +901,7 @@ class Agent(BaseModel):
                     f"{index}. {event.description}"
                     for index, event in enumerate(events)
                 ],
-                "conversation_history": get_conversation_history(self.id, self.context),
+                "conversation_history": await get_conversation_history(self.id, self.context),
             },
         )
 

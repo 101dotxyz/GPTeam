@@ -49,7 +49,8 @@ from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
 
-SUMMARIZE_ACTIVITY_INTERVAL = 20 # seconds
+SUMMARIZE_ACTIVITY_INTERVAL = 20  # seconds
+
 
 class Agent(BaseModel):
     id: UUID

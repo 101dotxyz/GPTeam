@@ -61,6 +61,11 @@ class DatabaseProviderSingleton(AbstractSingleton):
         pass
 
     @abc.abstractmethod
+    async def get_messages_by_discord_id(self, discord_id: str) -> list[dict[str, Any]]:
+        """get messages by discord id"""
+        pass
+
+    @abc.abstractmethod
     async def insert(self, table: Tables, data: dict, upsert=False) -> None:
         """insert a row"""
         pass

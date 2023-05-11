@@ -1,7 +1,7 @@
 from src.agent.message import AgentMessage
 from src.event.base import MessageEventSubtype
 from src.tools.context import ToolContext
-from src.utils.parameters import DISCORD_ENABLED, HUMAN_MODE, HumanMode
+from src.utils.parameters import DISCORD_ENABLED
 
 from ..utils.discord import send_message as send_discord_message
 from ..utils.discord import send_message_async as send_discord_message_async
@@ -13,7 +13,7 @@ def _print_func(text: str) -> None:
 
 
 async def ask_human_async(agent_input: str, tool_context: ToolContext):
-    if HUMAN_MODE == HumanMode.DISCORD:
+    if DISCORD_ENABLED:
         # Make an AgentMessage object
         agent_message = AgentMessage.from_agent_input(
             agent_input,
@@ -22,21 +22,20 @@ async def ask_human_async(agent_input: str, tool_context: ToolContext):
             type=MessageEventSubtype.AGENT_TO_HUMAN,
         )
 
-        if DISCORD_ENABLED:
-            # get the appropriate discord token
-            discord_token = tool_context.context.get_discord_token(
-                agent_message.sender_id
-            )
+        # get the appropriate discord token
+        discord_token = tool_context.context.get_discord_token(
+            agent_message.sender_id
+        )
 
-            # now time to send the message in discord
-            discord_message = await send_discord_message_async(
-                discord_token,
-                tool_context.context.get_channel_id(agent_message.location.id),
-                agent_message.get_event_message(),
-            )
+        # now time to send the message in discord
+        discord_message = await send_discord_message_async(
+            discord_token,
+            tool_context.context.get_channel_id(agent_message.location.id),
+            agent_message.get_event_message(),
+        )
 
-            # add the discord id to the agent message
-            agent_message.discord_id = str(discord_message.id)
+        # add the discord id to the agent message
+        agent_message.discord_id = str(discord_message.id)
 
         # Covert the AgentMessage to an event
         event = agent_message.to_event()
@@ -50,7 +49,7 @@ async def ask_human_async(agent_input: str, tool_context: ToolContext):
 
 
 def ask_human(agent_input: str, tool_context: ToolContext):
-    if HUMAN_MODE == HumanMode.DISCORD:
+    if DISCORD_ENABLED:
         # Make an AgentMessage object
         agent_message = AgentMessage.from_agent_input(
             agent_input,

@@ -686,7 +686,7 @@ class Agent(BaseModel):
         )
 
         # Get a summary of the recent activity
-        if (datetime.now() - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
+        if (datetime.now(pytz.utc) - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
             recent_activity = await self._summarize_activity()
         else:
             recent_activity = self.recent_activity
@@ -875,7 +875,7 @@ class Agent(BaseModel):
         )
 
         # Get a summary of the recent activity
-        if (datetime.now() - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
+        if (datetime.now(pytz.utc) - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
             recent_activity = await self._summarize_activity()
         else:
             recent_activity = self.recent_activity

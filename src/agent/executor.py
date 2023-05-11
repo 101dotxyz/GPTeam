@@ -334,7 +334,7 @@ class PlanExecutor(BaseModel):
             executor_response = PlanExecutorResponse(
                 status=PlanStatus.IN_PROGRESS,
                 output=result,
-                tool=tool,
+                tool=None,
                 scratchpad=self.intermediate_steps_to_list(intermediate_steps),
                 tool_input=str(response.tool_input),
             )

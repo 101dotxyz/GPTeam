@@ -25,7 +25,7 @@ async def get_embedding(text: str, model="text-embedding-ada-002", max_retries=3
             embedding = response["data"][0]["embedding"]
 
             return np.array(embedding)
-        except openai.error.APIConnectionError as e:
+        except Exception as e:
             if attempt < max_retries - 1:
                 await asyncio.sleep(1)  # Wait for 1 second before retrying
             else:

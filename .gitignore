@@ -167,3 +167,5 @@ start.sh
 database.db
 vectors.pickle.gz
 agents/*.txt
+discord_server.out
+discord_server_errors.out

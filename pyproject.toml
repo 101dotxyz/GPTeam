@@ -10,6 +10,7 @@ packages = [{include = "src"}]
 start = "src:run"
 world = "src.main:main"
 db-seed = "src.utils.database.seed:main"
+db-seed-small = "src.utils.database.seed:main_small"
 db-reset = "src.utils.database.reset:main"
 
 [tool.poetry.dependencies]

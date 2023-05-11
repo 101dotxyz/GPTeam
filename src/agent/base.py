@@ -510,7 +510,7 @@ class Agent(BaseModel):
         await self._update_agent_row(),
 
         if DISCORD_ENABLED:
-            announce_bot_move(
+            await announce_bot_move(
                 self.full_name, old_location.channel_id, location.channel_id
             ),
 

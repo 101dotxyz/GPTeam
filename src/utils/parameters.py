@@ -8,11 +8,6 @@ from .model_name import ChatModelName
 config = load_config()
 
 
-class HumanMode(Enum):
-    DISCORD = "discord"
-    STDIN = "stdin"
-
-
 TIME_SPEED_MULTIPLIER = 1000
 # Memory
 RECENCY_WEIGHT = 1
@@ -29,11 +24,10 @@ DEFAULT_SMART_MODEL = (
     ChatModelName.GPT4
 )
 DEFAULT_FAST_MODEL = ChatModelName.TURBO
-HUMAN_MODE = HumanMode.DISCORD
 
 
 # Tools
-DISCORD_ENABLED = True
+DISCORD_ENABLED = True if os.getenv("ANNOUNCER_DISCORD_TOKEN") is not None else False
 
 
 ## DISCORD CHANNEL IDS

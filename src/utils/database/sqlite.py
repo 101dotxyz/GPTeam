@@ -110,6 +110,13 @@ class SqliteDatabase(DatabaseProviderSingleton):
         ) as cursor:
             return await cursor.fetchall()
 
+    async def get_messages_by_discord_id(self, discord_id: str) -> list[dict[str, Any]]:
+        async with self.client.execute(
+            f"select * from events where metadata is not null and metadata->>'$.discord_id' = ?",
+            (discord_id,),
+        ) as cursor:
+            return await cursor.fetchall()
+
     async def insert(
         self, table: Tables, data: dict | list[dict], upsert=False
     ) -> None:

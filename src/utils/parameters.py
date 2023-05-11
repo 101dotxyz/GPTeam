@@ -33,7 +33,7 @@ HUMAN_MODE = HumanMode.DISCORD
 
 
 # Tools
-DISCORD_ENABLED = bool(os.getenv("DISCORD_TOKEN"))
+DISCORD_ENABLED = True
 
 
 ## DISCORD CHANNEL IDS

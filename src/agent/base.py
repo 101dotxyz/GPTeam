@@ -49,6 +49,7 @@ from .plans import LLMPlanResponse, LLMSinglePlan, PlanStatus, SinglePlan
 from .react import LLMReactionResponse, Reaction
 from .reflection import ReflectionQuestions, ReflectionResponse
 
+SUMMARIZE_ACTIVITY_INTERVAL = 20 # seconds
 
 class Agent(BaseModel):
     id: UUID
@@ -57,6 +58,7 @@ class Agent(BaseModel):
     public_bio: str
     directives: Optional[list[str]]
     last_checked_events: datetime
+    last_summarized_activity: datetime
     memories: list[SingleMemory]
     plans: list[SinglePlan]
     authorized_tools: list[ToolName]
@@ -67,6 +69,7 @@ class Agent(BaseModel):
     location: Location
     discord_bot_token: str = None
     react_response: LLMReactionResponse = None
+    recent_activity: str = ''
 
     class Config:
         allow_underscore_names = True
@@ -80,12 +83,14 @@ class Agent(BaseModel):
         location: Location,
         directives: list[str] = None,
         last_checked_events: datetime = None,
+        last_summarized_activity: datetime = None,
         memories: list[SingleMemory] = [],
         plans: list[SinglePlan] = [],
         authorized_tools: list[ToolName] = [],
         id: Optional[str | UUID] = None,
         world_id: Optional[UUID] = DEFAULT_WORLD_ID,
         discord_bot_token: str = None,
+        recent_activity: str = '',
     ):
         if id is None:
             id = uuid4()
@@ -93,6 +98,8 @@ class Agent(BaseModel):
             id = UUID(id)
         if last_checked_events is None:
             last_checked_events = datetime.fromtimestamp(0, tz=pytz.utc)
+        if last_summarized_activity is None:
+            last_summarized_activity = datetime.fromtimestamp(0, tz=pytz.utc)
 
         # initialize the base model
         super().__init__(
@@ -102,6 +109,7 @@ class Agent(BaseModel):
             public_bio=public_bio,
             directives=directives,
             last_checked_events=last_checked_events,
+            last_summarized_activity=last_summarized_activity,
             authorized_tools=authorized_tools,
             memories=memories,
             plans=plans,
@@ -109,6 +117,7 @@ class Agent(BaseModel):
             location=location,
             context=context,
             discord_bot_token=discord_bot_token,
+            recent_activity=recent_activity,
         )
 
         print("\n\nAGENT INITIALIZED --------------------------\n")
@@ -418,6 +427,8 @@ class Agent(BaseModel):
             loading_text="🤔 Summarizing recent activity...",
         )
 
+        self.recent_activity = response
+
         return response
 
     def _log(
@@ -675,7 +686,10 @@ class Agent(BaseModel):
         )
 
         # Get a summary of the recent activity
-        recent_activity = await self._summarize_activity()
+        if (datetime.now() - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
+            recent_activity = await self._summarize_activity()
+        else:
+            recent_activity = self.recent_activity
 
         self._log("Recent Activity Summary", LogColor.PLAN, recent_activity)
 
@@ -860,6 +874,12 @@ class Agent(BaseModel):
             llm=ChatModel(temperature=0).defaultModel,
         )
 
+        # Get a summary of the recent activity
+        if (datetime.now() - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
+            recent_activity = await self._summarize_activity()
+        else:
+            recent_activity = self.recent_activity
+
         # Make the reaction prompter
         reaction_prompter = Prompter(
             PromptString.REACT,
@@ -868,7 +888,7 @@ class Agent(BaseModel):
                 "full_name": self.full_name,
                 "private_bio": self.private_bio,
                 "directives": str(self.directives),
-                "recent_activity": await self._summarize_activity(),
+                "recent_activity": recent_activity,
                 "current_plans": [
                     f"{index}. {plan.description}"
                     for index, plan in enumerate(self.plans)
@@ -878,6 +898,7 @@ class Agent(BaseModel):
                     f"{index}. {event.description}"
                     for index, event in enumerate(events)
                 ],
+                "conversation_history": get_conversation_history(self.id, self.context),
             },
         )
 
@@ -980,12 +1001,14 @@ class Agent(BaseModel):
             # update the plan in the db
             await self._upsert_plan_rows([plan])
 
-            tool_usage_summary = await resp.tool.summarize_usage(
-                plan_description=plan.description,
-                tool_input=resp.tool_input,
-                tool_result=resp.output,
-                agent_full_name=self.full_name,
-            )
+            # IF the tool use failed, there will be no tool object
+            if resp.tool:
+                tool_usage_summary = await resp.tool.summarize_usage(
+                    plan_description=plan.description,
+                    tool_input=resp.tool_input,
+                    tool_result=resp.output,
+                    agent_full_name=self.full_name,
+                )
 
             self._log("Action In Progress", LogColor.ACT, f"{plan.description}")
 

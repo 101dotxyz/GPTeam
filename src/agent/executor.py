@@ -228,6 +228,13 @@ class PlanExecutor(BaseModel):
             result.append((action, observation))
         return result
 
+    def failed_action_response(self, output: str) -> PlanExecutorResponse:
+        return PlanExecutorResponse(
+            status=PlanStatus.IN_PROGRESS,
+            output=output, 
+            scratchpad=[]
+        )
+
     async def start_or_continue_plan(
         self, plan: SinglePlan, tools: list[CustomTool]
     ) -> PlanExecutorResponse:
@@ -291,24 +298,49 @@ class PlanExecutor(BaseModel):
             else:
                 return PlanExecutorResponse(status=PlanStatus.DONE, output=output)
 
-        # Else, the response is an AgentAction
-        try:
-            formatted_tool_name = response.tool.lower().replace(" ", "-")
-            tool = get_tools(
-                [ToolName(formatted_tool_name)],
-                context=self.context,
-                agent_id=self.agent_id,
-            )[0]
-        except ValueError:
-            raise ValueError(f"Tool: '{formatted_tool_name}' is not found in tool list")
-        except IndexError:
-            raise ValueError(f"Tool: '{formatted_tool_name}' is not found in tool list")
-
+        # Get the tool context
         tool_context = ToolContext(
             agent_id=self.agent_id,
             context=self.context,
             memories=self.relevant_memories,
         )
+
+        # Clean the chosen tool name
+        formatted_tool_name = response.tool.lower().strip().replace(" ", "-")
+        
+        # Try to get the tool object
+        try:
+            tool = get_tools(
+                [ToolName(formatted_tool_name)],
+                context=self.context,
+                agent_id=self.agent_id,
+            )[0]
+        
+        # If failed to get tool, return a failure message
+        except Exception as e:
+            if not isinstance(e, ValueError) and not isinstance(e, IndexError):
+                raise e
+            
+            result = f"Tool: '{formatted_tool_name}' is not found in tool list"
+            
+            print_to_console(
+                f"{agent_name}: Action Response: ",
+                LogColor.THOUGHT,
+                result,
+            )
+
+            intermediate_steps.append((response, result))
+
+            executor_response = PlanExecutorResponse(
+                status=PlanStatus.IN_PROGRESS,
+                output=result,
+                tool=tool,
+                scratchpad=self.intermediate_steps_to_list(intermediate_steps),
+                tool_input=str(response.tool_input),
+            )
+
+            return executor_response
+
 
         result = await tool.run(response.tool_input, tool_context)
 

@@ -40,7 +40,6 @@ locations = [
     for location in config.locations
 ]
 
-
 agents = [
     {
         "id": agent.id,
@@ -58,6 +57,12 @@ agents = [
     }
     for agent in config.agents
 ]
+
+for agent in agents:
+    if agent["discord_bot_token"] is None:
+        raise ValueError(
+            f"Could not find discord bot token for agent {agent['full_name']}"
+        )
 
 # For now, allow all agents in all locations
 for location in locations:

@@ -250,7 +250,7 @@ class SqliteDatabase(DatabaseProviderSingleton):
             stop_condition TEXT,
             completed_at TIMESTAMP,
             scratchpad TEXT,
-            status TEXT DEFAULT 'todo' CHECK(status IN ('in_progress', 'todo', 'done')),
+            status TEXT DEFAULT 'todo' CHECK(status IN ('failed', 'in_progress', 'todo', 'done')),
             related_event_id TEXT,
             FOREIGN KEY (agent_id) REFERENCES agents (id)
         )

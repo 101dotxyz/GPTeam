@@ -64,6 +64,7 @@ class Event(BaseModel):
         id: Optional[UUID] = None,
         subtype: Optional[Subtype] = None,
         metadata: Optional[Any] = None,
+        witness_ids: list[UUID] = [],
         **kwargs: Any,
     ):
         if id is None:
@@ -77,6 +78,10 @@ class Event(BaseModel):
 
         if isinstance(agent_id, str):
             agent_id = UUID(agent_id)
+
+        for witness_id in witness_ids:
+            if isinstance(witness_id, str):
+                witness_id = UUID(witness_id)
 
         subtype = Subtype(subtype) if subtype is not None else None
         if (
@@ -95,6 +100,7 @@ class Event(BaseModel):
             agent_id=agent_id,
             location_id=location_id,
             metadata=metadata,
+            witness_ids=witness_ids,
         )
 
     def db_dict(self):
@@ -130,17 +136,6 @@ class Event(BaseModel):
             witness_ids=event["witness_ids"],
             metadata=event["metadata"],
         )
-
-    # @staticmethod
-    # def from_discord_message(message: DiscordMessage, witnesses: list[UUID]) -> "Event":
-    #     # parse user provided message into an event
-    #     # witnesses are all agents who were in the same location as the message
-    #     pass
-
-    # @staticmethod
-    # def from_agent_action(action: AgentAction, witnesses: list[UUID]) -> "Event":
-    #     # parse agent action into an event
-    #     pass
 
 
 RECENT_EVENTS_BUFFER = 500

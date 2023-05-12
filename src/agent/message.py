@@ -65,7 +65,7 @@ class AgentMessage(BaseModel):
             if "everyone" in recipient_name:
                 recipient_name = None
                 recipient_id = None
-                
+
             else:
                 try:
                     recipient_id = context.get_agent_id_from_name(recipient_name)
@@ -84,7 +84,7 @@ class AgentMessage(BaseModel):
                 timestamp=datetime.now(),
                 sender_name=agent_name,
             )
-        
+
         return cls(
             content=agent_input,
             sender_id=agent_id,
@@ -236,7 +236,7 @@ async def get_conversation_history(
     # get all the messages sent at the location witnessed by the agent_id
     (message_events, _) = await context.events_manager.get_events(
         type=EventType.MESSAGE,
-        witness_ids = [agent_id],
+        witness_ids=[agent_id],
     )
 
     messages = [AgentMessage.from_event(event, context) for event in message_events]

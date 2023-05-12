@@ -1,5 +1,5 @@
 {
-    "world_name": "AI Discord Server",
+    "world_name": "Arcadia Innovations",
     "locations": [
         {
             "name": "Lobby",
@@ -41,7 +41,7 @@
             ],
             "initial_plan": {
                 "description": "Go to the Conference Room and sing a funny song to yourself out loud",
-                "stop_condition": "You've been singing for 2 minutes",
+                "stop_condition": "You've finished singing the song.",
                 "location": "Conference Room"
             }
         },
@@ -55,9 +55,9 @@
                 "Make sure the company is profitable."
             ],
             "initial_plan": {
-                "description": "Go to the work zone and start singing a song to yourself out loud",
-                "stop_condition": "You've been singing for 2 minutes",
-                "location": "Work Zone"
+                "description": "Find out if the company is profitable.",
+                "stop_condition": "You know the revenue for 2022",
+                "location": "Conference Room"
             }
         }
     ]

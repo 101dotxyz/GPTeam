@@ -3,7 +3,7 @@ create extension if not exists "vector" with schema "extensions";
 
 create type "public"."memory_type" as enum ('reflection', 'observation');
 create type "public"."event_type" as enum ('non_message', 'message');
-create type "public"."plan_status" as enum ('in_progress', 'todo', 'done');
+create type "public"."plan_status" as enum ('failed', 'in_progress', 'todo', 'done');
 
 CREATE TABLE "public"."Agents" (
     "id" uuid DEFAULT uuid_generate_v4() NOT NULL,

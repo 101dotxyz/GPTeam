@@ -1,15 +1,19 @@
 import asyncio
-from multiprocessing import Process
 import os
+import subprocess
 import traceback
-import openai
+from multiprocessing import Process
 
+import openai
 from dotenv import load_dotenv
 
 from src.utils.database.client import get_database
 from src.utils.discord import discord_listener
 from src.world.base import World
 
+from .utils.colors import LogColor
+from .utils.database.base import Tables
+from .utils.formatting import print_to_console
 from .utils.logging import init_logging
 
 load_dotenv()
@@ -24,7 +28,17 @@ async def run_world():
         process.start()
         print("Started Discord listener")
 
-        world = await World.from_name("AI Discord Server")
+        database = await get_database()
+
+        worlds = await database.get_all(Tables.Worlds)
+
+        if len(worlds) == 0:
+            raise ValueError("No worlds found!")
+
+        world = await World.from_id(worlds[-1]["id"])
+
+        print_to_console(f"Welcome to {world.name}!", LogColor.GENERAL, "")
+
         await world.run()
     except Exception:
         print(traceback.format_exc())

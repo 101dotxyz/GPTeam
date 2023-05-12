@@ -37,7 +37,11 @@ async def run_world():
 
         world = await World.from_id(worlds[-1]["id"])
 
-        print_to_console(f"Welcome to {world.name}!", LogColor.GENERAL, "")
+        print_to_console(
+            f"Welcome to {world.name}!",
+            LogColor.ANNOUNCEMENT,
+            "\n",
+        )
 
         await world.run()
     except Exception:

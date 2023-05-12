@@ -28,6 +28,9 @@ To change the world, all you need to do is:
 2. Reset your database: `poetry run db-reset`
 3. Run the world again: `poetry run world`
 
+## Setting up the Discord Integration
+Read through the dedicated [Discord setup docs](DISCORD.md)
+
 ## Contributing
 
 We enthusiastically welcome contributions to GPTeam! To contribute, please follow these steps:

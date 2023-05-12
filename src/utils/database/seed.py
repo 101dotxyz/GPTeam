@@ -7,17 +7,9 @@ from src.utils.database.client import get_database
 
 from ..config import AgentConfig, load_config
 from ..general import seed_uuid
-from ..parameters import DISCORD_ENABLED, DiscordChannelId
+from ..parameters import DISCORD_ENABLED
 
 config = load_config()
-
-
-def get_channel_id(location_name: str):
-    location_name = location_name.upper().replace(" ", "_")
-    try:
-        return DiscordChannelId[location_name].value
-    except KeyError:
-        return None
 
 
 worlds = [
@@ -33,7 +25,9 @@ locations = [
         "world_id": config.world_id,
         "name": location.name,
         "description": location.description,
-        "channel_id": get_channel_id(location.name) if DISCORD_ENABLED else None,
+        "channel_id": os.environ.get(
+            f"{location.name.upper()}_CHANNEL_ID", None
+        ) if DISCORD_ENABLED else None,
         "allowed_agent_ids": [],
         "available_tools": [],
     }

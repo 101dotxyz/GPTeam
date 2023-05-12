@@ -41,7 +41,7 @@
             ],
             "initial_plan": {
                 "description": "Go to the Conference Room and sing a funny song to yourself out loud",
-                "stop_condition": "You've been singing for 5 minutes",
+                "stop_condition": "You've been singing for 2 minutes",
                 "location": "Conference Room"
             }
         },
@@ -56,7 +56,7 @@
             ],
             "initial_plan": {
                 "description": "Go to the work zone and start singing a song to yourself out loud",
-                "stop_condition": "You've been singing for 5 minutes",
+                "stop_condition": "You've been singing for 2 minutes",
                 "location": "Work Zone"
             }
         }

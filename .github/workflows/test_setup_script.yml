@@ -3,7 +3,7 @@ name: Test Setup Script
 on:
   push:
     branches:
-      - joshua/dev-59-setup-script
+      - main
   pull_request:
     branches:
       - main

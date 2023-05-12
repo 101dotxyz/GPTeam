@@ -230,9 +230,7 @@ class PlanExecutor(BaseModel):
 
     def failed_action_response(self, output: str) -> PlanExecutorResponse:
         return PlanExecutorResponse(
-            status=PlanStatus.IN_PROGRESS,
-            output=output, 
-            scratchpad=[]
+            status=PlanStatus.IN_PROGRESS, output=output, scratchpad=[]
         )
 
     async def start_or_continue_plan(
@@ -282,7 +280,7 @@ class PlanExecutor(BaseModel):
 
         for log in response.log.split("\n"):
             suffix = log.split(":")[0] if ":" in log else "Thought"
-            print_to_console(f"{agent_name}: {suffix}: ", LogColor.THOUGHT, log)
+            print_to_console(f"[{agent_name}] {suffix}: ", LogColor.THOUGHT, log)
 
         # If the agent is finished, return the output
         if isinstance(response, AgentFinish):
@@ -307,7 +305,7 @@ class PlanExecutor(BaseModel):
 
         # Clean the chosen tool name
         formatted_tool_name = response.tool.lower().strip().replace(" ", "-")
-        
+
         # Try to get the tool object
         try:
             tool = get_tools(
@@ -315,16 +313,16 @@ class PlanExecutor(BaseModel):
                 context=self.context,
                 agent_id=self.agent_id,
             )[0]
-        
+
         # If failed to get tool, return a failure message
         except Exception as e:
             if not isinstance(e, ValueError) and not isinstance(e, IndexError):
                 raise e
-            
+
             result = f"Tool: '{formatted_tool_name}' is not found in tool list"
-            
+
             print_to_console(
-                f"{agent_name}: Action Response: ",
+                f"[{agent_name}] Action Response: ",
                 LogColor.THOUGHT,
                 result,
             )
@@ -341,11 +339,10 @@ class PlanExecutor(BaseModel):
 
             return executor_response
 
-
         result = await tool.run(response.tool_input, tool_context)
 
         print_to_console(
-            f"{agent_name}: Action Response: ",
+            f"[{agent_name}] Action Response: ",
             LogColor.THOUGHT,
             result[:280] + "..." if len(result) > 280 else str(result),
         )

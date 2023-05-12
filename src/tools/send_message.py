@@ -62,10 +62,6 @@ async def send_message_async(recipient: str, message: str, tool_context: ToolCon
     # now add it to the events manager
     event = await tool_context.context.add_event(event)
 
-    #TIMC
-    print("Added new event to the events manager")
-    
-
     # Check that the recipient is in the room
     # TODO: for some reason this wasn't working as expected
 

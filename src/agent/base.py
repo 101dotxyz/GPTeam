@@ -299,14 +299,6 @@ class Agent(BaseModel):
             discord_bot_token=agent.get("discord_bot_token"),
         )
 
-    async def _get_memories(self):
-        data = await (await get_database()).get_by_field(
-            Tables.Memories, "agent_id", str(self.id)
-        )
-
-        memories = [SingleMemory(**memory) for memory in data]
-        return memories
-
     async def _add_memory(
         self,
         description: str,
@@ -360,9 +352,6 @@ class Agent(BaseModel):
         self.plans = [
             plan if plan.id is not old_plan.id else new_plan for plan in self.plans
         ]
-
-    def get_recent_memories(self, count: int = 5) -> list[SingleMemory]:
-        return self.memories[-count:]
 
     async def _get_memories_since(self, date: datetime):
         data = await (await get_database()).get_memories_since(date, str(self.id))
@@ -436,7 +425,7 @@ class Agent(BaseModel):
     def _log(
         self, title: str, color: LogColor = LogColor.GENERAL, description: str = ""
     ):
-        print_to_console(f"{self.full_name}: {title}", color, description)
+        print_to_console(f"[{self.full_name}] {title}", color, description)
 
     async def _calculate_importance(self, memory_description: str) -> int:
         # Set up a complex chat model
@@ -971,6 +960,12 @@ class Agent(BaseModel):
 
         # IF the plan failed
         if resp.status == PlanStatus.FAILED:
+            self._log(
+                "Action Failed",
+                LogColor.ACT,
+                f"{plan.description} Error: {resp.output}",
+            )
+
             # update the plan in the local agent object
             plan.scratchpad = resp.scratchpad
             plan.status = resp.status
@@ -992,16 +987,9 @@ class Agent(BaseModel):
 
             event = await self.context.add_event(event)
 
-            self._log(
-                "Action Failed: Need help",
-                LogColor.ACT,
-                f"{plan.description} Error: {resp.output}",
-            )
-            # TODO: handle plan failure with a human
-
         # If the plan is in progress
         elif resp.status == PlanStatus.IN_PROGRESS:
-            print(f"{self.full_name}'s current plan is in progress...")
+            self._log("Action In Progress", LogColor.ACT, f"{plan.description}")
 
             # update the plan in the local agent object
             plan.scratchpad = resp.scratchpad
@@ -1020,11 +1008,9 @@ class Agent(BaseModel):
                     agent_full_name=self.full_name,
                 )
 
-            self._log("Action In Progress", LogColor.ACT, f"{plan.description}")
-
         # If the plan is done, remove it from the list of plans
         elif resp.status == PlanStatus.DONE:
-            print(f"{self.full_name}'s current plan is now done!")
+            self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
             # update the plan in the local agent object
             plan.completed_at = datetime.now(pytz.utc)
@@ -1037,8 +1023,6 @@ class Agent(BaseModel):
 
             # remove all plans with the same description
             self.plans = [p for p in self.plans if p.description != plan.description]
-
-            self._log("Action Completed", LogColor.ACT, f"{plan.description}")
 
         return resp.status
 
@@ -1070,23 +1054,28 @@ class Agent(BaseModel):
             after=last_checked_events, witness_ids=[self.id], force_refresh=True
         )
 
+        self._log(
+            f"Observed {len(events)} new events",
+            LogColor.PLAN,
+            f"Last checked events at {last_checked_events.strftime('%H:%M:%S')}",
+        )
+
         if len(events) > 0:
             # Make new memories based on the events
-            new_memories = []
-            for event in events:
-                new_memories.append(
-                    await self._add_memory(
-                        event.description,
-                        created_at=event.timestamp,
-                        type=MemoryType.OBSERVATION,
-                        log=False,
-                    )
+            new_memories = [
+                await self._add_memory(
+                    event.description,
+                    created_at=event.timestamp,
+                    type=MemoryType.OBSERVATION,
+                    log=False,
                 )
+                for event in events
+            ]
 
             self._log(
-                f"{len(events)} New Memories: ",
+                f"{len(events)} New Memories",
                 LogColor.MEMORY,
-                {f"{event.description}" for event in events},
+                {f"{memory.description}" for memory in new_memories},
             )
 
             # Respond to new message events
@@ -1113,12 +1102,6 @@ class Agent(BaseModel):
 
         conversation_history = await get_conversation_history(self.id, self.context)
 
-        current_conversations = (
-            conversation_history
-            if conversation_history != ""
-            else "No current conversations"
-        )
-
         plans_to_do = [
             "📆 " + plan.description
             for plan in self.plans
@@ -1141,12 +1124,10 @@ class Agent(BaseModel):
 
         with open(file_path, "w") as f:
             f.write(
-                f"👤 {self.full_name}\n\nCurrent Action:\n{current_action}\n\nLocation: {self.location.name}\n\nCurrent Conversations:\n{conversation_history}\n\nCurrent Plans:\n{current_plans}\n\nHistory:\n{memories}\n"
+                f"👤 {self.full_name}\n\nCurrent Action:\n{current_action}\n\nLocation: {self.location.name}\n\nCurrent Conversations:\n{conversation_history}\n\nCurrent Plans:\n{current_plans}\n\nMemories:\n{memories}\n"
             )
 
     async def run_for_one_step(self):
-        print(f"{self.full_name}: RUNNING ONE STEP...")
-
         await asyncio.sleep(random.random() * 3)
 
         events = await self.observe_and_plan_responses()

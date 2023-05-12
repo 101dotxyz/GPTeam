@@ -64,3 +64,7 @@ if __name__ == "__main__":
 
     print("Seed the database...")
     subprocess.run(["poetry", "run", "db-reset"], check=True)
+
+    print(
+        "\nSetup complete!\n\n→ You are ready to run the world. Please run `poetry run world` to get started."
+    )

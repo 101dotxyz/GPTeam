@@ -101,6 +101,11 @@ class World(BaseModel):
             await self.run_next_agent()
 
     async def run(self):
+        # Delete previous agents
+        agents_folder = os.path.join(os.getcwd(), "agents")
+        for agent in os.listdir(agents_folder):
+            os.remove(os.path.join(agents_folder, agent))
+
         concurrency = min(os.cpu_count(), len(self.agents))
         tasks = [self.run_agent_loop() for _ in range(concurrency)]
         await asyncio.gather(*tasks)

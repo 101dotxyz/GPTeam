@@ -25,9 +25,9 @@ locations = [
         "world_id": config.world_id,
         "name": location.name,
         "description": location.description,
-        "channel_id": os.environ.get(
-            f"{location.name.upper()}_CHANNEL_ID", None
-        ) if DISCORD_ENABLED else None,
+        "channel_id": os.environ.get(f"{location.name.upper()}_CHANNEL_ID", None)
+        if DISCORD_ENABLED
+        else None,
         "allowed_agent_ids": [],
         "available_tools": [],
     }
@@ -52,11 +52,12 @@ agents = [
     for agent in config.agents
 ]
 
-for agent in agents:
-    if agent["discord_bot_token"] is None:
-        raise ValueError(
-            f"Could not find discord bot token for agent {agent['full_name']}"
-        )
+if DISCORD_ENABLED:
+    for agent in agents:
+        if agent["discord_bot_token"] is None:
+            raise ValueError(
+                f"Could not find discord bot token for agent {agent['full_name']}"
+            )
 
 # For now, allow all agents in all locations
 for location in locations:

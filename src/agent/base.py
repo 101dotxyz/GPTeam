@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import random
 from ctypes import Union
 from datetime import datetime, timedelta
 from typing import Literal, Optional, Type, cast
@@ -52,8 +53,6 @@ from .reflection import ReflectionQuestions, ReflectionResponse
 SUMMARIZE_ACTIVITY_INTERVAL = 20  # seconds
 
 
-
-
 class Agent(BaseModel):
     id: UUID
     full_name: str
@@ -72,7 +71,7 @@ class Agent(BaseModel):
     location: Location
     discord_bot_token: str = None
     react_response: LLMReactionResponse = None
-    recent_activity: str = ''
+    recent_activity: str = ""
 
     class Config:
         allow_underscore_names = True
@@ -93,7 +92,7 @@ class Agent(BaseModel):
         id: Optional[str | UUID] = None,
         world_id: Optional[UUID] = DEFAULT_WORLD_ID,
         discord_bot_token: str = None,
-        recent_activity: str = '',
+        recent_activity: str = "",
     ):
         if id is None:
             id = uuid4()
@@ -498,7 +497,7 @@ class Agent(BaseModel):
         self._log(
             "Moved Location",
             LogColor.MOVE,
-            f"{self.location.name} -> {location.name} @ {datetime.now(pytz.utc)}",
+            f"{self.location.name} -> {location.name} @ {datetime.now(pytz.utc).strftime('%H:%M:%S')}",
         )
 
         departure_event = Event(
@@ -691,7 +690,9 @@ class Agent(BaseModel):
         )
 
         # Get a summary of the recent activity
-        if (datetime.now(pytz.utc) - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
+        if (
+            datetime.now(pytz.utc) - self.last_summarized_activity
+        ).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
             recent_activity = await self._summarize_activity()
         else:
             recent_activity = self.recent_activity
@@ -880,7 +881,9 @@ class Agent(BaseModel):
         )
 
         # Get a summary of the recent activity
-        if (datetime.now(pytz.utc) - self.last_summarized_activity).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
+        if (
+            datetime.now(pytz.utc) - self.last_summarized_activity
+        ).total_seconds() > SUMMARIZE_ACTIVITY_INTERVAL:
             recent_activity = await self._summarize_activity()
         else:
             recent_activity = self.recent_activity
@@ -903,7 +906,9 @@ class Agent(BaseModel):
                     f"{index}. {event.description}"
                     for index, event in enumerate(events)
                 ],
-                "conversation_history": await get_conversation_history(self.id, self.context),
+                "conversation_history": await get_conversation_history(
+                    self.id, self.context
+                ),
             },
         )
 
@@ -972,7 +977,7 @@ class Agent(BaseModel):
             self.update_plan(plan)
 
             # update the plan in the db
-            self._upsert_plan_rows([plan])
+            await self._upsert_plan_rows([plan])
 
             # remove all plans with the same description
             self.plans = [p for p in self.plans if p.description != plan.description]
@@ -1028,7 +1033,7 @@ class Agent(BaseModel):
             self.update_plan(plan)
 
             # update the plan in the db
-            self._upsert_plan_rows([plan])
+            await self._upsert_plan_rows([plan])
 
             # remove all plans with the same description
             self.plans = [p for p in self.plans if p.description != plan.description]
@@ -1142,8 +1147,7 @@ class Agent(BaseModel):
     async def run_for_one_step(self):
         print(f"{self.full_name}: RUNNING ONE STEP...")
 
-        # Wait 5 seconds
-        await asyncio.sleep(1)
+        await asyncio.sleep(random.random() * 3)
 
         events = await self.observe_and_plan_responses()
 

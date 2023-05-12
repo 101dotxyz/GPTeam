@@ -62,5 +62,5 @@ if __name__ == "__main__":
     print("Installing dependencies...")
     subprocess.run(["poetry", "install"], check=True)
 
-    print("Seeding database with agents...")
-    subprocess.run(["poetry", "run", "db-seed"], check=True)
+    print("Seed the database...")
+    subprocess.run(["poetry", "run", "db-reset"], check=True)

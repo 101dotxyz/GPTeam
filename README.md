@@ -1,6 +1,21 @@
-# GPTeam: Collaborative AI Agents
-[![GitHub Repo stars](https://img.shields.io/github/stars/101dotxyz/gpteam?style=social)](https://github.com/101dotxyz/ai/stargazers)
-[![Twitter Follow](https://img.shields.io/twitter/follow/101dotxyz?style=social)](https://twitter.com/101dotxyz)
+<p align="center">
+  <h1 align="center">GPTeam: Collaborative AI Agents</h1>
+  <p align="center">
+    <img src="https://img.shields.io/github/stars/101dotxyz/gpteam.svg?style=for-the-badge">
+    <img src="https://img.shields.io/github/license/101dotxyz/gpteam.svg?style=for-the-badge">
+    <br />
+    <a href="#"><b>View Discord Demo</b></a>
+    ·
+    <a href="https://github.com/101dotxyz/gpteam/issues"><b>Report Bug</b></a>
+    ·
+    <a href="https://twitter.com/101dotxyz"><b>Follow</b></a>
+  </p>
+    <div align="center">
+    <img src="assets/gpteam.png" alt="GPTeam" width="400" height="267" />
+  </div>
+</p>
+
+## About GPTeam
 
 GPTeam uses GPT-4 to create multiple agents who collaborate to achieve predefined goals. The main objective of this project is to explore the potential of GPT models in enhancing multi-agent productivity and effective communication.
 
@@ -44,4 +59,4 @@ We will review your pull request and provide feedback as necessary.
 
 ## License
 
-Licensed under the MIT license.
+Licensed under the [MIT license](LICENSE).

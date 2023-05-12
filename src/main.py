@@ -26,7 +26,6 @@ async def run_world():
     try:
         process = Process(target=discord_listener)
         process.start()
-        print("Started Discord listener")
 
         database = await get_database()
 

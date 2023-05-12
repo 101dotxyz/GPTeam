@@ -49,9 +49,9 @@ class Event(BaseModel):
     type: EventType
     subtype: Optional[Subtype] = None
     agent_id: Optional[UUID] = None
+    witness_ids: list[UUID] = []
     description: str
     location_id: UUID
-    witness_ids: list[UUID] = []
     metadata: Optional[Any]
 
     def __init__(
@@ -60,7 +60,6 @@ class Event(BaseModel):
         description: str,
         location_id: UUID | str,
         timestamp: datetime = None,
-        witness_ids: list[UUID] = [],
         agent_id: Optional[UUID | str] = None,
         id: Optional[UUID] = None,
         subtype: Optional[Subtype] = None,
@@ -79,12 +78,6 @@ class Event(BaseModel):
         if isinstance(agent_id, str):
             agent_id = UUID(agent_id)
 
-        if witness_ids is None:
-            witness_ids = []
-
-        if agent_id is not None and agent_id not in witness_ids:
-            witness_ids.append(agent_id)
-
         subtype = Subtype(subtype) if subtype is not None else None
         if (
             type == EventType.MESSAGE
@@ -101,7 +94,6 @@ class Event(BaseModel):
             timestamp=timestamp,
             agent_id=agent_id,
             location_id=location_id,
-            witness_ids=witness_ids,
             metadata=metadata,
         )
 
@@ -230,28 +222,6 @@ class EventsManager(BaseModel):
                 if len(data) > 0
                 else started_checking_events
             )
-
-    async def add_event(self, event: Event) -> None:
-        """Adds an event in the current step to the DB and local object"""
-        database = await get_database()
-
-        # get the witnesses
-        witness_data = await database.get_by_field(
-            Tables.Agents, "location_id", str(event.location_id)
-        )
-
-        event.witness_ids.extend(
-            [
-                UUID(witness["id"])
-                for witness in witness_data
-                if witness["id"] != event.agent_id
-            ]
-        )
-
-        await database.insert(Tables.Events, event.db_dict())
-
-        # add event to local events list
-        self.recent_events.append(event)
 
     async def get_events(
         self,

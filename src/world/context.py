@@ -2,7 +2,9 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from ..event.base import EventsManager
+from ..event.base import EventsManager, Event
+from src.utils.database.client import get_database
+from src.utils.database.base import Tables
 
 
 class WorldData(BaseModel):
@@ -49,6 +51,30 @@ class WorldContext(BaseModel):
             events_manager=events_manager,
         )
 
+    async def add_event(self, event: Event) -> None:
+        """Adds an event in the current step to the DB and local object"""
+
+        # get agents at this location
+        agents_at_location = self.get_agents_at_location(event.location_id)
+
+        # add the witnesses
+        event.witness_ids = [
+            UUID(witness["id"]) for witness in agents_at_location
+        ]
+
+        # This code is helpful when an agent is changing location
+        if event.agent_id not in event.witness_ids:
+            event.witness_ids.append(event.agent_id)
+
+        # Add event to the db
+        database = await get_database()
+        await database.insert(Tables.Events, event.db_dict())
+
+        # add event to local events list
+        self.events_manager.recent_events.append(event)
+
+        return event
+
     def get_agent_dict_from_id(self, agent_id: UUID | str) -> dict:
         # get agent
         try:
@@ -60,7 +86,7 @@ class WorldContext(BaseModel):
 
         return agent
 
-    def get_agents_at_location(self, location_id: str):
+    def get_agents_at_location(self, location_id: str) -> list[dict]:
         return [a for a in self.agents if str(a["location_id"]) == str(location_id)]
 
     def get_location_from_agent_id(self, agent_id: UUID | str) -> dict:

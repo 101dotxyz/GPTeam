@@ -501,10 +501,6 @@ class Agent(BaseModel):
             f"{self.location.name} -> {location.name} @ {datetime.now(pytz.utc)}",
         )
 
-        # Update the agents to the new location
-        self.location = location
-        self.context.update_agent(self._db_dict())
-
         departure_event = Event(
             type=EventType.NON_MESSAGE,
             description=f"{self.full_name} left the {old_location.name}",
@@ -521,15 +517,21 @@ class Agent(BaseModel):
             timestamp=datetime.now(pytz.utc),
         )
 
+        # Update the local agent, do we need both of these lines?
+        self.location = location
+        self.context.update_agent(self._db_dict())
+
+        # update agent in db
         await self._update_agent_row(),
 
         if DISCORD_ENABLED:
             await announce_bot_move(
                 self.full_name, old_location.channel_id, location.channel_id
-            ),
+            )
 
-        await self.context.events_manager.add_event(departure_event)
-        await self.context.events_manager.add_event(arrival_event)
+        # Add events to the events manager, which handles the DB updates
+        await self.context.add_event(departure_event)
+        await self.context.add_event(arrival_event)
 
     async def _reflect(self):
         recent_memories = sorted(
@@ -667,7 +669,7 @@ class Agent(BaseModel):
             location_id=self.location.id,
         )
 
-        await self.context.events_manager.add_event(event)
+        await self.context.add_event(event)
 
     async def _plan(self, thought_process: str = "") -> list[SinglePlan]:
         """Trigger the agent's planning process
@@ -983,7 +985,7 @@ class Agent(BaseModel):
                 location_id=self.location.id,
             )
 
-            await self.context.events_manager.add_event(event)
+            event = await self.context.add_event(event)
 
             self._log(
                 "Action Failed: Need help",

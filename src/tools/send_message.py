@@ -57,10 +57,14 @@ async def send_message_async(recipient: str, message: str, tool_context: ToolCon
         agent_message.discord_id = str(discord_message.id)
 
     # Covert the AgentMessage to an event
-    event = agent_message.to_event()
+    event: Event = agent_message.to_event()
 
     # now add it to the events manager
-    await tool_context.context.events_manager.add_event(event)
+    event = await tool_context.context.add_event(event)
+
+    #TIMC
+    print("Added new event to the events manager")
+    
 
     # Check that the recipient is in the room
     # TODO: for some reason this wasn't working as expected
@@ -103,6 +107,6 @@ def send_message_sync(recipient: str, message: str, tool_context: ToolContext):
     event = agent_message.to_event()
 
     # now add it to the events manager
-    tool_context.context.events_manager.add_event(event)
+    tool_context.context.add_event(event)
 
     return event.description

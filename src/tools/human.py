@@ -41,7 +41,7 @@ async def ask_human_async(agent_input: str, tool_context: ToolContext):
         event = agent_message.to_event()
 
         # now add it to the events manager
-        tool_context.context.events_manager.add_event(event)
+        tool_context.context.add_event(event)
 
         return event.description
     _print_func(agent_input)
@@ -75,7 +75,7 @@ def ask_human(agent_input: str, tool_context: ToolContext):
         event = agent_message.to_event()
 
         # now add it to the events manager
-        tool_context.context.events_manager.add_event(event)
+        tool_context.context.add_event(event)
 
         return event.description
     _print_func(agent_input)

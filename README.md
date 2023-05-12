@@ -19,10 +19,6 @@
 
 GPTeam uses GPT-4 to create multiple agents who collaborate to achieve predefined goals. The main objective of this project is to explore the potential of GPT models in enhancing multi-agent productivity and effective communication.
 
-## How it works
-
-GPTeam employs separate agents, each equipped with a memory, that interact with one another using communication as a tool. The implementation of agent memory and reflection is inspired by [this research paper](https://arxiv.org/pdf/2304.03442.pdf). Agents move around the world and perform tasks in different locations, depending on what they are doing and where other agents are located. They can speak to eachother and collaborate on tasks, working in parallel towards common goals.
-
 ## Getting started
 
 To begin exploring GPTeam, follow these steps:
@@ -34,6 +30,14 @@ To begin exploring GPTeam, follow these steps:
 5. Launch the world by running `poetry run world`
 
 Now you can observe the world in action and watch as the agents interact with each other, working together to accomplish their assigned directives.
+
+## How it works
+
+GPTeam employs separate agents, each equipped with a memory, that interact with one another using communication as a tool. The implementation of agent memory and reflection is inspired by [this research paper](https://arxiv.org/pdf/2304.03442.pdf). Agents move around the world and perform tasks in different locations, depending on what they are doing and where other agents are located. They can speak to eachother and collaborate on tasks, working in parallel towards common goals.
+
+## Viewing Agents
+
+The world is a busy place! To get a view of what different agents are doing whilst the world is running, you can visit the `agents/` folder where there is a txt file for each agent containing a summary of their current state.
 
 ## Changing the world
 

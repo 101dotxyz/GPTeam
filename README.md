@@ -59,4 +59,4 @@ We will review your pull request and provide feedback as necessary.
 
 ## License
 
-Licensed under the [MIT license](LICENSE.md).
+Licensed under the [MIT license](LICENSE).

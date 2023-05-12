@@ -280,7 +280,7 @@ class PlanExecutor(BaseModel):
 
         for log in response.log.split("\n"):
             suffix = log.split(":")[0] if ":" in log else "Thought"
-            print_to_console(f"{agent_name}: {suffix}: ", LogColor.THOUGHT, log)
+            print_to_console(f"[{agent_name}] {suffix}: ", LogColor.THOUGHT, log)
 
         # If the agent is finished, return the output
         if isinstance(response, AgentFinish):
@@ -342,7 +342,7 @@ class PlanExecutor(BaseModel):
         result = await tool.run(response.tool_input, tool_context)
 
         print_to_console(
-            f"{agent_name}: Action Response: ",
+            f"[{agent_name}] Action Response: ",
             LogColor.THOUGHT,
             result[:280] + "..." if len(result) > 280 else str(result),
         )

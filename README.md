@@ -11,7 +11,7 @@
     <a href="https://twitter.com/101dotxyz"><b>Follow</b></a>
   </p>
     <div align="center">
-    <img src="https://101-public.s3.amazonasws.com/gpteam.png" alt="GPTeam" width="400" height="267" />
+    <img src="assets/gpteam.png" alt="GPTeam" width="400" height="267" />
   </div>
 </p>
 

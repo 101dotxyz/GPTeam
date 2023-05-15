@@ -793,6 +793,7 @@ class Agent(BaseModel):
 
         return new_plans
 
+
     async def _plan_responses(self, events: list[Event]) -> None:
         """Respond to new messages"""
 
@@ -886,10 +887,7 @@ class Agent(BaseModel):
                 "private_bio": self.private_bio,
                 "directives": str(self.directives),
                 "recent_activity": recent_activity,
-                "current_plans": [
-                    f"{index}. {plan.description}"
-                    for index, plan in enumerate(self.plans)
-                ],
+                "current_plan": self.plans[0].description,
                 "location_context": self.context.location_context_string(self.id),
                 "event_descriptions": [
                     f"{index}. {event.description}"
@@ -914,7 +912,7 @@ class Agent(BaseModel):
         self._log(
             "Reaction",
             LogColor.REACT,
-            f"Decided to {parsed_reaction_response.reaction.value}: {parsed_reaction_response.thought_process}",
+            f"Decided to {parsed_reaction_response.reaction.value} the current plan: {parsed_reaction_response.thought_process}",
         )
 
         self.context.update_agent(self._db_dict())
@@ -936,7 +934,7 @@ class Agent(BaseModel):
         self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
 
         # Observe and react to new events
-        await self.observe_and_plan_responses()
+        await self.observe()
 
         # Gather relevant memories
         relevant_memories = await get_relevant_memories(
@@ -1036,15 +1034,14 @@ class Agent(BaseModel):
         if len(self.plans) == 0:
             print(f"{self.full_name} has no plans, making some...")
             plans = await self._plan()
-        # Otherwise, just use the existing plans
-        else:
-            plans = self.plans
 
         current_plan = plans[0]
 
         await self._act(current_plan)
 
-    async def observe_and_plan_responses(self) -> list[Event]:
+    async def observe(self) -> list[Event]:
+        # Take in new events and add them to memory. Return the events
+
         # Get new events witnessed by this agent
         last_checked_events = self.last_checked_events
 
@@ -1077,9 +1074,6 @@ class Agent(BaseModel):
                 LogColor.MEMORY,
                 {f"{memory.description}" for memory in new_memories},
             )
-
-            # Respond to new message events
-            await self._plan_responses(events)
 
         return events
 
@@ -1130,14 +1124,23 @@ class Agent(BaseModel):
     async def run_for_one_step(self):
         await asyncio.sleep(random.random() * 3)
 
-        events = await self.observe_and_plan_responses()
+        events = await self.observe()
+
+        # if there's no current plan, make some
+        if len(self.plans) == 0:
+            print(f"{self.full_name} has no plans, making some...")
+            await self._plan()
 
         # Decide how to react to these events
         self.react_response = await self._react(events)
 
-        # If the reaction calls for a new plan, make one
-        if self.react_response.reaction == Reaction.REPLAN:
-            await self._plan(self.react_response.thought_process)
+        # If the reaction calls to cancel the current plan, remove the first one
+        if self.react_response.reaction == Reaction.CANCEL:
+            self.plans = self.plans[1:]
+
+        # If the reaction calls to postpone the current plan, insert the new plan at the top
+        elif self.react_response.reaction == Reaction.POSTPONE:
+            self.plans.insert(0, self.react_response.new_plan)
 
         # Work through the plans
         await self._do_first_plan()

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Log Viewer</title>
+  <style>
+    #logs {
+      height: 600px;
+      width: 100%;
+      overflow: auto;
+      border: 1px solid black;
+      padding: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Log Viewer</h1>
+  <div id="logs"></div>
+
+  <script>
+    // Create a new EventSource instance for connecting to the server
+    var eventSource = new EventSource("/logs");
+
+    // Get a reference to the logs div
+    var logs = document.getElementById('logs');
+
+    // When a new message is received, add it to the logs div
+    eventSource.onmessage = function (e) {
+      // Create a new div for the log line
+      var logLine = document.createElement('div');
+
+      // Set the text of the log line
+      logLine.textContent = e.data;
+
+      // Add the log line to the logs div
+      logs.appendChild(logLine);
+
+      // Scroll to the bottom of the logs div
+      logs.scrollTop = logs.scrollHeight;
+    };
+  </script>
+</body>
+
+</html>

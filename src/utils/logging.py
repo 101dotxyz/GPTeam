@@ -85,3 +85,29 @@ class LoggingFilter(logging.Filter):
 
 def init_logging():
     openai.util.logger.setLevel(logging.WARNING)
+
+
+def get_agent_logger():
+    import logging
+
+    # Create a logger
+    logger = logging.getLogger("agent")
+    logger.setLevel(logging.INFO)
+
+    # Create a file handler
+    handler = logging.FileHandler("src/logs/agent.txt")
+    handler.setLevel(logging.INFO)
+
+    # # Create a logging format
+    # formatter = logging.Formatter(
+    #     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    # )
+    # handler.setFormatter(formatter)
+
+    # Add the handlers to the logger
+    logger.addHandler(handler)
+
+    return logger
+
+
+agent_logger = get_agent_logger()

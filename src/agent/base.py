@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from src.utils.database.base import Tables
 from src.utils.database.client import get_database
 from src.utils.discord import announce_bot_move
+from src.utils.logging import agent_logger
 
 from ..event.base import Event, EventsManager, EventType, MessageEventSubtype
 from ..location.base import Location
@@ -425,6 +426,7 @@ class Agent(BaseModel):
     def _log(
         self, title: str, color: LogColor = LogColor.GENERAL, description: str = ""
     ):
+        agent_logger.info(f"[{self.full_name}] {title} {description}")
         print_to_console(f"[{self.full_name}] {title}", color, description)
 
     async def _calculate_importance(self, memory_description: str) -> int:

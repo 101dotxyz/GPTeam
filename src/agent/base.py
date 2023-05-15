@@ -426,7 +426,7 @@ class Agent(BaseModel):
     def _log(
         self, title: str, color: LogColor = LogColor.GENERAL, description: str = ""
     ):
-        agent_logger.info(f"[{self.full_name}] {title} {description}")
+        agent_logger.info(f"[{self.full_name}] [{color}] [{title}] {description}")
         print_to_console(f"[{self.full_name}] {title}", color, description)
 
     async def _calculate_importance(self, memory_description: str) -> int:

@@ -4,40 +4,87 @@
 <head>
   <title>Log Viewer</title>
   <style>
-    #logs {
+    .logs {
       height: 600px;
       width: 100%;
       overflow: auto;
       border: 1px solid black;
       padding: 5px;
+      margin-bottom: 20px;
+    }
+
+    .log-title {
+      font-weight: bold;
+      margin-top: 20px;
     }
   </style>
 </head>
 
 <body>
   <h1>Log Viewer</h1>
-  <div id="logs"></div>
 
   <script>
     // Create a new EventSource instance for connecting to the server
     var eventSource = new EventSource("/logs");
 
-    // Get a reference to the logs div
-    var logs = document.getElementById('logs');
+    // Create a color mapping to approximate the colorama colors in CSS
+    var colorMapping = {
+      'GENERAL': 'white',
+      'PLAN': 'green',
+      'MOVE': 'cyan',
+      'REACT': 'yellow',
+      'ACT': 'blue',
+      'MESSAGE': 'lightblue',
+      'REFLECT': 'magenta',
+      'MEMORY': 'red',
+      'THOUGHT': 'gray',
+      'ERROR': 'red',
+      'ANNOUNCEMENT': 'lightmagenta'
+    };
 
-    // When a new message is received, add it to the logs div
+    // When a new message is received
     eventSource.onmessage = function (e) {
+      // Extract agent name, color, title, and description
+      var matches = e.data.match(/^\[(.*?)\] \[(.*?)\] \[(.*?)\] (.*)$/);
+      if (!matches) return;  // if the format is incorrect, ignore this log
+
+      var agentName = matches[1].trim();
+      var color = matches[2].trim();
+      var title = matches[3].trim();
+      var description = matches[4].trim();
+
+      // Find or create the log container for this agent
+      var logContainer = document.getElementById('logs-' + agentName);
+      if (!logContainer) {
+        var logTitle = document.createElement('h2');
+        logTitle.textContent = 'Logs for ' + agentName;
+        logTitle.className = 'log-title';
+        document.body.appendChild(logTitle);
+
+        logContainer = document.createElement('div');
+        logContainer.id = 'logs-' + agentName;
+        logContainer.className = 'logs';
+        document.body.appendChild(logContainer);
+      }
+
       // Create a new div for the log line
       var logLine = document.createElement('div');
 
-      // Set the text of the log line
-      logLine.textContent = e.data;
+      // Create a new span for the title and set its style
+      var titleSpan = document.createElement('span');
+      titleSpan.textContent = title;
+      titleSpan.style.color = colorMapping[color];
+      titleSpan.style.fontWeight = 'bold';
+
+      // Add the title and description to the log line
+      logLine.appendChild(titleSpan);
+      logLine.appendChild(document.createTextNode(' ' + description));
 
       // Add the log line to the logs div
-      logs.appendChild(logLine);
+      logContainer.appendChild(logLine);
 
       // Scroll to the bottom of the logs div
-      logs.scrollTop = logs.scrollHeight;
+      logContainer.scrollTop = logContainer.scrollHeight;
     };
   </script>
 </body>

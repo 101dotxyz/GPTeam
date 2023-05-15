@@ -17,12 +17,17 @@
       font-weight: bold;
       margin-top: 20px;
     }
+
   </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body>
-  <h1>Log Viewer</h1>
+  <h1 class="text-3xl font-bold pl-4">Log Viewer</h1>
+  <p class="text-xl pl-4">This page will automatically update as new logs are received.</p>
+  <div id="log-wrapper" class="flex flex-wrap">
 
+  </div>
   <script>
     // Create a new EventSource instance for connecting to the server
     var eventSource = new EventSource("/logs");
@@ -32,7 +37,7 @@
       'GENERAL': 'white',
       'PLAN': 'green',
       'MOVE': 'cyan',
-      'REACT': 'yellow',
+      'REACT': 'gold',
       'ACT': 'blue',
       'MESSAGE': 'lightblue',
       'REFLECT': 'magenta',
@@ -41,6 +46,22 @@
       'ERROR': 'red',
       'ANNOUNCEMENT': 'lightmagenta'
     };
+
+    function typeWriter(text, i, element) {
+      // check if text isn't finished yet
+      if (i < (text.length)) {
+        // add next character to h1
+        element.innerHTML = text.substring(0, i + 1) + '<span aria-hidden="true"></span>';
+
+        // wait for a while and call this function again for next character
+        setTimeout(function () {
+          typeWriter(text, i + 1, element)
+        }, 25);
+      }
+    }
+
+
+    var logWrapper = document.getElementById('log-wrapper');
 
     // When a new message is received
     eventSource.onmessage = function (e) {
@@ -54,21 +75,26 @@
       var description = matches[4].trim();
 
       // Find or create the log container for this agent
-      var logContainer = document.getElementById('logs-' + agentName);
-      if (!logContainer) {
+      var logLineContainer = document.getElementById('logs-' + agentName);
+      if (!logLineContainer) {
+        var logContainer = document.createElement('div');
+        logContainer.className = 'md:w-1/2 p-4';
+        logWrapper.appendChild(logContainer);
+
         var logTitle = document.createElement('h2');
         logTitle.textContent = 'Logs for ' + agentName;
         logTitle.className = 'log-title';
-        document.body.appendChild(logTitle);
+        logContainer.appendChild(logTitle);
 
-        logContainer = document.createElement('div');
-        logContainer.id = 'logs-' + agentName;
-        logContainer.className = 'logs';
-        document.body.appendChild(logContainer);
+        logLineContainer = document.createElement('div');
+        logLineContainer.id = 'logs-' + agentName;
+        logLineContainer.className = 'logs';
+        logContainer.appendChild(logLineContainer);
       }
 
       // Create a new div for the log line
       var logLine = document.createElement('div');
+      logLine.className = 'typewriter';
 
       // Create a new span for the title and set its style
       var titleSpan = document.createElement('span');
@@ -79,13 +105,14 @@
 
       // Add the title and description to the log line
       logLine.appendChild(titleSpan);
-      logLine.appendChild(document.createTextNode(' ' + description));
-
+      var text = document.createElement('span')
+      logLine.appendChild(text);
+      typeWriter(" " + description, 0, text)
       // Add the log line to the logs div
-      logContainer.appendChild(logLine);
+      logLineContainer.appendChild(logLine);
 
       // Scroll to the bottom of the logs div
-      logContainer.scrollTop = logContainer.scrollHeight;
+      logLineContainer.scrollTop = logLineContainer.scrollHeight;
     };
   </script>
 </body>

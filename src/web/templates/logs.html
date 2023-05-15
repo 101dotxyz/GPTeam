@@ -49,7 +49,7 @@
       if (!matches) return;  // if the format is incorrect, ignore this log
 
       var agentName = matches[1].trim();
-      var color = matches[2].trim();
+      var color = matches[2].trim().split('.')[1];
       var title = matches[3].trim();
       var description = matches[4].trim();
 
@@ -74,6 +74,7 @@
       var titleSpan = document.createElement('span');
       titleSpan.textContent = title;
       titleSpan.style.color = colorMapping[color];
+      console.log(colorMapping[color], color)
       titleSpan.style.fontWeight = 'bold';
 
       // Add the title and description to the log line

@@ -2,6 +2,7 @@ import atexit
 import json
 import logging
 import os
+from pathlib import Path
 import re
 from datetime import datetime
 from typing import List
@@ -93,6 +94,7 @@ def get_agent_logger():
     logger.setLevel(logging.INFO)
 
     # Create a file handler
+    Path('src/logs/').mkdir(parents=True, exist_ok=True)
     handler = logging.FileHandler("src/logs/agent.txt")
     handler.setLevel(logging.INFO)
 

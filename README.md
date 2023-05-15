@@ -4,11 +4,7 @@
     <img src="https://img.shields.io/github/stars/101dotxyz/gpteam.svg?style=for-the-badge">
     <img src="https://img.shields.io/github/license/101dotxyz/gpteam.svg?style=for-the-badge">
     <br />
-    <a href="#"><b>View Discord Demo</b></a>
-    ·
     <a href="https://github.com/101dotxyz/gpteam/issues"><b>Report Bug</b></a>
-    ·
-    <a href="https://twitter.com/101dotxyz"><b>Follow</b></a>
   </p>
     <div align="center">
     <img src="assets/gpteam.png" alt="GPTeam" width="400" height="267" />

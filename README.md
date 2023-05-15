@@ -1,8 +1,8 @@
 <p align="center">
   <h1 align="center">GPTeam: Collaborative AI Agents</h1>
   <p align="center">
-    <img src="https://img.shields.io/github/stars/101dotxyz/gpteam.svg?style=for-the-badge">
-    <img src="https://img.shields.io/github/license/101dotxyz/gpteam.svg?style=for-the-badge">
+    <img src="https://img.shields.io/github/stars/101dotxyz/gpteam.svg?style=for-the-badge&">
+    <img src="https://img.shields.io/github/license/101dotxyz/gpteam.svg?style=for-the-badge&">
     <br />
     <a href="https://github.com/101dotxyz/gpteam/issues"><b>Report Bug</b></a>
   </p>

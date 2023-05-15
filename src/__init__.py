@@ -1,4 +1,7 @@
+from dotenv import load_dotenv
 from quart import Quart, Response, render_template, send_file
+
+load_dotenv()
 
 app = Quart(__name__)
 

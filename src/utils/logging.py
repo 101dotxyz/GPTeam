@@ -88,8 +88,6 @@ def init_logging():
 
 
 def get_agent_logger():
-    import logging
-
     # Create a logger
     logger = logging.getLogger("agent")
     logger.setLevel(logging.INFO)

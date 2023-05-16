@@ -1116,10 +1116,10 @@ class Agent(BaseModel):
             ]
         )
 
-        with open(file_path, "w") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(
                 f"* {self.full_name}\n\nCurrent Action:\n{current_action}\n\nLocation: {self.location.name}\n\nCurrent Conversations:\n{conversation_history}\n\nCurrent Plans:\n{current_plans}\n\nMemories:\n{memories}\n"
-            )
+            , "w")
 
     async def run_for_one_step(self):
         await asyncio.sleep(random.random() * 3)

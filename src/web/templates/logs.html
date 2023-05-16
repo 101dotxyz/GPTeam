@@ -2,37 +2,23 @@
 <html>
 
 <head>
-  <title>Log Viewer</title>
-  <style>
-    .logs {
-      height: 600px;
-      width: 100%;
-      overflow: auto;
-      border: 1px solid black;
-      padding: 5px;
-      margin-bottom: 20px;
-    }
-
-    .log-title {
-      font-weight: bold;
-      margin-top: 20px;
-    }
-
-  </style>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Arcadia Innovations</title>
+  <meta charset="UTF-8">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.7/dist/tailwind.min.css" rel="stylesheet">
 </head>
 
 <body>
-  <h1 class="text-3xl font-bold pl-4">Log Viewer</h1>
-  <p class="text-xl pl-4">This page will automatically update as new logs are received.</p>
-  <div id="log-wrapper" class="flex flex-wrap">
+  <div id="root"></div>
 
-  </div>
-  <script>
-    // Create a new EventSource instance for connecting to the server
-    var eventSource = new EventSource("/logs");
+  <!-- Include React and ReactDOM -->
+  <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
 
-    // Create a color mapping to approximate the colorama colors in CSS
+  <!-- Include Babel and JSX Transformer -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.16.7/babel.min.js"></script>
+
+  <script type="text/babel">
     var colorMapping = {
       'GENERAL': 'white',
       'PLAN': 'green',
@@ -47,73 +33,107 @@
       'ANNOUNCEMENT': 'lightmagenta'
     };
 
-    function typeWriter(text, i, element) {
-      // check if text isn't finished yet
-      if (i < (text.length)) {
-        // add next character to h1
-        element.innerHTML = text.substring(0, i + 1) + '<span aria-hidden="true"></span>';
+    function LogViewer() {
+        const [logs, setLogs] = React.useState({});
 
-        // wait for a while and call this function again for next character
-        setTimeout(function () {
-          typeWriter(text, i + 1, element)
-        }, 25);
+        React.useEffect(() => {
+          const fetchLogs = async () => {
+            const response = await fetch('/logs');
+            if (response.ok) {
+              const data = await response.json();
+              setLogs(data);
+            }
+          };
+
+          fetchLogs();
+          const eventSource = new EventSource('/logs');
+
+          eventSource.onmessage = (e) => {
+            const matches = e.data.match(/^\[(.*?)\] \[(.*?)\] \[(.*?)\] (.*)$/);
+            if (!matches) return;
+
+            const agentName = matches[1].trim();
+            const color = matches[2].trim().split('.')[1];
+            const title = matches[3].trim();
+            const description = matches[4].trim();
+
+            setLogs((prevLogs) => {
+              const updatedLogs = { ...prevLogs };
+              if (!updatedLogs[agentName]) {
+                updatedLogs[agentName] = [];
+              }
+
+              updatedLogs[agentName] = [{ agentName, color, title, description }, ...updatedLogs[agentName]];
+              return updatedLogs;
+            });
+          };
+
+          return () => {
+            eventSource.close();
+          };
+        }, []);
+
+        const totalAgents = Object.keys(logs).length;
+
+        return (
+          <div className="h-screen flex overflow-hidden">
+            <div style={{ display: 'flex' }} className="h-full">
+              {Object.entries(logs).map(([agentName, logLines]) => (
+                <LogWindow
+                  key={agentName}
+                  agentName={agentName}
+                  logLines={logLines}
+                  columnWidth={`${100 / totalAgents}%`}
+                />
+              ))}
+            </div>
+          </div>
+        );
       }
+
+      function LogLine({ log }) {
+        const { agentName, color, title, description } = log;
+
+        return (
+          <div className="mb-4 font-mono">
+            <span style={{ color: colorMapping[color], fontWeight: 'bold' }}>{title}</span>{" "}
+            <TypeWriter text={description} />
+          </div>
+        );
+      }
+
+    function LogWindow({ agentName, logLines, columnWidth }) {
+      return (
+        <div style={{ width: columnWidth }} className="border border-gray-300 rounded m-2 p-2 h-full overflow-auto">
+          <h2 className="text-xl font-bold mb-4">🧍 {agentName}</h2>
+          <div className="h-full overflow-auto">
+            {logLines.map((log, index) => (
+              <LogLine key={index} log={log} />
+            ))}
+          </div>
+        </div>
+      );
     }
 
+      function TypeWriter({ text }) {
+          const [currentIndex, setCurrentIndex] = React.useState(0);
 
-    var logWrapper = document.getElementById('log-wrapper');
+          React.useEffect(() => {
+            const intervalId = setInterval(() => {
+              setCurrentIndex((prevIndex) => prevIndex + 1);
+            }, 10);
 
-    // When a new message is received
-    eventSource.onmessage = function (e) {
-      // Extract agent name, color, title, and description
-      var matches = e.data.match(/^\[(.*?)\] \[(.*?)\] \[(.*?)\] (.*)$/);
-      if (!matches) return;  // if the format is incorrect, ignore this log
+            return () => {
+              clearInterval(intervalId);
+            };
+          }, []);
 
-      var agentName = matches[1].trim();
-      var color = matches[2].trim().split('.')[1];
-      var title = matches[3].trim();
-      var description = matches[4].trim();
+          return <span>{text.substring(0, currentIndex)}</span>;
+        }
 
-      // Find or create the log container for this agent
-      var logLineContainer = document.getElementById('logs-' + agentName);
-      if (!logLineContainer) {
-        var logContainer = document.createElement('div');
-        logContainer.className = 'md:w-1/2 p-4';
-        logWrapper.appendChild(logContainer);
+      
 
-        var logTitle = document.createElement('h2');
-        logTitle.textContent = 'Logs for ' + agentName;
-        logTitle.className = 'log-title';
-        logContainer.appendChild(logTitle);
-
-        logLineContainer = document.createElement('div');
-        logLineContainer.id = 'logs-' + agentName;
-        logLineContainer.className = 'logs';
-        logContainer.appendChild(logLineContainer);
-      }
-
-      // Create a new div for the log line
-      var logLine = document.createElement('div');
-      logLine.className = 'typewriter';
-
-      // Create a new span for the title and set its style
-      var titleSpan = document.createElement('span');
-      titleSpan.textContent = title;
-      titleSpan.style.color = colorMapping[color];
-      console.log(colorMapping[color], color)
-      titleSpan.style.fontWeight = 'bold';
-
-      // Add the title and description to the log line
-      logLine.appendChild(titleSpan);
-      var text = document.createElement('span')
-      logLine.appendChild(text);
-      typeWriter(" " + description, 0, text)
-      // Add the log line to the logs div
-      logLineContainer.appendChild(logLine);
-
-      // Scroll to the bottom of the logs div
-      logLineContainer.scrollTop = logLineContainer.scrollHeight;
-    };
+      ReactDOM.render(<LogViewer />, document.getElementById('root'));
   </script>
 </body>
 

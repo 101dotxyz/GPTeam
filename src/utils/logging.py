@@ -2,9 +2,9 @@ import atexit
 import json
 import logging
 import os
-from pathlib import Path
 import re
 from datetime import datetime
+from pathlib import Path
 from typing import List
 
 import openai
@@ -93,16 +93,17 @@ def get_agent_logger():
     logger = logging.getLogger("agent")
     logger.setLevel(logging.INFO)
 
-    # Create a file handler
-    Path('src/logs/').mkdir(parents=True, exist_ok=True)
-    handler = logging.FileHandler("src/logs/agent.txt")
-    handler.setLevel(logging.INFO)
+    # Prevent log messages from being passed to the root logger or any other ancestor logger
+    logger.propagate = False
 
-    # # Create a logging format
-    # formatter = logging.Formatter(
-    #     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    # )
-    # handler.setFormatter(formatter)
+    # Remove all handlers associated with the logger object.
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+
+    # Create a file handler
+    Path("src/web/logs/").mkdir(parents=True, exist_ok=True)
+    handler = logging.FileHandler("src/web/logs/agent.txt")
+    handler.setLevel(logging.INFO)
 
     # Add the handlers to the logger
     logger.addHandler(handler)

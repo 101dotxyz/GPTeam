@@ -107,7 +107,7 @@ class CustomOutputParser(AgentOutputParser):
 
             if not match:
                 raise OutputParserException(
-                    f"Could not parse LLM output after retrying: `{retry}`. First attempt: `{retry}`"
+                    f"Could not parse LLM output after retrying: \n`{retry}`. \nFirst attempt: \n`{retry}`"
                 )
 
         action = match.group(1).strip()

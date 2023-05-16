@@ -26,7 +26,7 @@ from ..tools.context import ToolContext
 from ..tools.name import ToolName
 from ..utils.colors import LogColor
 from ..utils.embeddings import get_embedding
-from ..utils.formatting import print_to_console
+from ..utils.formatting import print_to_console, print_to_console2
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
 from ..utils.parameters import (
@@ -425,7 +425,7 @@ class Agent(BaseModel):
     def _log(
         self, title: str, color: LogColor = LogColor.GENERAL, description: str = ""
     ):
-        print_to_console(f"[{self.full_name}] {title}", color, description)
+        print_to_console2(f"[{self.full_name}] {title}", self.full_name, description)
 
     async def _calculate_importance(self, memory_description: str) -> int:
         # Set up a complex chat model
@@ -931,7 +931,7 @@ class Agent(BaseModel):
             await self._move_to_location(plan.location)
 
         # Execute the plan
-        self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
+        # self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
 
         # Observe and react to new events
         await self.observe()
@@ -1033,9 +1033,9 @@ class Agent(BaseModel):
         # If we have no plans, make some
         if len(self.plans) == 0:
             print(f"{self.full_name} has no plans, making some...")
-            plans = await self._plan()
+            await self._plan()
 
-        current_plan = plans[0]
+        current_plan = self.plans[0]
 
         await self._act(current_plan)
 
@@ -1069,11 +1069,11 @@ class Agent(BaseModel):
                 for event in events
             ]
 
-            self._log(
-                f"{len(events)} New Memories",
-                LogColor.MEMORY,
-                {f"{memory.description}" for memory in new_memories},
-            )
+            # self._log(
+            #     f"{len(events)} New Memories",
+            #     LogColor.MEMORY,
+            #     {f"{memory.description}" for memory in new_memories},
+            # )
 
         return events
 

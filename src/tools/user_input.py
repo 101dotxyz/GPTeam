@@ -1,7 +1,7 @@
 from colorama import Fore
 from langchain.agents import Tool
 
-from ..utils.formatting import print_to_console
+from ..utils.formatting import print_to_console, AgentLogColor
 
 
 class UserInputTool(Tool):
@@ -14,6 +14,6 @@ class UserInputTool(Tool):
 
     @staticmethod
     def get_user_input(question):
-        print_to_console("\nQuestion", Fore.MAGENTA, question)
+        print_to_console("\nQuestion", AgentLogColor.CLI_INPUT, question)
         i = input()
         return i

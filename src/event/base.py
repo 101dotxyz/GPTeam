@@ -188,7 +188,7 @@ class EventsManager(BaseModel):
         started_checking_events = datetime.now(pytz.utc)
 
         async with self.refresh_lock:
-            print("Refreshing events...")
+            # print("Refreshing events...")
             data = await (await get_database()).get_recent_events(
                 self.world_id, RECENT_EVENTS_BUFFER
             )

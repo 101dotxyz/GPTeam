@@ -36,7 +36,6 @@ async def send_message_async(recipient: str, message: str, tool_context: ToolCon
         agent_message = AgentMessage.from_agent_input(
             f"{recipient}; {message}", tool_context.agent_id, tool_context.context
         )
-        print("made a new agent message with content: ", agent_message.content)
     except Exception as e:
         if "Could not find agent" in str(e):
             return "Could not find agent with that name. Try checking the directory."

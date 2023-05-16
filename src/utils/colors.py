@@ -15,3 +15,5 @@ class LogColor(Enum):
     THOUGHT = Fore.LIGHTBLACK_EX
     ERROR = Fore.RED
     ANNOUNCEMENT = Fore.LIGHTMAGENTA_EX
+
+    

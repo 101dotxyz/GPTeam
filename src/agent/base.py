@@ -337,6 +337,7 @@ class Agent(BaseModel):
             "full_name": self.full_name,
             "private_bio": self.private_bio,
             "directives": self.directives,
+            "location_id": str(self.location.id),
             "last_checked_events": self.last_checked_events.isoformat(),
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
         }

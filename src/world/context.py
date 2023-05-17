@@ -6,6 +6,7 @@ from src.utils.database.base import Tables
 from src.utils.database.client import get_database
 
 from ..event.base import Event, EventsManager
+from ..utils.colors import NUM_AGENT_COLORS, LogColor
 
 
 class WorldData(BaseModel):
@@ -137,6 +138,12 @@ class WorldContext(BaseModel):
                 ]
             )
         )
+
+    def get_agent_color(self, agent_id: UUID | str) -> LogColor:
+        agent_ids = sorted([str(agent["id"]) for agent in self.agents], key=str)
+
+        color = f"AGENT_{agent_ids.index(str(agent_id)) % NUM_AGENT_COLORS}"
+        return LogColor[color]
 
     def get_location_name(self, location_id: UUID | str):
         return self.get_location_from_location_id(location_id)["name"]

@@ -30,7 +30,7 @@ from ..tools.base import CustomTool, get_tools
 from ..tools.context import ToolContext
 from ..tools.name import ToolName
 from ..utils.colors import LogColor
-from ..utils.formatting import print_to_console, print_to_console2
+from ..utils.formatting import print_to_console
 from ..utils.models import ChatModel
 from ..utils.parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 from ..utils.prompt import PromptString
@@ -280,7 +280,11 @@ class PlanExecutor(BaseModel):
 
         for log in response.log.split("\n"):
             suffix = log.split(":")[0] if ":" in log else "Thought"
-            print_to_console2(f"[{agent_name}] {suffix}: ", agent_name, log)
+            print_to_console(
+                f"[{agent_name}] {suffix}: ",
+                self.context.get_agent_color(self.agent_id),
+                log,
+            )
 
         # If the agent is finished, return the output
         if isinstance(response, AgentFinish):
@@ -321,9 +325,9 @@ class PlanExecutor(BaseModel):
 
             result = f"Tool: '{formatted_tool_name}' is not found in tool list"
 
-            print_to_console2(
+            print_to_console(
                 f"[{agent_name}] Action Response: ",
-                agent_name,
+                self.context.get_agent_color(self.agent_id),
                 result,
             )
 
@@ -341,9 +345,9 @@ class PlanExecutor(BaseModel):
 
         result = await tool.run(response.tool_input, tool_context)
 
-        print_to_console2(
+        print_to_console(
             f"[{agent_name}] Action Response: ",
-            agent_name,
+            self.context.get_agent_color(self.agent_id),
             result[:280] + "..." if len(result) > 280 else str(result),
         )
 

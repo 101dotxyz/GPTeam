@@ -16,7 +16,6 @@
 
   <!-- Include Babel and JSX Transformer -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.16.7/babel.min.js"></script>
 
   <script type="text/babel">
     var colorMapping = {
@@ -34,106 +33,110 @@
     };
 
     function LogViewer() {
-        const [logs, setLogs] = React.useState({});
+      const [logs, setLogs] = React.useState({});
+      const [worldState, setWorldState] = React.useState();
 
-        React.useEffect(() => {
-          const fetchLogs = async () => {
-            const response = await fetch('/logs');
-            if (response.ok) {
-              const data = await response.json();
-              setLogs(data);
+      React.useEffect(() => {
+        const socket = new WebSocket('ws://' + window.location.host + '/logs');
+        socket.onmessage = (e) => {
+
+          const { agentName, color, title, description } = JSON.parse(e.data)
+
+
+
+          setLogs((prevLogs) => {
+            const updatedLogs = { ...prevLogs };
+            if (!updatedLogs[agentName]) {
+              updatedLogs[agentName] = [];
             }
-          };
 
-          fetchLogs();
-          const eventSource = new EventSource('/logs');
+            updatedLogs[agentName] = [{ agentName, color, title, description }, ...updatedLogs[agentName]];
+            return updatedLogs;
+          });
+        };
 
-          eventSource.onmessage = (e) => {
-            const matches = e.data.match(/^\[(.*?)\] \[(.*?)\] \[(.*?)\] (.*)$/);
-            if (!matches) return;
+        return () => {
+          socket.close();
+        };
+      }, []);
 
-            const agentName = matches[1].trim();
-            const color = matches[2].trim().split('.')[1];
-            const title = matches[3].trim();
-            const description = matches[4].trim();
+      React.useEffect(() => {
+        const socket = new WebSocket('ws://' + window.location.host + '/world');
 
-            setLogs((prevLogs) => {
-              const updatedLogs = { ...prevLogs };
-              if (!updatedLogs[agentName]) {
-                updatedLogs[agentName] = [];
-              }
+        socket.onmessage = (e) => {
+          const data = JSON.parse(e.data);
+          setWorldState(data);
+        };
 
-              updatedLogs[agentName] = [{ agentName, color, title, description }, ...updatedLogs[agentName]];
-              return updatedLogs;
-            });
-          };
+        return () => {
+          socket.close();
+        };
+      }, []);
 
-          return () => {
-            eventSource.close();
-          };
-        }, []);
 
-        const totalAgents = Object.keys(logs).length;
-
-        return (
-          <div className="h-screen flex overflow-hidden">
-            <div style={{ display: 'flex' }} className="h-full">
-              {Object.entries(logs).map(([agentName, logLines]) => (
-                <LogWindow
-                  key={agentName}
-                  agentName={agentName}
-                  logLines={logLines}
-                  columnWidth={`${100 / totalAgents}%`}
-                />
-              ))}
-            </div>
-          </div>
-        );
+      if (!worldState) {
+        return <div>Loading...</div>
       }
 
-      function LogLine({ log }) {
-        const { agentName, color, title, description } = log;
+      console.log(logs[worldState.agents[0].full_name])
 
-        return (
-          <div className="mb-4 font-mono">
-            <span style={{ color: colorMapping[color], fontWeight: 'bold' }}>{title}</span>{" "}
-            <TypeWriter text={description} />
-          </div>
-        );
-      }
-
-    function LogWindow({ agentName, logLines, columnWidth }) {
       return (
-        <div style={{ width: columnWidth }} className="border border-gray-300 rounded m-2 p-2 h-full overflow-auto">
-          <h2 className="text-xl font-bold mb-4">🧍 {agentName}</h2>
-          <div className="h-full overflow-auto">
-            {logLines.map((log, index) => (
-              <LogLine key={index} log={log} />
-            ))}
+        <div className="h-screen flex overflow-hidden">
+          <div style={{ display: 'flex' }} className="h-full">
+            {(worldState.agents || []).map((agent) => <AgentWindow agent={agent} logLines={logs[agent.full_name] || []} columnWidth={`${100 / worldState.agents.length}%`} />)}
           </div>
         </div>
       );
     }
 
-      function TypeWriter({ text }) {
-          const [currentIndex, setCurrentIndex] = React.useState(0);
+    function LogLine({ log }) {
+      const { agentName, color, title, description } = log;
 
-          React.useEffect(() => {
-            const intervalId = setInterval(() => {
-              setCurrentIndex((prevIndex) => prevIndex + 1);
-            }, 10);
+      return (
+        <div className="mb-4 font-mono">
+          <span style={{ color: colorMapping[color], fontWeight: 'bold' }}>{title}</span>{" "}
+          <TypeWriter text={description} />
+        </div>
+      );
+    }
 
-            return () => {
-              clearInterval(intervalId);
-            };
-          }, []);
+    function AgentWindow({ agent, logLines, columnWidth }) {
+      return (
+        <div style={{ width: columnWidth }} className="border border-gray-300 rounded m-2 p-2 h-full overflow-auto">
+          <h2 className="text-xl font-bold mb-4">🧍 {agent["full_name"]}</h2>
+          <h2 className="text-xl font-bold mb-4">Current Location: {agent["location"]}</h2>
+          <LogWindow logLines={logLines} />
+        </div>
+      );
+    }
 
-          return <span>{text.substring(0, currentIndex)}</span>;
-        }
+    function LogWindow({ logLines }) {
+      return (
+        <div className="h-full overflow-auto">
+          {logLines.map((log, index) => (
+            <LogLine key={index} log={log} />
+          ))}
+        </div>
+      );
+    }
 
-      
+    function TypeWriter({ text }) {
+      const [currentIndex, setCurrentIndex] = React.useState(0);
 
-      ReactDOM.render(<LogViewer />, document.getElementById('root'));
+      React.useEffect(() => {
+        const intervalId = setInterval(() => {
+          setCurrentIndex((prevIndex) => prevIndex + 1);
+        }, 10);
+
+        return () => {
+          clearInterval(intervalId);
+        };
+      }, []);
+
+      return <span>{text.substring(0, currentIndex)}</span>;
+    }
+
+    ReactDOM.render(<LogViewer />, document.getElementById('root'));
   </script>
 </body>
 

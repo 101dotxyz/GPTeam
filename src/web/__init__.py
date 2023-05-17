@@ -6,8 +6,8 @@ import re
 from dotenv import load_dotenv
 from quart import Quart, abort, make_response, send_file, websocket
 
-from utils.database.base import Tables
-from utils.database.client import get_database
+from src.utils.database.base import Tables
+from src.utils.database.client import get_database
 
 load_dotenv()
 
@@ -83,6 +83,8 @@ def get_server():
                 for agent in agents
             ]
 
-            await websocket.send_json({"agents": agents_state})
+            sorted_agents = sorted(agents_state, key=lambda k: k["full_name"])
+
+            await websocket.send_json({"agents": sorted_agents})
 
     return app

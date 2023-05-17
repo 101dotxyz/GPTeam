@@ -23,7 +23,7 @@ class PlanStatus(Enum):
 class SinglePlan(BaseModel):
     id: UUID
     description: str
-    location: Location
+    location: Optional[Location]
     max_duration_hrs: float
     created_at: datetime
     agent_id: UUID
@@ -36,12 +36,12 @@ class SinglePlan(BaseModel):
     def __init__(
         self,
         description: str,
-        location: Location,
         max_duration_hrs: float,
         stop_condition: str,
         agent_id: UUID,
         status: PlanStatus = PlanStatus.TODO,
         scratchpad: Optional[list[dict]] = [],
+        location: Optional[Location] = None,
         created_at: datetime = None,
         completed_at: datetime = None,
         id: UUID = None,
@@ -82,7 +82,10 @@ class SinglePlan(BaseModel):
             raise ValueError(f"Plan with id {id} does not exist")
 
         plan_data = data[0]
-        plan_data["location"] = await Location.from_id(plan_data["location_id"])
+        if plan_data["location"] is not None:
+            plan_data["location"] = await Location.from_id(plan_data["location_id"])
+        else:
+            plan_data["location"] = None
         del plan_data["location_id"]
 
         return cls(**plan_data)
@@ -118,15 +121,15 @@ class SinglePlan(BaseModel):
 class LLMSinglePlan(BaseModel):
     index: int = Field(description="The plan number")
     description: str = Field(description="A description of the plan")
-    location_id: UUID = Field(
-        description="The id of the location. Must be a valid UUID from the available locations."
-    )
     start_time: datetime = Field(description="The starting time, in UTC, of the plan")
     stop_condition: str = Field(
         description="The condition that will cause this plan to be completed"
     )
     max_duration_hrs: float = Field(
         description="The maximum amount of time to spend on this activity before reassessing"
+    )
+    location_id: Optional[UUID] = Field(
+        description="Optional. The id of the location if known. If included, it must be a valid UUID from the available locations."
     )
 
 

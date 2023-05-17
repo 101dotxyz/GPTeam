@@ -24,7 +24,7 @@ class Location(BaseModel):
     name: str
     description: str
     available_tools: list[ToolName]
-    channel_id: Optional[int]
+    channel_id: Optional[int] = None
     allowed_agent_ids: list[UUID] = []
     world_id: UUID = None
 
@@ -32,7 +32,7 @@ class Location(BaseModel):
         self,
         name: str,
         description: str,
-        channel_id: int = None,
+        channel_id: Optional[int] = None,
         available_tools: list[ToolName] = [],
         allowed_agent_ids: list[UUID] = None,
         id: Optional[UUID] = None,
@@ -46,6 +46,9 @@ class Location(BaseModel):
 
         if allowed_agent_ids is None:
             allowed_agent_ids = []
+
+        if channel_id is not None and len(channel_id) == 0:
+            channel_id = None
 
         super().__init__(
             id=id,

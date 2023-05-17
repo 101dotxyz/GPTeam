@@ -103,6 +103,8 @@ class World(BaseModel):
     async def run(self):
         # Delete previous agents
         agents_folder = os.path.join(os.getcwd(), "agents")
+        if not os.path.exists(agents_folder):
+            os.mkdir(agents_folder)
         for agent in os.listdir(agents_folder):
             os.remove(os.path.join(agents_folder, agent))
 

@@ -25,7 +25,9 @@ locations = [
         "world_id": config.world_id,
         "name": location.name,
         "description": location.description,
-        "channel_id": os.environ.get(f"{location.name.upper().strip().replace(' ', '_')}_CHANNEL_ID", None)
+        "channel_id": os.environ.get(
+            f"{location.name.upper().replace(' ','_')}_CHANNEL_ID", None
+        )
         if DISCORD_ENABLED
         else None,
         "allowed_agent_ids": [],

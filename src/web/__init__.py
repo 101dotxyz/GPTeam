@@ -4,12 +4,15 @@ import os
 import re
 
 from dotenv import load_dotenv
-from quart import Quart, abort, make_response, send_file, websocket
+from quart import Quart, abort, make_response, send_file, websocket, request, jsonify
+from elevenlabs import generate, set_api_key
+import base64
 
 from src.utils.database.base import Tables
 from src.utils.database.client import get_database
 
 load_dotenv()
+set_api_key(os.getenv("ELEVEN_LABS_KEY"))
 
 
 def get_server():
@@ -88,5 +91,16 @@ def get_server():
             await websocket.send_json(
                 {"agents": sorted_agents, "name": worlds[0]["name"]}
             )
+
+    @app.route('/tts', methods=['POST'])
+    async def text_to_speech():
+        data = await request.get_json()
+        text = data['text']
+        voice = data['voice']
+        model = "eleven_monolingual_v1"
+
+        audio = generate(text=text, voice=voice, model=model)
+        audio_base64 = base64.b64encode(audio).decode('utf-8')
+        return jsonify({"audio": audio_base64})
 
     return app

@@ -1,198 +1,368 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <title>GPTeam</title>
+    <meta charset="UTF-8" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.7/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+  </head>
 
-<head>
-  <title>GPTeam</title>
-  <meta charset="UTF-8">
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.7/dist/tailwind.min.css" rel="stylesheet">
-</head>
+  <body>
+    <div id="root"></div>
 
-<body>
-  <div id="root"></div>
+    <!-- Include React and ReactDOM -->
+    <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
 
-  <!-- Include React and ReactDOM -->
-  <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+    <!-- Include Babel and JSX Transformer -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
 
-  <!-- Include Babel and JSX Transformer -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+    <script type="text/babel">
+      var colorMapping = {
+        GENERAL: "white",
+        ERROR: "red",
+        ANNOUNCEMENT: "lightmagenta",
+        CLI_INPUT: "lightblack",
+        AGENT_0: "lightgreen",
+        AGENT_1: "yellow",
+        AGENT_2: "magenta",
+        AGENT_3: "blue",
+        AGENT_4: "red",
+        AGENT_5: "lightcyan",
+        AGENT_6: "cyan",
+        AGENT_7: "lightyellow",
+        AGENT_8: "lightblue",
+        AGENT_9: "green",
+      };
 
-  <script type="text/babel">
-  var colorMapping = {
-    'GENERAL': 'white',
-    'ERROR': 'red',
-    'ANNOUNCEMENT': 'lightmagenta',
-    'CLI_INPUT': 'lightblack',
-    'AGENT_0': 'lightgreen',
-    'AGENT_1': 'yellow',
-    'AGENT_2': 'magenta',
-    'AGENT_3': 'blue',
-    'AGENT_4': 'red',
-    'AGENT_5': 'lightcyan',
-    'AGENT_6': 'cyan',
-    'AGENT_7': 'lightyellow',
-    'AGENT_8': 'lightblue',
-    'AGENT_9': 'green'
-  }
+      function LogViewer() {
+        const [logs, setLogs] = React.useState({});
+        const [worldState, setWorldState] = React.useState();
+        const [audioContext, setAudioContext] = React.useState();
+        const [voiceAssignment, setVoiceAssignment] = React.useState({});
 
+        React.useEffect(() => {
+          // Play text to speech
+          async function playTextToSpeech(text, agentName) {
+            console.log("playTextToSpeech called with text:", text);
 
-
-    function LogViewer() {
-      const [logs, setLogs] = React.useState({});
-      const [worldState, setWorldState] = React.useState();
-
-      React.useEffect(() => {
-        const socket = new WebSocket('ws://' + window.location.host + '/logs');
-        socket.onmessage = (e) => {
-          const { agentName, color, title, description } = JSON.parse(e.data)
-
-
-
-          setLogs((prevLogs) => {
-            const updatedLogs = { ...prevLogs };
-            if (!updatedLogs[agentName]) {
-              updatedLogs[agentName] = [];
+            // set the voice conditionally based on agentName
+            if (!voiceAssignment[agentName]) {
+              const voices = ['Adam', 'Antoni', 'Arnold', 'Bella', 'Domi', 'Elli', 'Josh', 'Rachel', 'Sam']
+              // remove the voices that are already assigned
+              const availableVoices = voices.filter(voice => !Object.values(voiceAssignment).includes(voice))
+              // select a random one from the available voices
+              const randomVoice = availableVoices[Math.floor(Math.random() * availableVoices.length)];
+              voiceAssignment[agentName] = randomVoice;
+              setVoiceAssignment(voiceAssignment);
             }
 
-            updatedLogs[agentName] = [{ agentName, color, title, description }, ...updatedLogs[agentName]];
-            return updatedLogs;
+            const response = await fetch("/tts", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ 
+                text,
+                voice: voiceAssignment[agentName]
+               }),
+            });
+
+            const data = await response.json();
+            console.log("Received audio data:", data.audio);
+
+            const audioData = Uint8Array.from(atob(data.audio), (c) =>
+              c.charCodeAt(0)
+            );
+            const buffer = await audioContext.decodeAudioData(audioData.buffer);
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start(0);
+          }
+
+          const socket = new WebSocket(
+            "ws://" + window.location.host + "/logs"
+          );
+
+          socket.onerror = (error) => {
+            console.log("WebSocket error: ", error);
+          };
+
+          socket.onclose = (event) => {
+            console.log("WebSocket closed: ", event);
+          };
+
+          socket.onmessage = (e) => {
+            const { agentName, color, title, description } = JSON.parse(e.data);
+
+            if (audioContext) {
+              try {
+                if (title.includes("Action Input")) {
+                  // make sure descripiton is a json object
+                  const action = JSON.parse(description);
+                  if (action.message) {
+                    // TEXT TO SPEECH VIA ELEVENLABS
+                    try {
+                      playTextToSpeech(action.message, agentName);
+                    } catch (e) {
+                      console.log("Error playing text to speech:", e);
+                    }
+                  }
+                }
+              } catch (e) {
+                console.log("Error playing text to speech:", e);
+              }
+            } else {
+              console.log("audioContext not defined yet");
+            }
+
+            setLogs((prevLogs) => {
+              const updatedLogs = { ...prevLogs };
+              if (!updatedLogs[agentName]) {
+                updatedLogs[agentName] = [];
+              }
+
+              updatedLogs[agentName] = [
+                { agentName, color, title, description },
+                ...updatedLogs[agentName],
+              ];
+              return updatedLogs;
+            });
+          };
+
+          return () => {
+            socket.close();
+          };
+        }, [audioContext]);
+
+        React.useEffect(() => {
+
+          const socket = new WebSocket(
+            "ws://" + window.location.host + "/world"
+          );
+
+          socket.onmessage = (e) => {
+            console.log("setting world state")
+            const data = JSON.parse(e.data);
+            setWorldState(data);
+          };
+
+          return () => {
+            socket.close();
+          };
+        }, []);
+
+        return (
+          <div className="min-h-screen flex overflow-hidden bg-gray-800 text-white">
+            {worldState ? (
+              <WorldVisualization
+                worldState={worldState}
+                logs={logs}
+                setAudioContext={setAudioContext}
+                audioContext={audioContext}
+              />
+            ) : (
+              <p>Loading...</p>
+            )}
+          </div>
+        );
+      }
+
+      function WorldVisualization({
+        worldState,
+        logs,
+        setAudioContext,
+        audioContext,
+      }) {
+        const startAudio = () => {
+          try {
+            const AudioContext =
+              window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+              const newAudioContext = new AudioContext();
+              setAudioContext(newAudioContext); // use the function passed down from the parent to set the audio context
+            } else {
+              alert(
+                "Sorry, but the Web Audio API is not supported by your browser."
+              );
+            }
+          } catch (e) {
+            alert(
+              "Sorry, but the Web Audio API is not supported by your browser. Please, update your browser or use another one."
+            );
+          }
+        };
+
+        React.useEffect(() => {
+          if (!audioContext) {
+            return;
+          }
+
+          const socket = new WebSocket(`ws://${window.location.host}/audio`);
+
+          socket.addEventListener("message", (event) => {
+            const data = JSON.parse(event.data);
+            const buffer = new Float32Array(data.buffer);
+            const source = audioContext.createBufferSource();
+            const audioBuffer = audioContext.createBuffer(
+              1,
+              buffer.length,
+              48000
+            );
+            audioBuffer.copyToChannel(buffer, 0);
+            source.buffer = audioBuffer;
+            source.connect(audioContext.destination);
+            source.start();
           });
-        };
 
-        return () => {
-          socket.close();
-        };
-      }, []);
+          return () => {
+            socket.close();
+          };
+        }, [audioContext]);
 
-      React.useEffect(() => {
-        const socket = new WebSocket('ws://' + window.location.host + '/world');
-
-        socket.onmessage = (e) => {
-          const data = JSON.parse(e.data);
-          setWorldState(data);
-        };
-
-        return () => {
-          socket.close();
-        };
-      }, []);
-
-
-
-      return (
-        <div className="min-h-screen flex overflow-hidden bg-gray-800 text-white">
-          {!worldState && <Loading />}
-          {worldState && <WorldVisualisation worldState={worldState} logs={logs} />}
-        </div>
-      );
-    }
-
-    function WorldVisualisation({ worldState, logs }) {
-      return (
-        <div className="flex flex-col py-2">
-          <div className="w-full my-2 px-6 text-center">
-            <h1 className="text-xl font-bold">🌎&nbsp;&nbsp;{worldState.name}</h1>
+        return (
+          <div className="flex flex-col py-2">
+            {worldState ? (
+              <React.Fragment>
+                <div className="w-full my-2 px-6 text-center">
+                  <h1 className="text-xl font-bold">
+                    🌎&nbsp;&nbsp;{worldState.name}
+                  </h1>
+                  <button onClick={startAudio}>Click to start audio</button>
+                </div>
+                <div className="h-screen flex w-screen px-3">
+                  {worldState.agents.map((agent) => (
+                    <AgentWindow
+                      agent={agent}
+                      logLines={logs[agent.full_name] || []}
+                      columnWidth={`${100 / worldState.agents.length}%`}
+                    />
+                  ))}
+                </div>
+              </React.Fragment>
+            ) : (
+              <p>Loading...</p>
+            )
+          }
           </div>
-          <div className="h-screen flex w-screen px-3">
-            {worldState && worldState.agents.map((agent) => <AgentWindow agent={agent} logLines={logs[agent.full_name] || []} columnWidth={`${100 / worldState.agents.length}%`} />)}
+        );
+      }
+
+      function LogLine({ log, type }) {
+        const { agentName, color, title, description } = log;
+
+        return (
+          <div className="mb-4 font-mono">
+            <span style={{ color: colorMapping[color], fontWeight: "bold" }}>
+              {title}
+            </span>{" "}
+            <TypeWriter text={description} enabled={type} />
           </div>
-        </div>
-      );
-    }
+        );
+      }
 
-    function LogLine({ log, type }) {
-      const { agentName, color, title, description } = log;
+      function AgentWindow({ agent, logLines, columnWidth }) {
+        return (
+          <div style={{ width: columnWidth }} className="px-3 py-2 h-full">
+            <AgentInformation agent={agent} logLines={logLines} />
+            <LogWindow logLines={logLines} />
+          </div>
+        );
+      }
 
-      return (
-        <div className="mb-4 font-mono">
-          <span style={{ color: colorMapping[color], fontWeight: 'bold' }}>{title}</span>{" "}
-          <TypeWriter text={description} enabled={type} />
-        </div>
-      );
-    }
+      function LogWindow({ logLines }) {
+        return (
+          <div className="h-full overflow-auto bg-black text-white p-4 text-sm rounded-md">
+            {logLines.map((log, index) => (
+              <LogLine key={index} log={log} type={index === 0} />
+            ))}
+          </div>
+        );
+      }
 
-    function AgentWindow({ agent, logLines, columnWidth }) {
-      return (
-        <div style={{ width: columnWidth }} className="px-3 py-2 h-full">
-          <AgentInformation agent={agent} logLines={logLines} />
-          <LogWindow logLines={logLines} />
-        </div>
-      );
-    }
+      const AGENT_STATUSES = {
+        Observe: "👀 Observing",
+        Act: "🚀 Taking Action",
+        React: "🔄 Reacting",
+        "Starting to Plan": "📝 Planning",
+        "Moved Location": "🚶‍♂️ Moving",
+        Reflection: "🤔 Reflecting",
+        Gossip: "💬 Gossiping",
+      };
 
-    function LogWindow({ logLines }) {
-      return (
-        <div className="h-full overflow-auto bg-black text-white p-4 text-sm rounded-md">
-          {logLines.map((log, index) => (
-            <LogLine key={index} log={log} type={index === 0} />
-          ))}
-        </div>
-      );
-    }
+      function AgentInformation({ agent, logLines }) {
+        const statusLogs = logLines.filter((line) =>
+          AGENT_STATUSES.hasOwnProperty(line.title)
+        );
+        const latestLog = statusLogs.length > 0 ? statusLogs[0] : null;
+        const agentStatus = latestLog
+          ? AGENT_STATUSES[latestLog.title]
+          : "Unknown";
 
-    const AGENT_STATUSES = {
-      "Observe": "👀 Observing",
-      "Act": "🚀 Taking Action",
-      "React": "🔄 Reacting",
-      "Starting to Plan": "📝 Planning",
-      "Moved Location": "🚶‍♂️ Moving",
-      "Reflection": "🤔 Reflecting",
-      "Gossip": "💬 Gossiping",
-    };
-
-    function AgentInformation({ agent, logLines }) {
-      const statusLogs = logLines.filter((line) => AGENT_STATUSES.hasOwnProperty(line.title));
-      const latestLog = statusLogs.length > 0 ? statusLogs[0] : null;
-      const agentStatus = latestLog ? AGENT_STATUSES[latestLog.title] : 'Unknown';
-
-      return (
-        <div class="bg-gray-800 h-min text-white pb-4">
-          <div class="flex items-end h-full">
-            <div class="w-1/2">
-              <h2 class="text-lg font-bold">{agent.full_name}</h2>
-              <p class="text-base">🗺️ Location: {agent.location}</p>
-            </div>
-            <div class="w-1/2">
-              <p class="text-right text-base">{agentStatus}</p>
+        return (
+          <div className="bg-gray-800 h-min text-white pb-4">
+            <div className="flex items-end h-full">
+              <div className="w-1/2">
+                <h2 className="text-lg font-bold">{agent.full_name}</h2>
+                <p className="text-base">🗺️ Location: {agent.location}</p>
+              </div>
+              <div className="w-1/2">
+                <p className="text-right text-base">{agentStatus}</p>
+              </div>
             </div>
           </div>
-        </div>
-      );
-    }
+        );
+      }
 
+      function TypeWriter({ text, enabled }) {
+        const [currentIndex, setCurrentIndex] = React.useState(0);
+        React.useEffect(() => {
+          const intervalId = setInterval(() => {
+            setCurrentIndex((prevIndex) => prevIndex + 1);
+          }, 10);
 
+          return () => {
+            clearInterval(intervalId);
+          };
+        }, []);
 
-    function TypeWriter({ text, enabled }) {
-      const [currentIndex, setCurrentIndex] = React.useState(0);
+        return <span>{enabled ? text.substring(0, currentIndex) : text}</span>;
+      }
 
-      React.useEffect(() => {
-        const intervalId = setInterval(() => {
-          setCurrentIndex((prevIndex) => prevIndex + 1);
-        }, 10);
+      function Loading() {
+        return (
+          <div className="flex w-full items-center justify-center">
+            <svg
+              className="animate-spin -ml-1 mr-3 h-8 w-8 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647zM20 12a8 8 0 01-8 8v-4a4 4 0 004-4h4zm-2-5.291A7.962 7.962 0 0120 12h4c0-3.042-1.135-5.824-3-7.938l-3 2.647z"
+              ></path>
+            </svg>
+            <span className="animate-pulse font-semibold">
+              Initializing world...
+            </span>
+          </div>
+        );
+      }
 
-        return () => {
-          clearInterval(intervalId);
-        };
-      }, []);
-
-      return <span>{enabled ? text.substring(0, currentIndex) : text}</span>;
-    }
-
-    function Loading() {
-      return (
-        <div className="flex w-full items-center justify-center">
-          <svg className="animate-spin -ml-1 mr-3 h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647zM20 12a8 8 0 01-8 8v-4a4 4 0 004-4h4zm-2-5.291A7.962 7.962 0 0120 12h4c0-3.042-1.135-5.824-3-7.938l-3 2.647z"></path>
-          </svg>
-          <span className="animate-pulse font-semibold">Initializing world...</span>
-        </div>
-      );
-    }
-
-
-    ReactDOM.render(<LogViewer />, document.getElementById('root'));
-  </script>
-</body>
-
+      ReactDOM.render(<LogViewer />, document.getElementById("root"));
+    </script>
+  </body>
 </html>

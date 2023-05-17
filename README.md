@@ -25,6 +25,8 @@ To begin exploring GPTeam, follow these steps:
 4. Update the environment variables in `.env` with your API Keys. You will need an OpenAI API key, which you can obtain [here](https://platform.openai.com/account/api-keys). Supplying API keys for optional services will enable the use of other tools.
 5. Launch the world by running `poetry run world`
 
+To run the world cheaply, you can use `poetry run world --turbo`. This will use gpt3.5-turbo for all LLM calls which is a lot cheaper, but expect worse results!
+
 Now you can observe the world in action and watch as the agents interact with each other, working together to accomplish their assigned directives.
 
 ## How it works
@@ -34,7 +36,6 @@ GPTeam employs separate agents, each equipped with a memory, that interact with 
 ## Viewing Agents
 
 The world is a busy place! To get a view of what different agents are doing whilst the world is running, you can visit the `agents/` folder where there is a txt file for each agent containing a summary of their current state.
-
 ## Changing the world
 
 To change the world, all you need to do is:

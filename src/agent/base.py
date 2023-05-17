@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from src.utils.database.base import Tables
 from src.utils.database.client import get_database
 from src.utils.discord import announce_bot_move
+from src.utils.logging import agent_logger
 
 from ..event.base import Event, EventsManager, EventType, MessageEventSubtype
 from ..location.base import Location
@@ -336,6 +337,7 @@ class Agent(BaseModel):
             "full_name": self.full_name,
             "private_bio": self.private_bio,
             "directives": self.directives,
+            "location_id": str(self.location.id),
             "last_checked_events": self.last_checked_events.isoformat(),
             "ordered_plan_ids": [str(plan.id) for plan in self.plans],
         }
@@ -427,6 +429,7 @@ class Agent(BaseModel):
         return response
 
     def _log(self, title: str, description: str = ""):
+        agent_logger.info(f"[{self.full_name}] [{self.color}] [{title}] {description}")
         print_to_console(f"[{self.full_name}] {title}", self.color, description)
 
     async def _calculate_importance(self, memory_description: str) -> int:
@@ -858,6 +861,8 @@ class Agent(BaseModel):
     async def _react(self, events: list[Event]) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
 
+        self._log("React", "Deciding how to react to recent events...")
+
         # LLM call to decide how to react to new events
         # Make the reaction parser
         reaction_parser = OutputFixingParser.from_llm(
@@ -919,6 +924,8 @@ class Agent(BaseModel):
         plan: SinglePlan,
     ) -> PlanStatus:
         """Act on a plan"""
+
+        self._log("Act", "Starting to act on plan.")
 
         # If we are not in the right location, move to the new location
         if self.location.id != plan.location.id:
@@ -1042,8 +1049,8 @@ class Agent(BaseModel):
         )
 
         self._log(
-            f"Observed {len(events)} new events",
-            f"Last checked events at {last_checked_events.strftime('%H:%M:%S')}",
+            "Observe",
+            f"Observed {len(events)} new events since {last_checked_events.strftime('%H:%M:%S')}",
         )
 
         if len(events) > 0:

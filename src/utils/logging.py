@@ -4,6 +4,7 @@ import logging
 import os
 import re
 from datetime import datetime
+from pathlib import Path
 from typing import List
 
 import openai
@@ -85,3 +86,29 @@ class LoggingFilter(logging.Filter):
 
 def init_logging():
     openai.util.logger.setLevel(logging.WARNING)
+
+
+def get_agent_logger():
+    # Create a logger
+    logger = logging.getLogger("agent")
+    logger.setLevel(logging.INFO)
+
+    # Prevent log messages from being passed to the root logger or any other ancestor logger
+    logger.propagate = False
+
+    # Remove all handlers associated with the logger object.
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+
+    # Create a file handler
+    Path("src/web/logs/").mkdir(parents=True, exist_ok=True)
+    handler = logging.FileHandler("src/web/logs/agent.txt")
+    handler.setLevel(logging.INFO)
+
+    # Add the handlers to the logger
+    logger.addHandler(handler)
+
+    return logger
+
+
+agent_logger = get_agent_logger()

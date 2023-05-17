@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>GPTeam</title>
+  <meta charset="UTF-8">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.7/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <!-- Include React and ReactDOM -->
+  <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+
+  <!-- Include Babel and JSX Transformer -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+
+  <script type="text/babel">
+    var colorMapping = {
+      'GENERAL': 'white',
+      'ERROR': 'red',
+      'ANNOUNCEMENT': 'lightmagenta',
+      'CLI_INPUT': 'lightblack',
+      'AGENT_0': 'lightcyan',
+      'AGENT_1': 'yellow',
+      'AGENT_2': 'blue',
+      'AGENT_3': 'magenta',
+      'AGENT_4': 'red',
+      'AGENT_5': 'green',
+      'AGENT_6': 'cyan',
+      'AGENT_7': 'lightyellow',
+      'AGENT_8': 'lightblue',
+      'AGENT_9': 'lightgreen'
+    };
+
+
+    function LogViewer() {
+      const [logs, setLogs] = React.useState({});
+      const [worldState, setWorldState] = React.useState();
+
+      React.useEffect(() => {
+        const socket = new WebSocket('ws://' + window.location.host + '/logs');
+        socket.onmessage = (e) => {
+          const { agentName, color, title, description } = JSON.parse(e.data)
+
+
+
+          setLogs((prevLogs) => {
+            const updatedLogs = { ...prevLogs };
+            if (!updatedLogs[agentName]) {
+              updatedLogs[agentName] = [];
+            }
+
+            updatedLogs[agentName] = [{ agentName, color, title, description }, ...updatedLogs[agentName]];
+            return updatedLogs;
+          });
+        };
+
+        return () => {
+          socket.close();
+        };
+      }, []);
+
+      React.useEffect(() => {
+        const socket = new WebSocket('ws://' + window.location.host + '/world');
+
+        socket.onmessage = (e) => {
+          const data = JSON.parse(e.data);
+          setWorldState(data);
+        };
+
+        return () => {
+          socket.close();
+        };
+      }, []);
+
+
+
+      return (
+        <div className="min-h-screen flex overflow-hidden bg-gray-800 text-white">
+          {!worldState && <Loading />}
+          {worldState && <WorldVisualisation worldState={worldState} logs={logs} />}
+        </div>
+      );
+    }
+
+    function WorldVisualisation({ worldState, logs }) {
+      return (
+        <div className="flex flex-col py-2">
+          <div className="w-full my-2 px-6 text-center">
+            <h1 className="text-xl font-bold">🌎&nbsp;&nbsp;{worldState.name}</h1>
+          </div>
+          <div className="h-screen flex w-screen px-3">
+            {worldState && worldState.agents.map((agent) => <AgentWindow agent={agent} logLines={logs[agent.full_name] || []} columnWidth={`${100 / worldState.agents.length}%`} />)}
+          </div>
+        </div>
+      );
+    }
+
+    function LogLine({ log }) {
+      const { agentName, color, title, description } = log;
+
+      return (
+        <div className="mb-4 font-mono">
+          <span style={{ color: colorMapping[color], fontWeight: 'bold' }}>{title}</span>{" "}
+          <TypeWriter text={description} />
+        </div>
+      );
+    }
+
+    function AgentWindow({ agent, logLines, columnWidth }) {
+      return (
+        <div style={{ width: columnWidth }} className="px-3 py-2 h-full">
+          <AgentInformation agent={agent} logLines={logLines} />
+          <LogWindow logLines={logLines} />
+        </div>
+      );
+    }
+
+    function LogWindow({ logLines }) {
+      return (
+        <div className="h-full overflow-auto bg-black text-white p-4 text-sm rounded-md">
+          {logLines.map((log, index) => (
+            <LogLine key={index} log={log} />
+          ))}
+        </div>
+      );
+    }
+
+    const AGENT_STATUSES = {
+      "Observe": "👀 Observing",
+      "Act": "🚀 Taking Action",
+      "React": "🔄 Reacting",
+      "Starting to Plan": "📝 Planning",
+      "Moved Location": "🚶‍♂️ Moving",
+      "Reflection": "🤔 Reflecting",
+      "Gossip": "💬 Gossiping",
+      "New Conversations": "🗣️ In Conversation"
+    };
+
+    function AgentInformation({ agent, logLines }) {
+      const statusLogs = logLines.filter((line) => AGENT_STATUSES.hasOwnProperty(line.title));
+      const latestLog = statusLogs.length > 0 ? statusLogs[0] : null;
+      const agentStatus = latestLog ? AGENT_STATUSES[latestLog.title] : 'Unknown';
+
+      return (
+        <div class="bg-gray-800 h-min text-white pb-4">
+          <div class="flex items-end h-full">
+            <div class="w-1/2">
+              <h2 class="text-lg font-bold">{agent.full_name}</h2>
+              <p class="text-base">🗺️ Location: {agent.location}</p>
+            </div>
+            <div class="w-1/2">
+              <p class="text-right text-base">{agentStatus}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+
+
+    function TypeWriter({ text }) {
+      const [currentIndex, setCurrentIndex] = React.useState(0);
+
+      React.useEffect(() => {
+        const intervalId = setInterval(() => {
+          setCurrentIndex((prevIndex) => prevIndex + 1);
+        }, 10);
+
+        return () => {
+          clearInterval(intervalId);
+        };
+      }, []);
+
+      return <span>{text.substring(0, currentIndex)}</span>;
+    }
+
+    function Loading() {
+      return (
+        <div className="flex w-full items-center justify-center">
+          <svg className="animate-spin -ml-1 mr-3 h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647zM20 12a8 8 0 01-8 8v-4a4 4 0 004-4h4zm-2-5.291A7.962 7.962 0 0120 12h4c0-3.042-1.135-5.824-3-7.938l-3 2.647z"></path>
+          </svg>
+          <span className="animate-pulse font-semibold">Initializing world...</span>
+        </div>
+      );
+    }
+
+
+    ReactDOM.render(<LogViewer />, document.getElementById('root'));
+  </script>
+</body>
+
+</html>

@@ -4,8 +4,8 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
-from src.utils.database.base import Tables
 
+from src.utils.database.base import Tables
 from src.utils.database.client import get_database
 
 from ..tools.name import ToolName

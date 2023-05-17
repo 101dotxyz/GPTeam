@@ -18,22 +18,23 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
 
   <script type="text/babel">
-    var colorMapping = {
-      'GENERAL': 'white',
-      'ERROR': 'red',
-      'ANNOUNCEMENT': 'lightmagenta',
-      'CLI_INPUT': 'lightblack',
-      'AGENT_0': 'lightcyan',
-      'AGENT_1': 'yellow',
-      'AGENT_2': 'blue',
-      'AGENT_3': 'magenta',
-      'AGENT_4': 'red',
-      'AGENT_5': 'green',
-      'AGENT_6': 'cyan',
-      'AGENT_7': 'lightyellow',
-      'AGENT_8': 'lightblue',
-      'AGENT_9': 'lightgreen'
-    };
+  var colorMapping = {
+    'GENERAL': 'white',
+    'ERROR': 'red',
+    'ANNOUNCEMENT': 'lightmagenta',
+    'CLI_INPUT': 'lightblack',
+    'AGENT_0': 'lightgreen',
+    'AGENT_1': 'yellow',
+    'AGENT_2': 'magenta',
+    'AGENT_3': 'blue',
+    'AGENT_4': 'red',
+    'AGENT_5': 'lightcyan',
+    'AGENT_6': 'cyan',
+    'AGENT_7': 'lightyellow',
+    'AGENT_8': 'lightblue',
+    'AGENT_9': 'green'
+  }
+
 
 
     function LogViewer() {
@@ -137,7 +138,6 @@
       "Moved Location": "🚶‍♂️ Moving",
       "Reflection": "🤔 Reflecting",
       "Gossip": "💬 Gossiping",
-      "New Conversations": "🗣️ In Conversation"
     };
 
     function AgentInformation({ agent, logLines }) {

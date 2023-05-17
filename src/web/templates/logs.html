@@ -104,26 +104,10 @@
     function AgentWindow({ agent, logLines, columnWidth }) {
       return (
         <div style={{ width: columnWidth }} className="px-3 py-2 h-full">
-          <AgentInformation agent={agent} />
+          <AgentInformation agent={agent} logLines={logLines} />
           <LogWindow logLines={logLines} />
         </div>
       );
-    }
-
-    function AgentInformation({ agent }) {
-      return (
-        <div class="bg-gray-800 text-white pb-4">
-          <div class="flex items-center">
-            <div class="w-1/2">
-              <h2 class="text-lg font-bold">{agent.full_name}</h2>
-              <p class="text-base">{agent.location}</p>
-            </div>
-            <div class="w-1/2 text-right">
-              <h2 class="text-lg font-bold">Agent Status</h2>
-              <p class="text-base">Online</p>
-            </div>
-          </div>
-        </div>)
     }
 
     function LogWindow({ logLines }) {
@@ -135,6 +119,39 @@
         </div>
       );
     }
+
+  const AGENT_STATUSES = {
+    "Observe": "👀 Observing",
+    "Act": "🚀 Taking Action",
+    "React": "🔄 Reacting",
+    "Starting to Plan": "📝 Planning",
+    "Moved Location": "🚶‍♂️ Moving",
+    "Reflection": "🤔 Reflecting",
+    "Gossip": "💬 Gossiping",
+    "New Conversations": "🗣️ In Conversation"
+  };
+
+  function AgentInformation({ agent, logLines }) {
+    const statusLogs = logLines.filter((line) => AGENT_STATUSES.hasOwnProperty(line.title));
+    const latestLog = statusLogs.length > 0 ? statusLogs[0] : null;
+    const agentStatus = latestLog ? AGENT_STATUSES[latestLog.title] : 'Unknown';
+
+    return (
+      <div class="bg-gray-800 h-min text-white pb-4">
+        <div class="flex items-end h-full">
+          <div class="w-1/2">
+            <h2 class="text-lg font-bold">{agent.full_name}</h2>
+            <p class="text-base">🗺️ Location: {agent.location}</p>
+          </div>
+          <div class="w-1/2">
+            <p class="text-right text-base">{agentStatus}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
 
     function TypeWriter({ text }) {
       const [currentIndex, setCurrentIndex] = React.useState(0);

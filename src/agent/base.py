@@ -861,6 +861,8 @@ class Agent(BaseModel):
     async def _react(self, events: list[Event]) -> LLMReactionResponse:
         """Get the recent activity and decide whether to replan to carry on"""
 
+        self._log("React", "Deciding how to react to recent events...")
+
         # LLM call to decide how to react to new events
         # Make the reaction parser
         reaction_parser = OutputFixingParser.from_llm(
@@ -922,6 +924,8 @@ class Agent(BaseModel):
         plan: SinglePlan,
     ) -> PlanStatus:
         """Act on a plan"""
+
+        self._log("Act", "Starting to act on plan.")
 
         # If we are not in the right location, move to the new location
         if self.location.id != plan.location.id:
@@ -1045,8 +1049,8 @@ class Agent(BaseModel):
         )
 
         self._log(
-            f"Observed {len(events)} new events",
-            f"Last checked events at {last_checked_events.strftime('%H:%M:%S')}",
+            "Observe",
+            f"Observed {len(events)} new events since {last_checked_events.strftime('%H:%M:%S')}",
         )
 
         if len(events) > 0:

@@ -4,7 +4,10 @@
     <img src="https://img.shields.io/github/stars/101dotxyz/gpteam.svg?style=for-the-badge&">
     <img src="https://img.shields.io/github/license/101dotxyz/gpteam.svg?style=for-the-badge&">
     <br />
-    <a href="https://github.com/101dotxyz/gpteam/issues"><b>Report Bug</b></a>
+  <a href="https://github.com/101dotxyz/gpteam/issues"><b>Report Bug</b></a>
+   | 
+  <a href="https://www.youtube.com/watch?v=cIxhI1d6NsM"><b>Video Demo</b></a>
+  
   </p>
     <div align="center">
     <img src="assets/gpteam.png" alt="GPTeam" width="400" height="267" />

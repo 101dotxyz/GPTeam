@@ -80,14 +80,12 @@
 
 
       if (!worldState) {
-        return <div>Loading...</div>
+        return <Loading />
       }
 
-      console.log(logs[worldState.agents[0].full_name])
-
       return (
-        <div className="h-screen flex overflow-hidden bg-gray-800 text-white">
-          <div style={{ display: 'flex' }} className="h-full">
+        <div className="min-h-screen flex overflow-hidden bg-gray-800 text-white">
+          <div className="h-screen flex w-screen">
             {(worldState.agents || []).map((agent) => <AgentWindow agent={agent} logLines={logs[agent.full_name] || []} columnWidth={`${100 / worldState.agents.length}%`} />)}
           </div>
         </div>
@@ -107,17 +105,32 @@
 
     function AgentWindow({ agent, logLines, columnWidth }) {
       return (
-        <div style={{ width: columnWidth }} className="border border-gray-300 rounded m-2 p-2 h-full overflow-auto">
-          <h2 className="text-xl font-bold mb-4">🧍 {agent["full_name"]}</h2>
-          <h2 className="text-xl font-bold mb-4">Current Location: {agent["location"]}</h2>
+        <div style={{ width: columnWidth }} className="m-2 p-2 h-full overflow-auto">
+          <AgentInformation agent={agent} />
           <LogWindow logLines={logLines} />
         </div>
       );
     }
 
+    function AgentInformation({ agent }) {
+      return (
+        <div class="pb-4 bg-gray-800 text-white">
+          <div class="flex items-center">
+            <div class="w-1/2">
+              <h2 class="text-lg font-bold">{agent.full_name}</h2>
+              <p class="text-base">{agent.location}</p>
+            </div>
+            <div class="w-1/2 text-right">
+              <h2 class="text-lg font-bold">Agent Status</h2>
+              <p class="text-base">Online</p>
+            </div>
+          </div>
+        </div>)
+    }
+
     function LogWindow({ logLines }) {
       return (
-        <div className="h-full overflow-auto">
+        <div className="h-full overflow-auto bg-black text-white p-4">
           {logLines.map((log, index) => (
             <LogLine key={index} log={log} />
           ))}
@@ -140,6 +153,15 @@
 
       return <span>{text.substring(0, currentIndex)}</span>;
     }
+
+    function Loading() {
+      return (
+        <div className="flex items-center justify-center h-screen bg-gray-600 text-white">
+          Loading...
+        </div>
+      );
+    }
+
 
     ReactDOM.render(<LogViewer />, document.getElementById('root'));
   </script>

@@ -100,13 +100,13 @@
       );
     }
 
-    function LogLine({ log }) {
+    function LogLine({ log, type }) {
       const { agentName, color, title, description } = log;
 
       return (
         <div className="mb-4 font-mono">
           <span style={{ color: colorMapping[color], fontWeight: 'bold' }}>{title}</span>{" "}
-          <TypeWriter text={description} />
+          <TypeWriter text={description} enabled={type} />
         </div>
       );
     }
@@ -124,7 +124,7 @@
       return (
         <div className="h-full overflow-auto bg-black text-white p-4 text-sm rounded-md">
           {logLines.map((log, index) => (
-            <LogLine key={index} log={log} />
+            <LogLine key={index} log={log} type={index === 0} />
           ))}
         </div>
       );
@@ -162,7 +162,7 @@
 
 
 
-    function TypeWriter({ text }) {
+    function TypeWriter({ text, enabled }) {
       const [currentIndex, setCurrentIndex] = React.useState(0);
 
       React.useEffect(() => {
@@ -175,7 +175,7 @@
         };
       }, []);
 
-      return <span>{text.substring(0, currentIndex)}</span>;
+      return <span>{enabled ? text.substring(0, currentIndex) : text}</span>;
     }
 
     function Loading() {

@@ -47,7 +47,7 @@ class Location(BaseModel):
         if allowed_agent_ids is None:
             allowed_agent_ids = []
 
-        if channel_id is not None and len(channel_id) == 0:
+        if channel_id is not None and len(str(channel_id)) == 0:
             channel_id = None
 
         super().__init__(

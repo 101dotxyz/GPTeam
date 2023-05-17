@@ -66,5 +66,5 @@ if __name__ == "__main__":
     subprocess.run(["poetry", "run", "db-reset"], check=True)
 
     print(
-        "\nSetup complete!\n\n-> You are ready to run the world. Please run `poetry run world` to get started."
+        "\nSetup complete!\n\n-> You are ready to run the world. Please set your OPENAI_API_KEY in .env and run `poetry run world` to get started."
     )

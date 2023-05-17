@@ -20,17 +20,21 @@
   <script type="text/babel">
     var colorMapping = {
       'GENERAL': 'white',
-      'PLAN': 'green',
-      'MOVE': 'cyan',
-      'REACT': 'gold',
-      'ACT': 'blue',
-      'MESSAGE': 'lightblue',
-      'REFLECT': 'magenta',
-      'MEMORY': 'red',
-      'THOUGHT': 'gray',
       'ERROR': 'red',
-      'ANNOUNCEMENT': 'lightmagenta'
+      'ANNOUNCEMENT': 'lightmagenta',
+      'CLI_INPUT': 'lightblack',
+      'AGENT_0': 'lightcyan',
+      'AGENT_1': 'yellow',
+      'AGENT_2': 'blue',
+      'AGENT_3': 'magenta',
+      'AGENT_4': 'red',
+      'AGENT_5': 'green',
+      'AGENT_6': 'cyan',
+      'AGENT_7': 'lightyellow',
+      'AGENT_8': 'lightblue',
+      'AGENT_9': 'lightgreen'
     };
+
 
     function LogViewer() {
       const [logs, setLogs] = React.useState({});
@@ -40,6 +44,7 @@
         const socket = new WebSocket('ws://' + window.location.host + '/logs');
         socket.onmessage = (e) => {
 
+          console.log("data: ", e.data)
           const { agentName, color, title, description } = JSON.parse(e.data)
 
 
@@ -81,7 +86,7 @@
       console.log(logs[worldState.agents[0].full_name])
 
       return (
-        <div className="h-screen flex overflow-hidden">
+        <div className="h-screen flex overflow-hidden bg-gray-800 text-white">
           <div style={{ display: 'flex' }} className="h-full">
             {(worldState.agents || []).map((agent) => <AgentWindow agent={agent} logLines={logs[agent.full_name] || []} columnWidth={`${100 / worldState.agents.length}%`} />)}
           </div>

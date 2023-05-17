@@ -16,8 +16,11 @@ async def reset():
     if DATABASE_PROVIDER == "supabase":
         subprocess.run(["supabase", "db", "reset"])
     else:
-        subprocess.run(["rm", "-f", "database.db"])
-        subprocess.run(["rm", "-f", "vectors.pickle.gz"])
+        if os.path.exists("database.db"):
+            os.remove("database.db")
+
+        if os.path.exists("vectors.pickle.gz"):
+            os.remove("vectors.pickle.gz")
 
     print("database reset")
 

@@ -100,7 +100,12 @@ class SupabaseDatabase(DatabaseProviderSingleton):
         ).data
 
     async def get_messages_by_discord_id(self, discord_id: str) -> list[dict[str, Any]]:
-        return (await self.client.table("Events").select().eq("metadata->>discord_id", discord_id).single()).data
+        return (
+            await self.client.table("Events")
+            .select()
+            .eq("metadata->>discord_id", discord_id)
+            .single()
+        ).data
 
     async def insert(
         self, table: Tables, data: dict | list[dict], upsert=False

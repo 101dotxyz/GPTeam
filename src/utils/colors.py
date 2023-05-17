@@ -2,18 +2,21 @@ from enum import Enum
 
 from colorama import Fore
 
+NUM_AGENT_COLORS = 10
+
 
 class LogColor(Enum):
     GENERAL = Fore.WHITE
-    PLAN = Fore.GREEN
-    MOVE = Fore.LIGHTCYAN_EX
-    REACT = Fore.YELLOW
-    ACT = Fore.BLUE
-    MESSAGE = Fore.LIGHTBLUE_EX
-    REFLECT = Fore.MAGENTA
-    MEMORY = Fore.RED
-    THOUGHT = Fore.LIGHTBLACK_EX
     ERROR = Fore.RED
     ANNOUNCEMENT = Fore.LIGHTMAGENTA_EX
-
-    
+    CLI_INPUT = Fore.LIGHTBLACK_EX
+    AGENT_0 = Fore.LIGHTCYAN_EX
+    AGENT_1 = Fore.YELLOW
+    AGENT_2 = Fore.BLUE
+    AGENT_3 = Fore.MAGENTA
+    AGENT_4 = Fore.RED
+    AGENT_5 = Fore.GREEN
+    AGENT_6 = Fore.CYAN
+    AGENT_7 = Fore.LIGHTYELLOW_EX
+    AGENT_8 = Fore.LIGHTBLUE_EX
+    AGENT_9 = Fore.LIGHTGREEN_EX

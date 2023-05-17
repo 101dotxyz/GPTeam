@@ -26,7 +26,7 @@ from ..tools.context import ToolContext
 from ..tools.name import ToolName
 from ..utils.colors import LogColor
 from ..utils.embeddings import get_embedding
-from ..utils.formatting import print_to_console, print_to_console2
+from ..utils.formatting import print_to_console
 from ..utils.model_name import ChatModelName
 from ..utils.models import ChatModel
 from ..utils.parameters import (
@@ -299,6 +299,10 @@ class Agent(BaseModel):
             discord_bot_token=agent.get("discord_bot_token"),
         )
 
+    @property
+    def color(self) -> LogColor:
+        return self.context.get_agent_color(self.id)
+
     async def _add_memory(
         self,
         description: str,
@@ -323,7 +327,7 @@ class Agent(BaseModel):
         await (await get_database()).insert(Tables.Memories, memory.db_dict())
 
         if log:
-            self._log("New Memory", LogColor.MEMORY, f"{memory}")
+            self._log("New Memory", f"{memory}")
 
         return memory
 
@@ -422,10 +426,8 @@ class Agent(BaseModel):
 
         return response
 
-    def _log(
-        self, title: str, color: LogColor = LogColor.GENERAL, description: str = ""
-    ):
-        print_to_console2(f"[{self.full_name}] {title}", self.full_name, description)
+    def _log(self, title: str, description: str = ""):
+        print_to_console(f"[{self.full_name}] {title}", self.color, description)
 
     async def _calculate_importance(self, memory_description: str) -> int:
         # Set up a complex chat model
@@ -485,7 +487,6 @@ class Agent(BaseModel):
 
         self._log(
             "Moved Location",
-            LogColor.MOVE,
             f"{self.location.name} -> {location.name} @ {datetime.now(pytz.utc).strftime('%H:%M:%S')}",
         )
 
@@ -528,7 +529,7 @@ class Agent(BaseModel):
             reverse=True,
         )[:REFLECTION_MEMORY_COUNT]
 
-        self._log("Reflection", LogColor.REFLECT, "Beginning reflection... 🤔")
+        self._log("Reflection", "Beginning reflection... 🤔")
 
         # Set up a complex chat model
         chat_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0)
@@ -576,7 +577,7 @@ class Agent(BaseModel):
                 llm=chat_llm.defaultModel,
             )
 
-            self._log("Reflecting on Question", LogColor.REFLECT, f"{question}")
+            self._log("Reflecting on Question", f"{question}")
 
             # Make the reflection prompter
             reflection_prompter = Prompter(
@@ -645,7 +646,6 @@ class Agent(BaseModel):
 
         self._log(
             "Gossip",
-            LogColor.ACT,
             f"{response}",
         )
 
@@ -666,7 +666,7 @@ class Agent(BaseModel):
             location_context (str): A description of the current location and list of the other agents in this location
         """
 
-        self._log("Starting to Plan", LogColor.PLAN, "📝")
+        self._log("Starting to Plan", "📝")
 
         low_temp_llm = ChatModel(DEFAULT_SMART_MODEL, temperature=0, streaming=True)
 
@@ -686,7 +686,7 @@ class Agent(BaseModel):
         else:
             recent_activity = self.recent_activity
 
-        self._log("Recent Activity Summary", LogColor.PLAN, recent_activity)
+        self._log("Recent Activity Summary", recent_activity)
 
         # Make the Plan prompter
         plan_prompter = Prompter(
@@ -732,7 +732,6 @@ class Agent(BaseModel):
         if invalid_locations:
             self._log(
                 "Invalid Locations in Plan",
-                LogColor.PLAN,
                 f"The following locations are invalid: {invalid_locations}",
             )
 
@@ -787,12 +786,10 @@ class Agent(BaseModel):
         for index, plan in enumerate(new_plans):
             self._log(
                 "New Plan",
-                LogColor.PLAN,
                 f"#{index}: {plan.description} @ {plan.location.name} (<{plan.max_duration_hrs} hrs) [Stop Condition: {plan.stop_condition}]",
             )
 
         return new_plans
-
 
     async def _plan_responses(self, events: list[Event]) -> None:
         """Respond to new messages"""
@@ -816,14 +813,12 @@ class Agent(BaseModel):
         if not relevant_messages:
             self._log(
                 "No Conversations",
-                LogColor.MESSAGE,
                 "No new conversations to respond to.",
             )
             return
 
         self._log(
             "New Conversations",
-            LogColor.MESSAGE,
             f"{len(relevant_messages)} conversations to respond to.",
         )
 
@@ -911,7 +906,6 @@ class Agent(BaseModel):
 
         self._log(
             "Reaction",
-            LogColor.REACT,
             f"Decided to {parsed_reaction_response.reaction.value} the current plan: {parsed_reaction_response.thought_process}",
         )
 
@@ -929,9 +923,6 @@ class Agent(BaseModel):
         # If we are not in the right location, move to the new location
         if self.location.id != plan.location.id:
             await self._move_to_location(plan.location)
-
-        # Execute the plan
-        # self._log("Acting on Plan", LogColor.ACT, f"{plan.description}")
 
         # Observe and react to new events
         await self.observe()
@@ -960,7 +951,6 @@ class Agent(BaseModel):
         if resp.status == PlanStatus.FAILED:
             self._log(
                 "Action Failed",
-                LogColor.ACT,
                 f"{plan.description} Error: {resp.output}",
             )
 
@@ -987,7 +977,7 @@ class Agent(BaseModel):
 
         # If the plan is in progress
         elif resp.status == PlanStatus.IN_PROGRESS:
-            self._log("Action In Progress", LogColor.ACT, f"{plan.description}")
+            self._log("Action In Progress", f"{plan.description}")
 
             # update the plan in the local agent object
             plan.scratchpad = resp.scratchpad
@@ -1008,7 +998,7 @@ class Agent(BaseModel):
 
         # If the plan is done, remove it from the list of plans
         elif resp.status == PlanStatus.DONE:
-            self._log("Action Completed", LogColor.ACT, f"{plan.description}")
+            self._log("Action Completed", f"{plan.description}")
 
             # update the plan in the local agent object
             plan.completed_at = datetime.now(pytz.utc)
@@ -1053,7 +1043,6 @@ class Agent(BaseModel):
 
         self._log(
             f"Observed {len(events)} new events",
-            LogColor.PLAN,
             f"Last checked events at {last_checked_events.strftime('%H:%M:%S')}",
         )
 
@@ -1068,12 +1057,6 @@ class Agent(BaseModel):
                 )
                 for event in events
             ]
-
-            # self._log(
-            #     f"{len(events)} New Memories",
-            #     LogColor.MEMORY,
-            #     {f"{memory.description}" for memory in new_memories},
-            # )
 
         return events
 

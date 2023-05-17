@@ -2,9 +2,11 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from ..event.base import EventsManager, Event
-from src.utils.database.client import get_database
 from src.utils.database.base import Tables
+from src.utils.database.client import get_database
+
+from ..event.base import Event, EventsManager
+from ..utils.colors import NUM_AGENT_COLORS, LogColor
 
 
 class WorldData(BaseModel):
@@ -58,9 +60,7 @@ class WorldContext(BaseModel):
         agents_at_location = self.get_agents_at_location(event.location_id)
 
         # add the witnesses
-        event.witness_ids = [
-            UUID(witness["id"]) for witness in agents_at_location
-        ]
+        event.witness_ids = [UUID(witness["id"]) for witness in agents_at_location]
 
         # This code is helpful when an agent is changing location
         if event.agent_id not in event.witness_ids:
@@ -139,6 +139,12 @@ class WorldContext(BaseModel):
             )
         )
 
+    def get_agent_color(self, agent_id: UUID | str) -> LogColor:
+        agent_ids = sorted([str(agent["id"]) for agent in self.agents], key=str)
+
+        color = f"AGENT_{agent_ids.index(str(agent_id)) % NUM_AGENT_COLORS}"
+        return LogColor[color]
+
     def get_location_name(self, location_id: UUID | str):
         return self.get_location_from_location_id(location_id)["name"]
 
@@ -186,4 +192,3 @@ class WorldContext(BaseModel):
         agent["location_id"] = str(agent["location_id"])
         new_agents.append(agent)
         self.agents = new_agents
-

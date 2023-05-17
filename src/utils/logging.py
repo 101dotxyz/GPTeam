@@ -86,6 +86,7 @@ class LoggingFilter(logging.Filter):
 
 def init_logging():
     openai.util.logger.setLevel(logging.WARNING)
+    open("src/web/logs/agent.txt", "w").close()
 
 
 def get_agent_logger():
@@ -102,6 +103,7 @@ def get_agent_logger():
 
     # Create a file handler
     Path("src/web/logs/").mkdir(parents=True, exist_ok=True)
+
     handler = logging.FileHandler("src/web/logs/agent.txt")
     handler.setLevel(logging.INFO)
 

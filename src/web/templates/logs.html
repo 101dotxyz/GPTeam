@@ -2,7 +2,7 @@
 <html>
 
 <head>
-  <title>Arcadia Innovations</title>
+  <title>GPTeam</title>
   <meta charset="UTF-8">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.7/dist/tailwind.min.css" rel="stylesheet">
 </head>
@@ -43,8 +43,6 @@
       React.useEffect(() => {
         const socket = new WebSocket('ws://' + window.location.host + '/logs');
         socket.onmessage = (e) => {
-
-          console.log("data: ", e.data)
           const { agentName, color, title, description } = JSON.parse(e.data)
 
 
@@ -82,8 +80,19 @@
 
       return (
         <div className="min-h-screen flex overflow-hidden bg-gray-800 text-white">
-          <div className="h-screen flex w-screen p-3">
-            {!worldState && <Loading />}
+          {!worldState && <Loading />}
+          {worldState && <WorldVisualisation worldState={worldState} logs={logs} />}
+        </div>
+      );
+    }
+
+    function WorldVisualisation({ worldState, logs }) {
+      return (
+        <div className="flex flex-col py-2">
+          <div className="w-full my-2 px-6 text-center">
+            <h1 className="text-xl font-bold">🌎&nbsp;&nbsp;{worldState.name}</h1>
+          </div>
+          <div className="h-screen flex w-screen px-3">
             {worldState && worldState.agents.map((agent) => <AgentWindow agent={agent} logLines={logs[agent.full_name] || []} columnWidth={`${100 / worldState.agents.length}%`} />)}
           </div>
         </div>
@@ -112,7 +121,7 @@
 
     function LogWindow({ logLines }) {
       return (
-        <div className="h-full overflow-auto bg-black text-white p-4 text-sm">
+        <div className="h-full overflow-auto bg-black text-white p-4 text-sm rounded-md">
           {logLines.map((log, index) => (
             <LogLine key={index} log={log} />
           ))}
@@ -120,36 +129,36 @@
       );
     }
 
-  const AGENT_STATUSES = {
-    "Observe": "👀 Observing",
-    "Act": "🚀 Taking Action",
-    "React": "🔄 Reacting",
-    "Starting to Plan": "📝 Planning",
-    "Moved Location": "🚶‍♂️ Moving",
-    "Reflection": "🤔 Reflecting",
-    "Gossip": "💬 Gossiping",
-    "New Conversations": "🗣️ In Conversation"
-  };
+    const AGENT_STATUSES = {
+      "Observe": "👀 Observing",
+      "Act": "🚀 Taking Action",
+      "React": "🔄 Reacting",
+      "Starting to Plan": "📝 Planning",
+      "Moved Location": "🚶‍♂️ Moving",
+      "Reflection": "🤔 Reflecting",
+      "Gossip": "💬 Gossiping",
+      "New Conversations": "🗣️ In Conversation"
+    };
 
-  function AgentInformation({ agent, logLines }) {
-    const statusLogs = logLines.filter((line) => AGENT_STATUSES.hasOwnProperty(line.title));
-    const latestLog = statusLogs.length > 0 ? statusLogs[0] : null;
-    const agentStatus = latestLog ? AGENT_STATUSES[latestLog.title] : 'Unknown';
+    function AgentInformation({ agent, logLines }) {
+      const statusLogs = logLines.filter((line) => AGENT_STATUSES.hasOwnProperty(line.title));
+      const latestLog = statusLogs.length > 0 ? statusLogs[0] : null;
+      const agentStatus = latestLog ? AGENT_STATUSES[latestLog.title] : 'Unknown';
 
-    return (
-      <div class="bg-gray-800 h-min text-white pb-4">
-        <div class="flex items-end h-full">
-          <div class="w-1/2">
-            <h2 class="text-lg font-bold">{agent.full_name}</h2>
-            <p class="text-base">🗺️ Location: {agent.location}</p>
-          </div>
-          <div class="w-1/2">
-            <p class="text-right text-base">{agentStatus}</p>
+      return (
+        <div class="bg-gray-800 h-min text-white pb-4">
+          <div class="flex items-end h-full">
+            <div class="w-1/2">
+              <h2 class="text-lg font-bold">{agent.full_name}</h2>
+              <p class="text-base">🗺️ Location: {agent.location}</p>
+            </div>
+            <div class="w-1/2">
+              <p class="text-right text-base">{agentStatus}</p>
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
 
 

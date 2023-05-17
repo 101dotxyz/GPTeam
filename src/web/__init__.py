@@ -85,6 +85,8 @@ def get_server():
 
             sorted_agents = sorted(agents_state, key=lambda k: k["full_name"])
 
-            await websocket.send_json({"agents": sorted_agents})
+            await websocket.send_json(
+                {"agents": sorted_agents, "name": worlds[0]["name"]}
+            )
 
     return app

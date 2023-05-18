@@ -864,7 +864,7 @@ class Agent(BaseModel):
         self._log("Act", "Starting to act on plan.")
 
         # If we are not in the right location, move to the new location
-        if (plan.location and self.location.id != plan.location.id):
+        if (hasattr(plan, 'location') and plan.location and self.location.id != plan.location.id):
             await self._move_to_location(plan.location)
 
         # Observe and react to new events

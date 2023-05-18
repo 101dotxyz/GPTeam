@@ -105,7 +105,7 @@ class SqliteDatabase(DatabaseProviderSingleton):
         self, world_id: str, limit: int
     ) -> list[dict[str, Any]]:
         async with self.client.execute(
-            f"SELECT * FROM Events INNER JOIN locations ON Events.location_id = locations.id WHERE Locations.world_id = ? ORDER BY Events.timestamp DESC LIMIT ?",
+            f"SELECT Events.*, Locations.world_id FROM Events INNER JOIN locations ON Events.location_id = locations.id WHERE Locations.world_id = ? ORDER BY Events.timestamp DESC LIMIT ?",
             (world_id, limit),
         ) as cursor:
             return await cursor.fetchall()

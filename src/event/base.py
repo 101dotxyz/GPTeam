@@ -169,7 +169,7 @@ class EventsManager(BaseModel):
                 type=EventType(event["type"]),
                 subtype=event["subtype"],
                 description=event["description"],
-                location_id=event["location_id"]["id"],
+                location_id=event["location_id"] if isinstance(event["location_id"], str) else event["location_id"]["id"],
                 timestamp=datetime.fromisoformat(event["timestamp"]),
                 witness_ids=event["witness_ids"],
                 metadata=event["metadata"],
@@ -192,14 +192,13 @@ class EventsManager(BaseModel):
             data = await (await get_database()).get_recent_events(
                 self.world_id, RECENT_EVENTS_BUFFER
             )
-
             events = [
                 Event(
                     id=event["id"],
                     type=EventType(event["type"]),
                     subtype=event["subtype"],
                     description=event["description"],
-                    location_id=event["location_id"]["id"],
+                    location_id=event["location_id"] if isinstance(event["location_id"], str) else event["location_id"]["id"],
                     agent_id=event["agent_id"],
                     timestamp=datetime.fromisoformat(event["timestamp"]),
                     witness_ids=event["witness_ids"],
@@ -235,8 +234,9 @@ class EventsManager(BaseModel):
             await self.refresh_events()
 
         filtered_events = self.recent_events
-
         if after is not None:
+            if after.tzinfo is None:
+                after = pytz.utc.localize(after)
             filtered_events = [
                 event for event in filtered_events if event.timestamp > after
             ]

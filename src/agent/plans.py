@@ -19,6 +19,24 @@ class PlanStatus(Enum):
     DONE = "done"
     FAILED = "failed"
 
+class LLMSinglePlan(BaseModel):
+    index: int = Field(description="The plan number")
+    description: str = Field(description="A description of the plan")
+    start_time: datetime = Field(description="The starting time, in UTC, of the plan")
+    stop_condition: str = Field(
+        description="The condition that will cause this plan to be completed"
+    )
+    max_duration_hrs: float = Field(
+        description="The maximum amount of time to spend on this activity before reassessing"
+    )
+    location_name: str = Field(
+        description="The name of the location. Must match the location name exactly."
+    )
+
+
+class LLMPlanResponse(BaseModel):
+    plans: list[LLMSinglePlan] = Field(description="A numbered list of plans")
+
 
 class SinglePlan(BaseModel):
     id: UUID
@@ -90,6 +108,18 @@ class SinglePlan(BaseModel):
 
         return cls(**plan_data)
 
+    @classmethod
+    async def from_llm_single_plan(cls, agent_id: UUID, llm_plan: LLMSinglePlan):
+        location = await Location.from_name(llm_plan.location_name)
+
+        return cls(
+            description = llm_plan.description,
+            max_duration_hrs = llm_plan.max_duration_hrs,
+            stop_condition = llm_plan.stop_condition,
+            agent_id = agent_id,
+            location = location
+        )
+
     async def delete(self):
         return await (await get_database()).get_by_id(Tables.Plan, str(self.id))
 
@@ -118,20 +148,3 @@ class SinglePlan(BaseModel):
         return f"\nDo this: {self.description}\nAt this location: {self.location.name}\nStop when this happens: {self.stop_condition}\nIf do not finish within {self.max_duration_hrs} hours, stop."
 
 
-class LLMSinglePlan(BaseModel):
-    index: int = Field(description="The plan number")
-    description: str = Field(description="A description of the plan")
-    start_time: datetime = Field(description="The starting time, in UTC, of the plan")
-    stop_condition: str = Field(
-        description="The condition that will cause this plan to be completed"
-    )
-    max_duration_hrs: float = Field(
-        description="The maximum amount of time to spend on this activity before reassessing"
-    )
-    location_id: Optional[UUID] = Field(
-        description="Optional. The id of the location if known. If included, it must be a valid UUID from the available locations."
-    )
-
-
-class LLMPlanResponse(BaseModel):
-    plans: list[LLMSinglePlan] = Field(description="A numbered list of plans")

@@ -1066,7 +1066,9 @@ class Agent(BaseModel):
 
         # If the reaction calls to postpone the current plan, insert the new plan at the top
         elif self.react_response.reaction == Reaction.POSTPONE:
-            self.plans.insert(0, self.react_response.new_plan)
+            # create a new plan from the LLMSinglePlan
+            new_plan = await SinglePlan.from_llm_single_plan(self.id, self.react_response.new_plan)
+            self.plans.insert(0, new_plan)
 
         # Work through the plans
         await self._do_first_plan()

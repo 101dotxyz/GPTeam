@@ -18,22 +18,22 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
 
   <script type="text/babel">
-    var colorMapping = {
-      'GENERAL': 'white',
-      'ERROR': 'red',
-      'ANNOUNCEMENT': 'lightmagenta',
-      'CLI_INPUT': 'lightblack',
-      'AGENT_0': 'lightgreen',
-      'AGENT_1': 'yellow',
-      'AGENT_2': 'magenta',
-      'AGENT_3': 'blue',
-      'AGENT_4': 'red',
-      'AGENT_5': 'lightcyan',
-      'AGENT_6': 'cyan',
-      'AGENT_7': 'lightyellow',
-      'AGENT_8': 'lightblue',
-      'AGENT_9': 'green'
-    }
+  var colorMapping = {
+    'GENERAL': 'white',
+    'ERROR': 'red',
+    'ANNOUNCEMENT': 'lightmagenta',
+    'CLI_INPUT': 'lightblack',
+    'AGENT_0': 'lightgreen',
+    'AGENT_1': 'yellow',
+    'AGENT_2': 'magenta',
+    'AGENT_3': 'blue',
+    'AGENT_4': 'red',
+    'AGENT_5': 'lightcyan',
+    'AGENT_6': 'cyan',
+    'AGENT_7': 'lightyellow',
+    'AGENT_8': 'lightblue',
+    'AGENT_9': 'green'
+  }
 
 
 
@@ -44,17 +44,17 @@
       React.useEffect(() => {
         const socket = new WebSocket('ws://' + window.location.host + '/logs');
         socket.onmessage = (e) => {
-          const {agentName, color, title, description} = JSON.parse(e.data)
+          const { agentName, color, title, description } = JSON.parse(e.data)
 
 
 
           setLogs((prevLogs) => {
-            const updatedLogs = {...prevLogs};
+            const updatedLogs = { ...prevLogs };
             if (!updatedLogs[agentName]) {
               updatedLogs[agentName] = [];
             }
 
-            updatedLogs[agentName] = [{agentName, color, title, description}, ...updatedLogs[agentName]];
+            updatedLogs[agentName] = [{ agentName, color, title, description }, ...updatedLogs[agentName]];
             return updatedLogs;
           });
         };
@@ -117,7 +117,6 @@
       }, []);
 
 
-
       return (
         <div className="min-h-screen flex overflow-hidden bg-gray-800 text-white">
           {!worldState && <Loading />}
@@ -126,7 +125,7 @@
       );
     }
 
-    function WorldVisualisation({worldState, logs}) {
+    function WorldVisualisation({ worldState, logs }) {
       return (
         <div className="flex flex-col py-2">
           <div className="w-full my-2 px-6 text-center">
@@ -139,27 +138,27 @@
       );
     }
 
-    function LogLine({log, type}) {
-      const {agentName, color, title, description} = log;
+    function LogLine({ log, type }) {
+      const { agentName, color, title, description } = log;
 
       return (
         <div className="mb-4 font-mono">
-          <span style={{color: colorMapping[color], fontWeight: 'bold'}}>{title}</span>{" "}
+          <span style={{ color: colorMapping[color], fontWeight: 'bold' }}>{title}</span>{" "}
           <TypeWriter text={description} enabled={type} />
         </div>
       );
     }
 
-    function AgentWindow({agent, logLines, columnWidth}) {
+    function AgentWindow({ agent, logLines, columnWidth }) {
       return (
-        <div style={{width: columnWidth}} className="px-3 py-2 h-full">
+        <div style={{ width: columnWidth }} className="px-3 py-2 h-full">
           <AgentInformation agent={agent} logLines={logLines} />
           <LogWindow logLines={logLines} />
         </div>
       );
     }
 
-    function LogWindow({logLines}) {
+    function LogWindow({ logLines }) {
       return (
         <div className="h-full overflow-auto bg-black text-white p-4 text-sm rounded-md">
           {logLines.map((log, index) => (
@@ -179,7 +178,7 @@
       "Gossip": "💬 Gossiping",
     };
 
-    function AgentInformation({agent, logLines}) {
+    function AgentInformation({ agent, logLines }) {
       const statusLogs = logLines.filter((line) => AGENT_STATUSES.hasOwnProperty(line.title));
       const latestLog = statusLogs.length > 0 ? statusLogs[0] : null;
       const agentStatus = latestLog ? AGENT_STATUSES[latestLog.title] : 'Unknown';
@@ -201,7 +200,7 @@
 
 
 
-    function TypeWriter({text, enabled}) {
+    function TypeWriter({ text, enabled }) {
       const [currentIndex, setCurrentIndex] = React.useState(0);
 
       React.useEffect(() => {

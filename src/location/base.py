@@ -99,5 +99,30 @@ class Location(BaseModel):
             world_id=location["world_id"],
         )
 
+    @classmethod
+    async def from_name(cls, name: str):
+        data = await (await get_database()).get_by_field(Tables.Locations, "name", name)
+
+        if len(data) == 0:
+            raise ValueError(f"Location with name {name} not found")
+
+        location = data[0]
+
+        available_tools = list(
+            map(lambda name: ToolName(name), location.get("available_tools"))
+        )
+
+        return cls(
+            id=location["id"],
+            name=location["name"],
+            description=location["description"],
+            available_tools=available_tools,
+            channel_id=location["channel_id"],
+            allowed_agent_ids=list(
+                map(lambda id: UUID(id), location.get("allowed_agent_ids"))
+            ),
+            world_id=location["world_id"],
+        )
+
     def context_string(self):
         return f"- {self.name}: {self.description}\n"

@@ -726,10 +726,10 @@ class Agent(BaseModel):
         parsed_plans_response: LLMPlanResponse = plan_parser.parse(response)
 
         invalid_locations = [
-            plan.location_id
+            plan.location_name
             for plan in parsed_plans_response.plans
-            if plan.location_id
-            not in [location.id for location in await self.allowed_locations]
+            if plan.location_name
+            not in [location.name for location in await self.allowed_locations]
         ]
 
         if invalid_locations:
@@ -766,7 +766,7 @@ class Agent(BaseModel):
                     (
                         location
                         for location in await self.allowed_locations
-                        if str(location.id) == str(plan.location_id)
+                        if str(location.name) == str(plan.location_name)
                     ),
                     None,
                 ),
@@ -1066,7 +1066,9 @@ class Agent(BaseModel):
 
         # If the reaction calls to postpone the current plan, insert the new plan at the top
         elif self.react_response.reaction == Reaction.POSTPONE:
-            self.plans.insert(0, self.react_response.new_plan)
+            # create a new plan from the LLMSinglePlan
+            new_plan = await SinglePlan.from_llm_single_plan(self.id, self.react_response.new_plan)
+            self.plans.insert(0, new_plan)
 
         # Work through the plans
         await self._do_first_plan()

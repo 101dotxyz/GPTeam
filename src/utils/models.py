@@ -27,6 +27,8 @@ def get_chat_model(name: ChatModelName, **kwargs) -> BaseChatModel:
         return ChatOpenAI(model_name=name.value, **kwargs)
     elif name == ChatModelName.CLAUDE:
         return ChatAnthropic(model=name.value, **kwargs)
+    elif name == ChatModelName.CLAUDE_INSTANT:
+        return ChatAnthropic(model=name.value, **kwargs)
     elif name == ChatModelName.WINDOW:
         return ChatWindowAI(model_name=name.value, **kwargs)
     else:

@@ -77,6 +77,30 @@
         };
       }, []);
 
+      React.useEffect(() => {
+        const socket = new WebSocket('ws://' + window.location.host + '/window');
+
+        socket.onmessage = (e) => {
+          console.log('window message');
+          console.log(e);
+
+          if (!window.ai) {
+            alert('window.ai not found. Please install at https://windowai.io/');
+            return;
+          }
+
+
+
+          const data = JSON.parse(e.data);
+          
+          // call window.ai extension
+        };
+
+        return () => {
+          socket.close();
+        };
+      }, []);
+
 
 
       return (

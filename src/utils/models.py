@@ -5,6 +5,7 @@ from langchain.chat_models import ChatAnthropic, ChatOpenAI
 from langchain.chat_models.base import BaseChatModel
 from langchain.llms import OpenAI
 from langchain.schema import BaseMessage
+from utils.windowai_model import ChatWindowAI
 
 from .cache import chat_json_cache, json_cache
 from .model_name import ChatModelName
@@ -26,6 +27,8 @@ def get_chat_model(name: ChatModelName, **kwargs) -> BaseChatModel:
         return ChatOpenAI(model_name=name.value, **kwargs)
     elif name == ChatModelName.CLAUDE:
         return ChatAnthropic(model=name.value, **kwargs)
+    elif name == ChatModelName.WINDOW:
+        return ChatWindowAI(model_name=name.value, **kwargs)
     else:
         raise ValueError(f"Invalid model name: {name}")
 

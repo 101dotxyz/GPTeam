@@ -52,6 +52,10 @@ Read through the dedicated [Discord setup docs](DISCORD.md)
 
 ## Using with Anthropic Claude
 Make sure you have an `ANTHROPIC_API_KEY` in your env, then you can use `poetry run world --claude` which will run the world using `claude-v1` for some calls and `claude-v1-instant` for others.
+
+## Using with Window
+Make sure you have the [Window extension](https://windowai.io/) installed, then you can use `poetry run world --window`.
+
 ## Contributing
 
 We enthusiastically welcome contributions to GPTeam! To contribute, please follow these steps:

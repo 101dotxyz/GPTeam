@@ -81,18 +81,15 @@
         const socket = new WebSocket('ws://' + window.location.host + '/window');
 
         socket.onmessage = (e) => {
-          console.log('e.data');
-          console.log(e.data);
-
-          console.log('window message');
-          console.log(e);
-
           if (!window.ai) {
             alert('window.ai not found. Please install at https://windowai.io/');
             return;
           }
 
           const { request_id, messages, temperature } = JSON.parse(e.data);
+
+          console.log('window.ai input messages:');
+          console.log(messages);
 
           window.ai.generateText(
             {
@@ -102,17 +99,12 @@
               temperature: temperature,
             }
           ).then(([response]) => {
-            console.log('response');
-            console.log(response);
-
-            console.log(response.message.content) // "I am an AI language model"
-
             const result = {
               request_id: request_id,
               content: response.message.content
             };
 
-            console.log('result');
+            console.log('window.ai result:');
             console.log(result);
 
             socket.send(JSON.stringify(result));

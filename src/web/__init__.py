@@ -9,11 +9,7 @@ from quart import Quart, abort, make_response, send_file, websocket
 from src.utils.database.base import Tables
 from src.utils.database.client import get_database
 
-from src.utils.windowai_model import WindowAIRouter
-
 load_dotenv()
-
-window_router = WindowAIRouter()
 
 window_request_queue = asyncio.Queue()
 window_response_queue = asyncio.Queue()
@@ -101,21 +97,10 @@ def get_server():
         while True:
             await asyncio.sleep(0.25)
 
-            # data = await websocket.receive()
-
-            # client should ping server periodically to see if new requests to process
-
-            # print("window_websocket data", data)
-
             request = await window_request_queue.get()
-            
             await websocket.send(request)
 
-            # receive
             response = await websocket.receive()
-
-            print("websocket.receive() response", response)
-
             await window_response_queue.put(response)
 
     @app.websocket("/windowmodel")
@@ -124,45 +109,9 @@ def get_server():
             await asyncio.sleep(0.25)
 
             request = await websocket.receive()
-
-            print("window_websocket data", request)
-
             await window_request_queue.put(request)
 
-            # read from window response queue
-
             response = await window_response_queue.get()
-
-            print("window_response_queue response", response)
-
             await websocket.send(response)
-
-            """
-            requests = window_router.get_window_requests()
-
-            print("window_websocket requests", requests)
-
-            # loop through requests
-            for request in requests:
-                request_id = request["request_id"]
-                messages = request["messages"]
-
-                # get response
-                response = window_router.get_window_response(request_id)
-                
-                if not response:
-                    print("window_websocket request", request)
-
-                    # send request
-                    await websocket.send_json(request)
-
-                    response = await websocket.receive_json()
-
-                    print("window_websocket response", response)
-
-                    window_router.add_window_response(response)
-            """
-
-
 
     return app

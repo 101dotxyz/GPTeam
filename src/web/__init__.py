@@ -15,6 +15,9 @@ load_dotenv()
 
 window_router = WindowAIRouter()
 
+window_request_queue = asyncio.Queue()
+window_response_queue = asyncio.Queue()
+
 
 def get_server():
     app = Quart(__name__)
@@ -98,24 +101,41 @@ def get_server():
         while True:
             await asyncio.sleep(0.25)
 
-            data = await websocket.receive()
+            # data = await websocket.receive()
 
             # client should ping server periodically to see if new requests to process
 
-            print("window_websocket data", data)
+            # print("window_websocket data", data)
+
+            request = await window_request_queue.get()
             
-            await websocket.send(data)
+            await websocket.send(request)
+
+            # receive
+            response = await websocket.receive()
+
+            print("websocket.receive() response", response)
+
+            await window_response_queue.put(response)
 
     @app.websocket("/windowmodel")
     async def window_model_websocket():
         while True:
             await asyncio.sleep(0.25)
 
-            data = await websocket.receive()
+            request = await websocket.receive()
 
-            print("window_websocket data", data)
+            print("window_websocket data", request)
 
-            await websocket.send(data)
+            await window_request_queue.put(request)
+
+            # read from window response queue
+
+            response = await window_response_queue.get()
+
+            print("window_response_queue response", response)
+
+            await websocket.send(response)
 
             """
             requests = window_router.get_window_requests()

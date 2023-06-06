@@ -10,6 +10,7 @@ from langchain.schema import (
     ChatGeneration,
     ChatResult,
     HumanMessage,
+    SystemMessage,
     LLMResult,
     PromptValue,
 )
@@ -95,20 +96,37 @@ class ChatWindowAI(BaseChatModel):
 
         # python object with messages and request ID
         request = {
-            "messages": messages,
+            "messages": [],
+            "temperature": self.temperature,
             "request_id": request_id,
         }
+
+        for message in messages:
+            role = "user" # default role is user
+            if isinstance(message, HumanMessage):
+                role = "user"
+            elif isinstance(message, AIMessage):
+                role = "assistant"
+            elif isinstance(message, SystemMessage):
+                role = "system"
+
+            request["messages"].append({
+                "role": role,
+                "content": message.content,
+            })
 
         # websocket.enableTrace(True)
         ws = websocket.WebSocket()
         ws.connect("ws://127.0.0.1:5000/windowmodel")
-        ws.send(str(request))
+        ws.send(json.dumps(request))
         message = ws.recv()
         ws.close()
 
         print(f"Received: {message}")
 
-        response = "Response!"
+        message = json.loads(message)
+
+        response = message["content"]
 
         """
         request_id = str(uuid.uuid4())

@@ -90,6 +90,7 @@
 
           console.log('window.ai input messages:');
           console.log(messages);
+          console.log('window.ai input temperature: ' + temperature);
 
           window.ai.generateText(
             {
@@ -97,6 +98,8 @@
             },
             {
               temperature: temperature,
+              // enabling streaming prevents "timeout of 42000ms exceeded" and "status code 405" errors
+              onStreamResult: (res) => console.log(res.message.content)
             }
           ).then(([response]) => {
             const result = {

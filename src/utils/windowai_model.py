@@ -23,6 +23,8 @@ class ChatWindowAI(BaseChatModel):
     """What sampling temperature to use."""
     streaming: bool = False
     """Whether to stream the results."""
+    request_timeout: int = 3600
+    """Timeout in seconds for the request."""
 
     @property
     def _llm_type(self) -> str:

@@ -165,6 +165,7 @@ logs/
 start.sh
 
 database.db
+database.db-journal
 vectors.pickle.gz
 agents/*.txt
 discord_server.out

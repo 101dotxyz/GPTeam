@@ -88,9 +88,6 @@
 
           const { request_id, messages, temperature } = JSON.parse(e.data);
 
-          console.log('window.ai input messages:');
-          console.log(messages);
-          console.log('window.ai input temperature: ' + temperature);
 
           window.ai.generateText(
             {
@@ -99,16 +96,13 @@
             {
               temperature: temperature,
               // enabling streaming prevents "timeout of 42000ms exceeded" and "status code 405" errors
-              onStreamResult: (res) => console.log(res.message.content)
+              onStreamResult: (res) => {}
             }
           ).then(([response]) => {
             const result = {
               request_id: request_id,
               content: response.message.content
             };
-
-            console.log('window.ai result:');
-            console.log(result);
 
             socket.send(JSON.stringify(result));
           });

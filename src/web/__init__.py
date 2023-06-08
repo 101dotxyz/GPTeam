@@ -5,11 +5,16 @@ import re
 
 from dotenv import load_dotenv
 from quart import Quart, abort, make_response, send_file, websocket
+from ..utils.model_name import ChatModelName
+from ..utils.parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 
 from src.utils.database.base import Tables
 from src.utils.database.client import get_database
 
 load_dotenv()
+
+window_request_queue = asyncio.Queue()
+window_response_queue = asyncio.Queue()
 
 
 def get_server():
@@ -88,5 +93,39 @@ def get_server():
             await websocket.send_json(
                 {"agents": sorted_agents, "name": worlds[0]["name"]}
             )
+
+    @app.websocket("/window")
+    async def window_websocket():
+        if (
+            DEFAULT_SMART_MODEL != ChatModelName.WINDOW
+            and DEFAULT_FAST_MODEL != ChatModelName.WINDOW
+        ):
+            return
+
+        while True:
+            await asyncio.sleep(0.25)
+
+            request = await window_request_queue.get()
+            await websocket.send(request)
+
+            response = await websocket.receive()
+            await window_response_queue.put(response)
+
+    @app.websocket("/windowmodel")
+    async def window_model_websocket():
+        if (
+            DEFAULT_SMART_MODEL != ChatModelName.WINDOW
+            and DEFAULT_FAST_MODEL != ChatModelName.WINDOW
+        ):
+            return
+
+        while True:
+            await asyncio.sleep(0.25)
+
+            request = await websocket.receive()
+            await window_request_queue.put(request)
+
+            response = await window_response_queue.get()
+            await websocket.send(response)
 
     return app

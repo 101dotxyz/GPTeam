@@ -77,6 +77,42 @@
         };
       }, []);
 
+      React.useEffect(() => {
+        const socket = new WebSocket('ws://' + window.location.host + '/window');
+        
+
+        socket.onmessage = (e) => {
+          if (!window.ai) {
+            alert('window.ai not found. Please install at https://windowai.io/');
+            return;
+          }
+
+          const { request_id, messages, temperature } = JSON.parse(e.data);
+
+
+          window.ai.generateText(
+            {
+              messages: messages
+            },
+            {
+              temperature: temperature,
+              // enabling streaming prevents "timeout of 42000ms exceeded" and "status code 405" errors
+              onStreamResult: (res) => {}
+            }
+          ).then(([response]) => {
+            const result = {
+              request_id: request_id,
+              content: response.message.content
+            };
+
+            socket.send(JSON.stringify(result));
+          });
+        };
+
+        return () => {
+          socket.close();
+        };
+      }, []);
 
 
       return (

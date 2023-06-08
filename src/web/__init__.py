@@ -5,6 +5,8 @@ import re
 
 from dotenv import load_dotenv
 from quart import Quart, abort, make_response, send_file, websocket
+from ..utils.model_name import ChatModelName
+from ..utils.parameters import DEFAULT_FAST_MODEL, DEFAULT_SMART_MODEL
 
 from src.utils.database.base import Tables
 from src.utils.database.client import get_database
@@ -94,6 +96,12 @@ def get_server():
 
     @app.websocket("/window")
     async def window_websocket():
+        if (
+            DEFAULT_SMART_MODEL != ChatModelName.WINDOW
+            and DEFAULT_FAST_MODEL != ChatModelName.WINDOW
+        ):
+            return
+
         while True:
             await asyncio.sleep(0.25)
 
@@ -105,6 +113,12 @@ def get_server():
 
     @app.websocket("/windowmodel")
     async def window_model_websocket():
+        if (
+            DEFAULT_SMART_MODEL != ChatModelName.WINDOW
+            and DEFAULT_FAST_MODEL != ChatModelName.WINDOW
+        ):
+            return
+
         while True:
             await asyncio.sleep(0.25)
 

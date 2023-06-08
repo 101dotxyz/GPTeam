@@ -21,11 +21,21 @@ DEFAULT_WORLD_ID = config.world_id
 ANNOUNCER_DISCORD_TOKEN = os.getenv("ANNOUNCER_DISCORD_TOKEN")
 
 DEFAULT_SMART_MODEL = (
-    ChatModelName.TURBO if "--turbo" in sys.argv else ChatModelName.CLAUDE if "--claude" in sys.argv else ChatModelName.WINDOW if "--window" in sys.argv else ChatModelName.GPT4
+    ChatModelName.TURBO
+    if "--turbo" in sys.argv
+    else ChatModelName.CLAUDE
+    if "--claude" in sys.argv
+    else ChatModelName.WINDOW
+    if "--window" in sys.argv
+    else ChatModelName.GPT4
 )
 
 DEFAULT_FAST_MODEL = (
-     ChatModelName.CLAUDE_INSTANT if "--claude" in sys.argv else ChatModelName.WINDOW if "--window" in sys.argv else ChatModelName.TURBO
+    ChatModelName.CLAUDE_INSTANT
+    if "--claude" in sys.argv
+    else ChatModelName.WINDOW
+    if "--window" in sys.argv
+    else ChatModelName.TURBO
 )
 
 

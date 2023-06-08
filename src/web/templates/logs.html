@@ -79,6 +79,7 @@
 
       React.useEffect(() => {
         const socket = new WebSocket('ws://' + window.location.host + '/window');
+        
 
         socket.onmessage = (e) => {
           if (!window.ai) {

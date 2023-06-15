@@ -19,6 +19,7 @@ from .utils.formatting import print_to_console
 from .utils.logging import init_logging
 from .utils.parameters import DISCORD_ENABLED
 from .web import get_server
+from config import config
 
 load_dotenv()
 
@@ -56,7 +57,7 @@ def run_world():
 
 def run_server():
     app = get_server()
-    run_in_new_loop(app.run_task())
+    run_in_new_loop(app.run_task(port=config["server_port"]))
 
 
 def run_in_new_loop(coro):
@@ -78,7 +79,7 @@ def run():
     process_server.start()
 
     sleep(3)
-    webbrowser.open("http://127.0.0.1:5000")
+    webbrowser.open(f"{config['base_url']}:{config['server_port']}")
 
     process_discord.join()
     process_world.join()

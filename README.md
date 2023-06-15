@@ -30,6 +30,8 @@ To begin exploring GPTeam, follow these steps:
 
 To run the world cheaply, you can use `poetry run world --turbo`. This will use gpt3.5-turbo for all LLM calls which is a lot cheaper, but expect worse results!
 
+To specify the port or base URL for viewing the HTML logs, edit the relevant lines in `metaconfig.json`. By default the app uses port 8080.
+
 Now you can observe the world in action and watch as the agents interact with each other, working together to accomplish their assigned directives.
 
 ## How it works

@@ -1,5 +1,4 @@
 {
     "server_port": 8080,
-    "openai_version": "gpt-4",
     "base_url": "http://127.0.0.1"
 }

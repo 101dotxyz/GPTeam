@@ -71,6 +71,8 @@ def run_in_new_loop(coro):
 
 
 def run():
+    port = get_open_port()
+
     process_discord = Process(target=discord_listener)
     process_world = Process(target=run_world)
     process_server = Process(target=run_server)
@@ -80,8 +82,6 @@ def run():
     process_server.start()
 
     sleep(3)
-
-    port = get_open_port()
 
     print(f"Opening browser on port {port}...")
     webbrowser.open(f"127.0.0.1:{port}")

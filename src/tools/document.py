@@ -1,10 +1,12 @@
+import ast
 from typing import Optional
+import numpy as np
 from pydantic import BaseModel, Field
 
 from src.tools.context import ToolContext
 from src.utils.database.base import Tables
 from src.utils.database.client import get_database
-from src.utils.embeddings import get_embedding
+from src.utils.embeddings import cosine_similarity, get_embedding
 
 # pydantic model for the document tool
 
@@ -63,9 +65,29 @@ class SearchDocumentsToolInput(BaseModel):
 async def search_documents(query: str, tool_context: Optional[ToolContext]):
     documents = await (await get_database()).get_all(Tables.Documents)
 
+    # get top 10 documents from embedding cosine similarity
+
+    query_embedding = await get_embedding(query)
+
+    def get_similarity(document) -> float:
+        # TODO: get working on sqlite
+        embedding = (
+            np.array(document["embedding"][1:-1].split(","), dtype=float)
+            if type(document["embedding"]) == str
+            else np.array(document["embedding"])
+        )
+
+        return cosine_similarity(embedding, query_embedding)
+
+    similar_documents = sorted(
+        documents,
+        key=lambda document: get_similarity(document),
+        reverse=True,
+    )[:10]
+
     document_titles = (
         '"'
-        + '"\n"'.join(map(lambda document: f'- {document["title"]}', documents))
+        + '"\n"'.join(map(lambda document: f'- {document["title"]}', similar_documents))
         + '"'
     )
     return f"""The following documents were found for the query "{query}":

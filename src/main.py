@@ -57,7 +57,8 @@ def run_world():
 
 def run_server():
     app = get_server()
-    run_in_new_loop(app.run_task(port=int(os.getenv("PORT", "5000"))))
+    port = get_open_port()
+    run_in_new_loop(app.run_task(port=port))
 
 
 def run_in_new_loop(coro):

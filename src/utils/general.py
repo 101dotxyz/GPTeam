@@ -27,7 +27,7 @@ def is_port_in_use(port):
 
 
 def get_open_port():
-    port = os.getenv("PORT", "8080")
+    port = os.getenv("PORT", "5000")
     while is_port_in_use(port):
         port += 1
     return port

@@ -15,7 +15,9 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     return similarity
 
 
-async def get_embedding(text: str, model="text-embedding-ada-002", max_retries=3) -> np.ndarray:
+async def get_embedding(
+    text: str, model="text-embedding-ada-002", max_retries=3
+) -> np.ndarray:
     for attempt in range(max_retries):
         try:
             response: list[float] = await openai.Embedding.acreate(

@@ -166,7 +166,7 @@ class SqliteDatabase(DatabaseProviderSingleton):
         else:
             if len(await self.get_by_id(Tables.Documents, data["id"])) > 0:
                 await self.delete(Tables.Documents, data["id"])
-        await self.insert(Tables.Documents, data)
+        await self.insert(Tables.Documents, data, upsert=True)
         data["embedding_text"] = embedding_text
         self.vector_db.add_document(data)
 

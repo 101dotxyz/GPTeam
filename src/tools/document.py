@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, Field
 
 from src.tools.context import ToolContext
@@ -59,12 +60,15 @@ class SearchDocumentsToolInput(BaseModel):
     query: str = Field(..., description="document query")
 
 
-async def search_documents(query: str, tool_context: ToolContext):
-    # documents = await (await get_database()).search_document_embeddings(query, 10)
-    if True:
-        return f"No documents found for query: {query}"
-    document_names = (
-        '"' + '"\n"'.join(map(lambda document: document["title"], documents)) + '"'
+async def search_documents(query: str, tool_context: Optional[ToolContext]):
+    documents = await (await get_database()).get_all(Tables.Documents)
+
+    document_titles = (
+        '"'
+        + '"\n"'.join(map(lambda document: f'- {document["title"]}', documents))
+        + '"'
     )
-    return f"""Documents found for query "{query}": 
-{document_names}"""
+    return f"""The following documents were found for the query "{query}":
+
+     {document_titles}
+    """

@@ -123,8 +123,8 @@ class SupabaseDatabase(DatabaseProviderSingleton):
     async def insert_document_with_embedding(
         self, data: dict, embedding_text: str
     ) -> None:
-        data["embedding"] = await get_embedding(embedding_text)
-        await self.insert(Tables.Documents, data)
+        data["embedding"] = (await get_embedding(embedding_text)).tolist()
+        await self.insert(Tables.Documents, data, upsert=True)
 
     async def search_document_embeddings(self, embedding_text: str, limit: int = 10):
         embedding = await get_embedding(embedding_text)

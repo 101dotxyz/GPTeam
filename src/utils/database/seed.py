@@ -2,12 +2,21 @@ import asyncio
 import os
 import random
 
+import openai
+
 from src.utils.database.base import Tables
 from src.utils.database.client import get_database
+from ...tools.context import ToolContext
+from ...tools.document import read_document, save_document, search_documents
 
 from ..config import AgentConfig, load_config
 from ..general import seed_uuid
 from ..parameters import DISCORD_ENABLED
+
+from dotenv import load_dotenv
+
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 config = load_config()
 
@@ -90,9 +99,23 @@ def get_agent_initial_plan(agent: AgentConfig):
 
 initial_plans = [get_agent_initial_plan(agent) for agent in config.agents]
 
+documents = [
+    {
+        "id": seed_uuid(f"document-{document.title}"),
+        "title": document.title,
+        "content": document.content,
+        "agent_id": agents[0]["id"],
+    }
+    for document in config.initial_documents
+]
+
 
 async def seed(small=False):
     print(f"seeding the db - {'small' if small else 'normal'}")
+
+    saved_docs = await search_documents("life is good", None)
+
+    print(f"{saved_docs}")
 
     database = await get_database()
     await database.insert(Tables.Worlds, worlds, upsert=True)
@@ -101,6 +124,23 @@ async def seed(small=False):
     await database.insert(
         Tables.Plans, initial_plans[:2] if small else initial_plans, upsert=True
     )
+
+    for document in documents:
+        normalized_title = document["title"].lower().strip().replace(" ", "_")
+
+        await (await get_database()).insert_document_with_embedding(
+            {
+                "id": seed_uuid(f"document-{document['title']}"),
+                "title": document["title"],
+                "normalized_title": normalized_title,
+                "content": document["content"],
+                "agent_id": agents[0]["id"],
+            },
+            f"""{document["title"]} ({normalized_title})
+    {document}""",
+        )
+
+        print(f"inserted document {document['title']}")
 
     await database.close()
 

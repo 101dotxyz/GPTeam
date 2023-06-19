@@ -3,6 +3,9 @@
 import os
 import platform
 import subprocess
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def is_poetry_installed():
@@ -61,6 +64,20 @@ if __name__ == "__main__":
 
     print("Installing dependencies...")
     subprocess.run(["poetry", "install"], check=True)
+
+    if os.getenv("DATABASE_PROVIDER") == "supabase":
+        if os.getenv("SUPABASE_URL") is None or os.getenv("SUPABASE_KEY") is None:
+            raise Exception(
+                "Please set your SUPABASE_URL and SUPABASE_KEY in .env before running the setup script with SUPABASE as your database provider."
+            )
+
+        # ask user if supabase is running
+        if prompt:
+            answer = input("⚠️  Have you started Supabase? (y/n): ").lower()
+            if answer != "y":
+                raise Exception(
+                    "Please start Supabase before running the setup script."
+                )
 
     print("Seed the database...")
     subprocess.run(["poetry", "run", "db-reset"], check=True)

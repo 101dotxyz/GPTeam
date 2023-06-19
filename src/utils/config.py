@@ -22,12 +22,18 @@ class AgentConfig(BaseModel):
     initial_plan: dict[str, str]
 
 
+class DocumentConfig(BaseModel):
+    title: str
+    content: str
+
+
 class WorldConfig(BaseModel):
     world_id: str
     world_name: str
     default_location_id: str
     locations: list[LocationConfig]
     agents: list[AgentConfig]
+    initial_documents: list[DocumentConfig]
 
 
 def load_config():
@@ -54,10 +60,13 @@ def load_config():
         for agent in config["agents"]
     ]
 
+    documents = [DocumentConfig(**document) for document in config["documents"]]
+
     return WorldConfig(
         world_id=seed_uuid(f"world-{config['world_name']}"),
         world_name=config["world_name"],
         default_location_id=default_location_id,
         locations=locations,
         agents=agents,
+        initial_documents=documents,
     )

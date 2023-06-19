@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, TypedDict
 import websocket
 import uuid
 import json
+from .general import get_open_port
 
 
 class MessageDict(TypedDict):
@@ -86,7 +87,8 @@ class ChatWindowAI(BaseChatModel):
             )
 
         ws = websocket.WebSocket()
-        ws.connect("ws://127.0.0.1:5000/windowmodel")
+        port = get_open_port()
+        ws.connect(f"ws://127.0.0.1:{port}/windowmodel")
         ws.send(json.dumps(request))
         message = ws.recv()
         ws.close()

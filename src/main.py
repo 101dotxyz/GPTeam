@@ -19,6 +19,7 @@ from .utils.formatting import print_to_console
 from .utils.logging import init_logging
 from .utils.parameters import DISCORD_ENABLED
 from .web import get_server
+from .utils.general import get_open_port
 
 load_dotenv()
 
@@ -79,8 +80,10 @@ def run():
 
     sleep(3)
 
-    print("Opening browser...")
-    webbrowser.open(f"127.0.0.1:{os.getenv('PORT', '5000')}")
+    port = get_open_port()
+
+    print(f"Opening browser on port {port}...")
+    webbrowser.open(f"127.0.0.1:{port}")
 
     process_discord.join()
     process_world.join()

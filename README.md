@@ -30,8 +30,6 @@ To begin exploring GPTeam, follow these steps:
 
 To run the world cheaply, you can use `poetry run world --turbo`. This will use gpt3.5-turbo for all LLM calls which is a lot cheaper, but expect worse results!
 
-To specify the port or base URL for viewing the HTML logs, edit the relevant lines in `metaconfig.json`. By default the app uses port 8080.
-
 Now you can observe the world in action and watch as the agents interact with each other, working together to accomplish their assigned directives.
 
 ## How it works
@@ -41,6 +39,7 @@ GPTeam employs separate agents, each equipped with a memory, that interact with 
 ## Viewing Agents
 
 The world is a busy place! To get a view of what different agents are doing whilst the world is running, you can visit the `agents/` folder where there is a txt file for each agent containing a summary of their current state.
+
 ## Changing the world
 
 To change the world, all you need to do is:
@@ -50,12 +49,15 @@ To change the world, all you need to do is:
 3. Run the world again: `poetry run world`
 
 ## Setting up the Discord Integration
+
 Read through the dedicated [Discord setup docs](DISCORD.md)
 
 ## Using with Anthropic Claude
+
 Make sure you have an `ANTHROPIC_API_KEY` in your env, then you can use `poetry run world --claude` which will run the world using `claude-v1` for some calls and `claude-v1-instant` for others.
 
 ## Using with Window
+
 Make sure you have the [Window extension](https://windowai.io/) installed, then you can use `poetry run world --window`. Some models may be slow to respond, since the prompts are very long.
 
 ## Contributing

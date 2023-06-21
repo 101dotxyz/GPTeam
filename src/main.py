@@ -19,6 +19,7 @@ from .utils.formatting import print_to_console
 from .utils.logging import init_logging
 from .utils.parameters import DISCORD_ENABLED
 from .web import get_server
+from .utils.general import get_open_port
 
 load_dotenv()
 
@@ -56,7 +57,8 @@ def run_world():
 
 def run_server():
     app = get_server()
-    run_in_new_loop(app.run_task())
+    port = get_open_port()
+    run_in_new_loop(app.run_task(port=port))
 
 
 def run_in_new_loop(coro):
@@ -69,6 +71,8 @@ def run_in_new_loop(coro):
 
 
 def run():
+    port = get_open_port()
+
     process_discord = Process(target=discord_listener)
     process_world = Process(target=run_world)
     process_server = Process(target=run_server)
@@ -78,7 +82,9 @@ def run():
     process_server.start()
 
     sleep(3)
-    webbrowser.open("http://127.0.0.1:5000")
+
+    print(f"Opening browser on port {port}...")
+    webbrowser.open(f"http://127.0.0.1:{port}")
 
     process_discord.join()
     process_world.join()

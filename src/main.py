@@ -84,7 +84,7 @@ def run():
     sleep(3)
 
     print(f"Opening browser on port {port}...")
-    webbrowser.open(f"127.0.0.1:{port}")
+    webbrowser.open(f"http://127.0.0.1:{port}")
 
     process_discord.join()
     process_world.join()

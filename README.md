@@ -14,6 +14,9 @@
   </div>
 </p>
 
+### *** NEW! The GPTeam web app is here! ✨ ***
+Try it out: https://www.gpteamai.com/ 
+
 ## About GPTeam
 
 GPTeam uses GPT-4 to create multiple agents who collaborate to achieve predefined goals. The main objective of this project is to explore the potential of GPT models in enhancing multi-agent productivity and effective communication.

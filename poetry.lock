@@ -958,13 +958,12 @@ uvloop = ["uvloop"]
 
 [[package]]
 name = "hyperdb-python"
-version = "0.1.3"
+version = "0.1.4"
 description = "A hyper-fast local vector database for use with LLM Agents."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "hyperdb-python-0.1.3.tar.gz", hash = "sha256:d9be942fdac74c2b2de87e7b40e2eb12e9952cfa3209de15ca7afaf2a098e8be"},
-    {file = "hyperdb_python-0.1.3-py3-none-any.whl", hash = "sha256:680cf2ddca00d185c8c618273c09c113bb8cec9cc17a03322ccdbed02065cf8d"},
+    {file = "hyperdb-python-0.1.4.tar.gz", hash = "sha256:faf94b14f1b56579c0c8939812d0a0222cc21930bf1ea971933e5bff1d241f14"},
 ]
 
 [package.dependencies]
@@ -2573,4 +2572,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "032a9a6de91b2b1bac01fb66e4e56a3897942bb7363cc613a18b6b4e71fd0a26"
+content-hash = "07addb5113e526935252d7246b10aaff4c4330ba404124803f6742763defafc3"

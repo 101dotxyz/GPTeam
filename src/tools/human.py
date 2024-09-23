@@ -37,7 +37,7 @@ async def ask_human_async(agent_input: str, tool_context: ToolContext):
         # add the discord id to the agent message
         agent_message.discord_id = str(discord_message.id)
 
-        # Covert the AgentMessage to an event
+        # Convert the AgentMessage to an event
         event = agent_message.to_event()
 
         # now add it to the events manager
@@ -71,7 +71,7 @@ def ask_human(agent_input: str, tool_context: ToolContext):
         # add the discord id to the agent message
         agent_message.discord_id = str(discord_message.id)
 
-        # Covert the AgentMessage to an event
+        # Convert the AgentMessage to an event
         event = agent_message.to_event()
 
         # now add it to the events manager

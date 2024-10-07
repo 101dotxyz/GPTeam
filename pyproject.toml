@@ -30,6 +30,7 @@ hyperdb-python = "^0.1.3"
 quart = "^0.18.4"
 anthropic = "^0.2.10"
 websocket-client = "^1.5.2"
+werkzeug = "2.2.3"
 
 [tool.black]
 line-length = 88

@@ -13,7 +13,7 @@ db-seed-small = "src.utils.database.seed:main_small"
 db-reset = "src.utils.database.reset:main"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
+python = ">=3.13,<3.14"
 colorama = "^0.4.6"
 python-dotenv = "^1.0.0"
 openai = "^0.27.4"

@@ -1,4 +1,4 @@
-from langchain.utilities import BashProcess
+from langchain_community.utilities import BashProcess
 from langchain.agents import load_tools
 
 

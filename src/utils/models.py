@@ -1,10 +1,11 @@
 from enum import Enum
 
 from dotenv import load_dotenv
-from langchain.chat_models import ChatAnthropic, ChatOpenAI
-from langchain.chat_models.base import BaseChatModel
-from langchain.llms import OpenAI
-from langchain.schema import BaseMessage
+from langchain_community.chat_models import ChatAnthropic
+from langchain_openai import ChatOpenAI
+from langchain_core.language_models import BaseChatModel
+from langchain_openai import OpenAI
+from langchain_core.messages import BaseMessage
 from utils.windowai_model import ChatWindowAI
 
 from .cache import chat_json_cache, json_cache

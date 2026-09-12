@@ -9,16 +9,12 @@ from uuid import UUID
 from dotenv import load_dotenv
 from langchain import LLMChain
 from langchain.agents import AgentOutputParser, LLMSingleActionAgent
-from langchain.llms import OpenAI
+from langchain_openai import OpenAI
 from langchain.output_parsers import OutputFixingParser
 from langchain.prompts import BaseChatPromptTemplate
-from langchain.schema import (
-    AgentAction,
-    AgentFinish,
-    HumanMessage,
-    OutputParserException,
-    SystemMessage,
-)
+from langchain_core.agents import AgentAction, AgentFinish
+from langchain_core.exceptions import OutputParserException
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.tools import BaseTool
 from pydantic import BaseModel
 from typing_extensions import override

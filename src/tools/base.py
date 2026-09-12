@@ -8,7 +8,7 @@ from uuid import UUID
 
 from langchain import GoogleSearchAPIWrapper, SerpAPIWrapper, WolframAlphaAPIWrapper
 from langchain.agents import Tool, load_tools
-from langchain.llms import OpenAI
+from langchain_openai import OpenAI
 from langchain.tools import BaseTool
 from typing_extensions import override
 

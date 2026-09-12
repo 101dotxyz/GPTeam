@@ -1,13 +1,12 @@
 import langchain
-from langchain.chat_models.base import BaseChatModel, SimpleChatModel
-from langchain.schema import (
+from langchain_core.language_models import BaseChatModel, SimpleChatModel
+from langchain_core.messages import (
     AIMessage,
     BaseMessage,
-    ChatGeneration,
-    ChatResult,
     HumanMessage,
     SystemMessage,
 )
+from langchain_core.outputs import ChatGeneration, ChatResult
 from typing import Any, Dict, List, Mapping, Optional, Sequence, TypedDict
 import websocket
 import uuid

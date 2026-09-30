@@ -130,7 +130,7 @@ class SinglePlan(BaseModel):
             "location_id": str(self.location.id),
             "max_duration_hrs": self.max_duration_hrs,
             "created_at": self.created_at.isoformat(),
-            "agent_id": str(self.id),
+            "agent_id": str(self.agent_id),
             "related_event_id": str(self.related_message.event_id)
             if self.related_message
             else None,

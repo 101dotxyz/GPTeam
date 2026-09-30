@@ -2,6 +2,7 @@
 
 import os
 import platform
+import shutil
 import subprocess
 
 
@@ -32,6 +33,12 @@ def install_poetry():
             os.environ["PATH"] = f"{poetry_bin_path}:{os.environ['PATH']}"
 
 
+def copy_env_file_if_missing(env_example_path=".env.example", env_file_path=".env"):
+    if not os.path.exists(env_file_path):
+        print("Creating .env file...")
+        shutil.copyfile(env_example_path, env_file_path)
+
+
 if __name__ == "__main__":
     os_type = platform.system()
 
@@ -54,10 +61,8 @@ if __name__ == "__main__":
         print("Installing Poetry...")
         install_poetry()
 
-    # copy .env.example to .env
-    if not os.path.exists(".env"):
-        print("Creating .env file...")
-        subprocess.run(["cp", ".env.example", ".env"], check=True)
+    # Copy .env.example to .env without relying on a platform-specific command.
+    copy_env_file_if_missing()
 
     print("Installing dependencies...")
     subprocess.run(["poetry", "install"], check=True)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import json
 import uuid
@@ -95,7 +97,7 @@ class SqliteDatabase(DatabaseProviderSingleton):
 
     async def get_should_reflect(self, agent_id: str) -> list[dict[str, Any]]:
         async with self.client.execute(
-            f"SELECT * FROM Memories WHERE id = ? AND type = 'reflection' ORDER BY created_at DESC LIMIT 1",
+            f"SELECT * FROM Memories WHERE agent_id = ? AND type = 'reflection' ORDER BY created_at DESC LIMIT 1",
             (agent_id,),
         ) as cursor:
             return await cursor.fetchall()

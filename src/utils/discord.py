@@ -61,6 +61,51 @@ async def announce_bot_move(bot_name: str, left_channel_id: str, enter_channel_i
     )
 
 
+async def _persist_human_message(database, message, location):
+    if message.type == hikari.MessageType.REPLY:
+        referenced_message = message.referenced_message
+        if referenced_message is None:
+            return
+        referenced_event = await database.get_messages_by_discord_id(
+            str(referenced_message.id)
+        )
+        if len(referenced_event) == 0:
+            return
+        referenced_event = referenced_event[0]
+        question = referenced_message.content.split(":")[1].strip()
+        await database.insert(
+            Tables.Events,
+            {
+                "timestamp": message.timestamp,
+                "type": "message",
+                "subtype": "human-agent-reply",
+                "description": f'{message.author.username}#{message.author.discriminator} (human) replied to question "{question}": {message.content}',
+                "location_id": str(location.id),
+                "metadata": {
+                    "discord_id": str(message.id),
+                    "referenced_event_id": str(referenced_event.id),
+                    "referenced_agent_id": str(referenced_event.agent_id),
+                    "human_id": str(message.author.id),
+                },
+            },
+        )
+        return
+
+    await database.insert(
+        Tables.Events,
+        {
+            "timestamp": message.timestamp,
+            "type": "message",
+            "subtype": "human-in-channel",
+            "description": f"{message.author.username}#{message.author.discriminator} said: {message.content}",
+            "location_id": str(location.id),
+            "metadata": {
+                "discord_id": str(message.id),
+            },
+        },
+    )
+
+
 async def close_rest_app():
     global rest_started
     if rest_started:
@@ -121,46 +166,6 @@ def discord_listener():
             return
         location = locations[0]
 
-        if event.message.type == hikari.MessageType.REPLY:
-            referenced_message = event.message.referenced_message
-            if referenced_message is None:
-                return
-            referenced_event = await database.get_messages_by_discord_id(
-                str(referenced_message.id)
-            )
-            if len(referenced_event) == 0:
-                return
-            referenced_event = referenced_event[0]
-            question = referenced_message.content.split(":")[1].strip()
-            await database.insert(
-                Tables.Messages,
-                {
-                    "timestamp": event.message.timestamp,
-                    "type": "message",
-                    "subtype": "human-agent-reply",
-                    "description": f'{event.message.author.username}#{event.message.author.discriminator} (human) replied to question "{question}": {event.message.content}',
-                    "location_id": str(location.id),
-                    "metadata": {
-                        "discord_id": str(event.message.id),
-                        "referenced_event_id": str(referenced_event.id),
-                        "referenced_agent_id": str(referenced_event.agent_id),
-                        "human_id": str(event.message.author.id),
-                    },
-                },
-            )
-            return
-        await database.insert(
-            Tables.Messages,
-            {
-                "timestamp": event.message.timestamp,
-                "type": "message",
-                "subtype": "human-in-channel",
-                "description": f"{event.message.author.username}#{event.message.author.discriminator} said: {event.message.content}",
-                "location_id": str(location.id),
-                "metadata": {
-                    "discord_id": str(event.message.id),
-                },
-            },
-        )
+        await _persist_human_message(database, event.message, location)
 
     bot.run()

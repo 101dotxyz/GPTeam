@@ -94,19 +94,20 @@ class SinglePlan(BaseModel):
 
     @classmethod
     async def from_id(cls, id: UUID):
-        data = await (await get_database()).get_by_id(Tables.Plan, id)
+        database = await get_database()
+        data = await database.get_by_id(Tables.Plans, str(id))
 
         if len(data) == 0:
             raise ValueError(f"Plan with id {id} does not exist")
 
-        plan_data = data[0]
-        if plan_data["location"] is not None:
-            plan_data["location"] = await Location.from_id(plan_data["location_id"])
-        else:
-            plan_data["location"] = None
-        del plan_data["location_id"]
+        plan_data = data[0].copy()
+        location_id = plan_data.pop("location_id")
+        plan_data.pop("related_event_id", None)
+        location = (
+            await Location.from_id(location_id) if location_id is not None else None
+        )
 
-        return cls(**plan_data)
+        return cls(**plan_data, location=location)
 
     @classmethod
     async def from_llm_single_plan(cls, agent_id: UUID, llm_plan: LLMSinglePlan):
@@ -121,7 +122,7 @@ class SinglePlan(BaseModel):
         )
 
     async def delete(self):
-        return await (await get_database()).get_by_id(Tables.Plan, str(self.id))
+        return await (await get_database()).delete(Tables.Plans, str(self.id))
 
     def _db_dict(self):
         row = {

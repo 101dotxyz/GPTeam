@@ -60,11 +60,11 @@ class SearchDocumentsToolInput(BaseModel):
 
 
 async def search_documents(query: str, tool_context: ToolContext):
-    # documents = await (await get_database()).search_document_embeddings(query, 10)
-    if True:
+    documents = await (await get_database()).search_document_embeddings(query, 10)
+    if not documents:
         return f"No documents found for query: {query}"
     document_names = (
         '"' + '"\n"'.join(map(lambda document: document["title"], documents)) + '"'
     )
-    return f"""Documents found for query "{query}": 
+    return f"""Documents found for query "{query}":
 {document_names}"""

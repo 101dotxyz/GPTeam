@@ -21,13 +21,16 @@ class NumpyArrayEncoder(json.JSONEncoder):
 
 def dict_factory(cursor: Cursor, row: Any) -> dict[str, Any]:
     fields = [column[0] for column in cursor.description]
-    row = [
-        json.loads(value)
-        if isinstance(value, str) and (value.startswith("[") or value.startswith("{"))
-        else value
-        for value in row
-    ]
-    return {key: value for key, value in zip(fields, row)}
+    result = {}
+    for key, value in zip(fields, row):
+        if isinstance(value, str) and value.startswith(("[", "{")):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                # Text fields may begin with a bracket without containing JSON.
+                pass
+        result[key] = value
+    return result
 
 
 class SqliteDatabase(DatabaseProviderSingleton):

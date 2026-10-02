@@ -83,8 +83,8 @@ async def _persist_human_message(database, message, location):
                 "location_id": str(location.id),
                 "metadata": {
                     "discord_id": str(message.id),
-                    "referenced_event_id": str(referenced_event.id),
-                    "referenced_agent_id": str(referenced_event.agent_id),
+                    "referenced_event_id": str(referenced_event["id"]),
+                    "referenced_agent_id": str(referenced_event["agent_id"]),
                     "human_id": str(message.author.id),
                 },
             },

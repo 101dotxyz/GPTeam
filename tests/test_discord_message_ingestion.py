@@ -31,7 +31,7 @@ class RecordingDatabase:
 
     async def get_messages_by_discord_id(self, discord_id):
         self.looked_up_discord_id = discord_id
-        return [SimpleNamespace(id="event-1", agent_id="agent-1")]
+        return [{"id": "event-1", "agent_id": "agent-1"}]
 
 
 def make_message(message_type, **kwargs):

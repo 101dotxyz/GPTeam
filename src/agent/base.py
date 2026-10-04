@@ -215,6 +215,7 @@ class Agent(BaseModel):
             private_bio=agent_dict["private_bio"],
             public_bio=agent_dict["public_bio"],
             directives=agent_dict["directives"],
+            authorized_tools=agent_dict["authorized_tools"],
             last_checked_events=agent_dict["last_checked_events"],
             world_id=agent_dict["world_id"],
             location=agent_location,

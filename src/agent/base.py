@@ -215,6 +215,7 @@ class Agent(BaseModel):
             private_bio=agent_dict["private_bio"],
             public_bio=agent_dict["public_bio"],
             directives=agent_dict["directives"],
+            authorized_tools=agent_dict["authorized_tools"],
             last_checked_events=agent_dict["last_checked_events"],
             world_id=agent_dict["world_id"],
             location=agent_location,
@@ -230,75 +231,13 @@ class Agent(BaseModel):
         agents_data = await database.get_by_id(Tables.Agents, str(id))
         if len(agents_data) == 0:
             raise ValueError("No agent with that id")
-        agent = agents_data[1][0]
-        # get all the plans in db that are in the agent's plan list
-        plans_data = await database.get_by_ids(Tables.Plans, agent["ordered_plan_ids"])
-        ordered_plans_data = sorted(
-            plans_data, key=lambda plan: agent["ordered_plan_ids"].index(plan["id"])
-        )
-
+        agent = agents_data[0]
         locations_data = await database.get_by_field(
             Tables.Locations, "world_id", agent["world_id"]
         )
+        locations = [Location(**location) for location in locations_data]
 
-        location = [
-            location
-            for location in locations_data
-            if str(location["id"]) == agent["location_id"]
-        ][0]
-
-        available_tools = list(
-            map(lambda name: ToolName(name), location.get("available_tools"))
-        )
-
-        print("available tools", available_tools)
-
-        locations = {
-            str(location["id"]): Location(
-                id=location["id"],
-                name=location["name"],
-                description=location["description"],
-                channel_id=location["channel_id"],
-                available_tools=available_tools,
-                world_id=location["world_id"],
-                allowed_agent_ids=list(
-                    map(lambda id: UUID(id), location.get("allowed_agent_ids"))
-                ),
-            )
-            for location in locations_data
-        }
-
-        memories_data = await database.get_by_field(Tables.Memory, "agent_id", str(id))
-
-        plans = [
-            SinglePlan(
-                **{key: value for key, value in plan.items() if key != "location_id"},
-                location=locations[plan["location_id"]],
-            )
-            for plan in ordered_plans_data
-        ]
-
-        location = locations[agent["location_id"]]
-
-        authorized_tools = list(
-            map(lambda name: ToolName(name), agent.get("authorized_tools"))
-        )
-
-        return Agent(
-            id=id,
-            full_name=agent.get("full_name"),
-            private_bio=agent.get("private_bio"),
-            public_bio=agent.get("public_bio"),
-            directives=agent.get("directives"),
-            last_checked_events=agent.get("last_checked_events"),
-            authorized_tools=authorized_tools,
-            memories=[SingleMemory(**memory) for memory in memories_data[1]],
-            plans=plans,
-            world_id=agent.get("world_id"),
-            location=location,
-            context=context,
-            discord_bot_token=agent.get("discord_bot_token"),
-        )
+        return await cls.from_db_dict(agent, locations, context)
 
     @property
     def color(self) -> LogColor:

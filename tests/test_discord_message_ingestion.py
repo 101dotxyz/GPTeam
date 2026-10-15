@@ -51,7 +51,7 @@ class DiscordMessageIngestionTests(unittest.IsolatedAsyncioTestCase):
     async def test_in_channel_message_is_stored_as_an_event(self):
         database = RecordingDatabase()
         message = make_message(None)
-        location = SimpleNamespace(id="location-1")
+        location = {"id": "location-1"}
 
         await _persist_human_message(database, message, location)
 
@@ -70,7 +70,7 @@ class DiscordMessageIngestionTests(unittest.IsolatedAsyncioTestCase):
                 id="message-1", content="Agent: What do you need?"
             ),
         )
-        location = SimpleNamespace(id="location-1")
+        location = {"id": "location-1"}
 
         await _persist_human_message(database, message, location)
 

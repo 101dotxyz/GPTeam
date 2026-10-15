@@ -80,7 +80,7 @@ async def _persist_human_message(database, message, location):
                 "type": "message",
                 "subtype": "human-agent-reply",
                 "description": f'{message.author.username}#{message.author.discriminator} (human) replied to question "{question}": {message.content}',
-                "location_id": str(location.id),
+                "location_id": str(location["id"]),
                 "metadata": {
                     "discord_id": str(message.id),
                     "referenced_event_id": str(referenced_event["id"]),
@@ -98,7 +98,7 @@ async def _persist_human_message(database, message, location):
             "type": "message",
             "subtype": "human-in-channel",
             "description": f"{message.author.username}#{message.author.discriminator} said: {message.content}",
-            "location_id": str(location.id),
+            "location_id": str(location["id"]),
             "metadata": {
                 "discord_id": str(message.id),
             },
